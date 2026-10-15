@@ -81,3 +81,31 @@ Static review only; these are source-level findings, not runtime test results. T
 
 ## Exit rule
 Stage 0 remains BLOCKED until required checks have evidence, unresolved items are decided, and a human explicitly approves the exact scope. This document is an audit draft, not a PASS certificate.
+
+
+## User-provided CSV scan output (2026-10-15)
+
+The user supplied the output of two read-only scans run locally on Windows; the assistant did not access the CSV directly.
+
+### Structural scan
+- Data rows: 3,489,359
+- Wrong column count: 0
+- Invalid numeric values: 0
+- OHLC/negative-value issues: 0
+- Adjacent duplicate timestamps: 0
+- Out-of-order timestamps: 0
+- Zero VOL: 3,251,252
+- Zero TICKVOL: 3
+- Zero SPREAD: 57
+
+### Timestamp-gap scan
+- Gaps greater than 60 seconds: 6,505
+- Gaps greater than 12 hours: 538
+- Longest observed gap: 451,560 seconds, from 2017-09-26 19:35:00 to 2017-10-02 01:01:00
+- The user supplied a sample of the >12-hour gaps, many of which were Friday-to-Monday. The full set of 538 gaps has not been classified, so their causes are unknown.
+
+### Working decision from the user
+The user requested that the project proceed on the assumption that this dataset is usable for backtesting and ML development, rather than spending more time investigating gaps. Treat this strictly as a working assumption for future authorized stages. Do not modify the source CSV or claim that every expected candle has been verified.
+
+### Scope gate remains unchanged
+This new evidence does not expand the current approval. Stage 0 branch work is still limited to audit/planning/memory documentation. Do not implement code, copy old code/data, modify main, or start Stage 1 until Stage 0 exit criteria and explicit human authorization are satisfied.
