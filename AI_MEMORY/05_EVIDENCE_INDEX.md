@@ -19,7 +19,8 @@ Use this index to find the source of each important claim. Keep evidence paths c
 | Local CSV SHA-256 `E539F77788859C25F6D8B53606F89E7E3531AF1C46FF53207D9F0831DC2ACB9E` | User-reported | PowerShell `Get-FileHash` output; summarized in current state |
 | Local CSV has 3,489,360 lines including header | User-reported, repeated | Two PowerShell full-file line counts matched; the simpler pass took 15.733 seconds. This does not validate row contents. |
 | CSV source is user's Windows + MT5 + AMarkets | User-reported | User statement; server/timezone/export details remain unknown |
-| Full-file integrity scan passed | Unknown / not claimed | User has not provided the scan output yet |
+| Full-file structural scan results | User-reported | Conversation output: wrong columns 0; invalid numeric values 0; OHLC/negative issues 0; adjacent duplicate timestamps 0; out-of-order timestamps 0; zero VOL 3,251,252; zero TICKVOL 3; zero SPREAD 57. Not independently reproduced. |
+| Timestamp gaps | User-reported | 6,505 gaps >60 seconds; 538 gaps >12 hours; longest 451,560 seconds (2017-09-26 19:35 to 2017-10-02 01:01). Only a sample of the >12-hour list was provided; complete causes are not established. |
 | CSV timestamps are UTC | Unknown | Must not assume |
 | Data redistribution rights are established | Unknown | Must not assume |
 
