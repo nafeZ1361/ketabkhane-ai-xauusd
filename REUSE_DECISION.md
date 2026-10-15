@@ -17,6 +17,11 @@
 ## Review evidence
 The five files were read through GitHub at the ref above. Static review only; no code was executed. File blob SHAs and preliminary findings are recorded in `STAGE_0_AUDIT.md`.
 
+## Additional governance/data warnings
+- The old repository's `PROJECT_STATE.md` records a frozen dataset and evidence, plus a documented split-manifest mismatch (GAP-001). Do not copy or modify those artifacts; their current integrity and provenance were not independently checked in this review.
+- The same source state document says LIVE can be enabled through `ENABLE_LIVE_TRADING=YES`. That execution configuration conflicts with the new project's no-live-trading scope and must not be reused.
+- The source `PROJECT_STATE.md` records HEAD `4448ff0`, but the inspected remote main commit is `36df7c9665ded188ab565d1fd4f25da63197c0f3`; source governance docs are not fully synchronized.
+
 ## Rules for any future candidate
 For each proposed reuse, record exact source commit/path, purpose, dependencies, execution side effects, tests, known defects, provenance/license concerns, destination, and the smallest possible change. Require no-lookahead tests and deterministic replay evidence where relevant.
 
