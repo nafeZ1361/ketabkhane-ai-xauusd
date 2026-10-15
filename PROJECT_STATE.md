@@ -22,14 +22,14 @@
 - [x] Recorded local CSV metadata supplied by the user in `AI_MEMORY/01_CURRENT_STATE.md`; dataset itself was not uploaded.
 
 ## Blockers
-- Full-file CSV quality scan output is not yet available.
-- Dataset source timezone, timestamp convention, symbol specification, and export settings need evidence.
+- User-provided full-file structural scan output is recorded in AI_MEMORY/01_CURRENT_STATE.md and AI_MEMORY/05_EVIDENCE_INDEX.md. The scan found no malformed column counts, invalid numeric values, OHLC/negative-value issues, adjacent duplicate timestamps, or out-of-order timestamps. It found 6,505 gaps >60 seconds, including 538 >12 hours; longest 451,560 seconds. Gap causes are not fully classified.
+- Dataset source timezone, timestamp convention, symbol specification, and export settings still need evidence.
 - Data use and public redistribution rights are not established.
 - No Stage 0 acceptance evidence package or independent review exists.
 - No legacy source file is approved for transfer.
 
 ## Next action
-Continue Stage 0 only. Obtain the read-only CSV quality scan output already requested from the user's Windows PowerShell; record results in the audit and AI memory. Then resolve timezone/provenance and reuse-review blockers. Do not ask broad questions already answered in memory. Do not copy code/data, run legacy trading scripts, change main, merge, or start Stage 1.
+Continue Stage 0 only. Record and use the user-provided structural scan output. The user asked us to treat the CSV as usable for initial research/backtesting and not to continue investigating the gaps for now; record that as a working assumption, not a verified integrity PASS. Resolve the remaining Stage 0 provenance and reuse-review blockers. Do not implement the backtester or start Stage 1 until explicitly authorized after Stage 0 exit. Do not ask broad questions already answered in memory. Do not copy code/data, run legacy trading scripts, change main, merge, or start Stage 1.
 
 ## Safety
 No live trading or real orders. No credentials. No production deployment. No merge or changes to `main` under this scope. The local CSV must not be committed to this public repository.
