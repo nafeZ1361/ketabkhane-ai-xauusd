@@ -20,7 +20,9 @@ Build a reproducible and leakage-resistant XAUUSD ML research/backtest/paper-val
 - Windows file: `XAUUSD_M1_201610030100_202610092354.csv` on Desktop.
 - Size: 214,692,947 bytes.
 - User-reported SHA-256: `E539F77788859C25F6D8B53606F89E7E3531AF1C46FF53207D9F0831DC2ACB9E`.
-- User-reported total lines: 3,489,360, including one header; nominal data lines: 3,489,359. A second full sequential line-count pass completed in 15.733 seconds and returned the same count. This validates readability/count only, not row-level quality.
+- User-reported total lines: 3,489,360, including one header; nominal data lines: 3,489,359. A second full sequential line-count pass completed in 15.733 seconds and returned the same count.
+- User-provided read-only full-file scan output: wrong column count 0; invalid numeric values 0; OHLC/negative-value issues 0; adjacent duplicate timestamps 0; out-of-order timestamps 0; zero VOL 3,251,252; zero TICKVOL 3; zero SPREAD 57.
+- User-provided timestamp-gap scan: 6,505 gaps greater than 60 seconds; 538 gaps greater than 12 hours; longest gap 451,560 seconds from 2017-09-26 19:35 to 2017-10-02 01:01. The provided sample of large gaps mostly spans Friday-to-Monday, but no full classification of all gaps was supplied. These are user-provided outputs; assistant has not independently accessed the CSV.
 - Header fields: DATE, TIME, OPEN, HIGH, LOW, CLOSE, TICKVOL, VOL, SPREAD.
 - First displayed row: 2016-10-03 01:00:00.
 - Last displayed row: 2026-10-09 23:54:00.
@@ -36,10 +38,10 @@ Build a reproducible and leakage-resistant XAUUSD ML research/backtest/paper-val
 - Static review only; no runtime test results exist.
 
 ## Current next action
-Finish establishing a safe, efficient Stage 0 data-quality report from the local CSV using read-only streaming checks in PowerShell. The user has not yet provided the results of the full-file quality scan. Then record the report and distinguish genuine market-closure gaps from unexpected gaps. Do not ask for upload of the 205 MB CSV unless a smaller sample becomes essential.
+The user instructed us to proceed on the working assumption that the CSV is usable for research/backtesting and to stop investigating its gaps for now. Record this as a working assumption only; do not alter the CSV. The structural scan outputs are now recorded. Do not begin backtester/model implementation yet: the current human authorization is limited to Stage 0 audit/documentation, and Stage 1 is not authorized until Stage 0 exit and explicit human confirmation.
 
 ## Stage 0 blockers
-1. Full-file data-quality scan not yet reported: malformed rows, duplicate/out-of-order timestamps, OHLC violations, gaps, numeric validity, volume/spread summaries.
+1. Structural scan output has been provided and recorded, but source-time convention and meaning of observed gaps remain unverified; user has asked to treat data as usable for initial research work.
 2. Source timezone and timestamp convention not verified.
 3. Symbol specification and export method not verified from MT5 metadata.
 4. Data usage and public redistribution permission not established.
