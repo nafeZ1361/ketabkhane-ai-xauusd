@@ -31,3 +31,11 @@
 - Confirm whether dataset can legally be used for research and whether any redistribution is permitted.
 - Final accept/reject/defer decision for any extracted pure backtest logic.
 - Stage 0 exit approval.
+
+
+## DEC-007 — Rollback and recovery is a required project capability
+**Date:** 2026-10-15  
+**Decision:** Before Stage 1 starts, define and later implement a checkpoint/rollback mechanism usable at every stage.  
+**Required behavior:** Every stage starts from a recorded known-good checkpoint; failed-stage artifacts and evidence are preserved; rollback uses traceable recovery commits/branches, verifies hashes and tests, and cannot silently replace data/baselines or erase history. Protected changes, shared-branch actions, and stage transitions still require explicit human approval.  
+**Design reference:** `ROLLBACK_AND_RECOVERY.md`.  
+**Status:** Requirement accepted; design documented on the Stage 0 draft branch. Implementation and tests are not yet done. This decision does not authorize Stage 1 or changes to `main`.
