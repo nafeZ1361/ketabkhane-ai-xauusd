@@ -31,5 +31,10 @@
 ## Next action
 Continue Stage 0 only. Record and use the user-provided structural scan output. The user asked us to treat the CSV as usable for initial research/backtesting and not to continue investigating the gaps for now; record that as a working assumption, not a verified integrity PASS. Resolve the remaining Stage 0 provenance and reuse-review blockers. Do not implement the backtester or start Stage 1 until explicitly authorized after Stage 0 exit. Do not ask broad questions already answered in memory. Do not copy code/data, run legacy trading scripts, change main, merge, or start Stage 1.
 
+## Rollback / recovery requirement
+- User requested the ability to return safely to a previous known-good state if any stage encounters a problem.
+- Design documented in `ROLLBACK_AND_RECOVERY.md`; project plan and AI memory updated.
+- This is not implemented or tested yet. Its implementation and acceptance tests are mandatory before Stage 1 work begins and require explicit authorization. Preserve evidence; never alter source CSV or rewrite shared history.
+
 ## Safety
 No live trading or real orders. No credentials. No production deployment. No merge or changes to `main` under this scope. The local CSV must not be committed to this public repository.
