@@ -20,6 +20,8 @@ Statuses: `DONE`, `IN_PROGRESS`, `BLOCKED`, `NOT_STARTED`. A task is not DONE wi
 | S0-010 | Independent review and Stage 0 exit decision | NOT_STARTED | Cannot pass by inference; requires evidence and explicit human approval |
 | S0-011 | Start Stage 1 data audit | BLOCKED | Not authorized until Stage 0 exit requirements pass and human confirms |
 
+| S0-012 | Define project-wide checkpoint and rollback requirements | DONE (design only) | `ROLLBACK_AND_RECOVERY.md`, decision `DEC-007`, and `PROPOSED_PROJECT_PLAN.md`; implementation and tests are explicitly pending and not authorized yet. |
+
 ## Session log
 
 ### 2026-10-15
@@ -27,6 +29,7 @@ Statuses: `DONE`, `IN_PROGRESS`, `BLOCKED`, `NOT_STARTED`. A task is not DONE wi
 - Created repository-native Markdown memory structure under `AI_MEMORY/`.
 - User-provided local CSV metadata and full-file scan outputs recorded; no CSV uploaded or committed.
 - User instructed the project to proceed on a working assumption that the data is usable for backtesting/ML; this is an assumption, not an integrity PASS.
+- User requested rollback/recovery capability for any stage. Added `ROLLBACK_AND_RECOVERY.md`, recorded decision DEC-007, and updated the proposed plan and AI handoff state. This is a design requirement only; no code or tests implemented.
 - Scope remains documentation and Stage 0 only; no implementation code has been authorized.
 
 ## How to update this ledger
