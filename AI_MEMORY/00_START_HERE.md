@@ -18,7 +18,8 @@
 5. `AI_MEMORY/04_HANDOFF_PROMPT.md` — compact prompt to start a fresh AI session.
 6. `PROJECT_STATE.md` — project state summary.
 7. `STAGE_0_AUDIT.md` and `REUSE_DECISION.md` — evidence and old-code review.
-8. `PROPOSED_PROJECT_PLAN.md` — proposed stage sequence.
+8. `PROPOSED_PROJECT_PLAN.md` — proposed stage sequence and mandatory gates.
+9. `ROLLBACK_AND_RECOVERY.md` — required checkpoint and rollback design.
 
 ## 3. Rules for every AI
 - Read the files above before asking the user anything. Do not ask for information already recorded.
