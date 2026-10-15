@@ -17,7 +17,7 @@ Use this index to find the source of each important claim. Keep evidence paths c
 | Old backtest source has risks documented in the audit | Static review | `STAGE_0_AUDIT.md`, `REUSE_DECISION.md`; no runtime tests |
 | Local CSV size 214,692,947 bytes | User-reported | PowerShell output in conversation; summarized in `AI_MEMORY/01_CURRENT_STATE.md` |
 | Local CSV SHA-256 `E539F77788859C25F6D8B53606F89E7E3531AF1C46FF53207D9F0831DC2ACB9E` | User-reported | PowerShell `Get-FileHash` output; summarized in current state |
-| Local CSV has 3,489,360 lines including header | User-reported | PowerShell line count; not independently scanned |
+| Local CSV has 3,489,360 lines including header | User-reported, repeated | Two PowerShell full-file line counts matched; the simpler pass took 15.733 seconds. This does not validate row contents. |
 | CSV source is user's Windows + MT5 + AMarkets | User-reported | User statement; server/timezone/export details remain unknown |
 | Full-file integrity scan passed | Unknown / not claimed | User has not provided the scan output yet |
 | CSV timestamps are UTC | Unknown | Must not assume |
