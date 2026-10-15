@@ -55,6 +55,12 @@ Reviewed at source ref `golden-librarytallaii/main` commit `36df7c9665ded188ab56
 
 Static review only; these are source-level findings, not runtime test results. They make the CSV runner **not approved for research use as-is**.
 
+## User-reported data origin (2026-10-15)
+- The user states that the source data comes from their own Windows computer and MetaTrader 5 connected to AMarkets.
+- Existing project context identifies the server as `AMarkets-Demo`; treat that as user-reported context until corroborated by the export or terminal metadata.
+- This narrows the claimed origin but does **not** verify the exact CSV file, its SHA256, export settings, whether timestamps are broker-server time or UTC, symbol contract settings, completeness, or permission to redistribute the file publicly.
+- Next evidence step: inspect the original CSV and a non-secret MT5 export/terminal metadata sample on the user's Windows machine. Do not request or copy passwords, account numbers, investor passwords, or broker credentials. No direct access to the user's Windows machine or MT5 session is available from this GitHub-only audit.
+
 ## Stage 0 checks still required
 - [ ] Confirm dataset provenance, source, license, and redistribution permissions.
 - [ ] Confirm MT5 broker/server, export method, timezone, timestamp convention, symbol specification, and coverage.
