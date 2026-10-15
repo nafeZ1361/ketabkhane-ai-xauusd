@@ -37,6 +37,24 @@ Files found in `backtest/`:
 - The old `PROJECT_STATE.md` records HEAD as `4448ff0`, while the inspected remote `main` is `36df7c9665ded188ab565d1fd4f25da63197c0f3`. The state document is stale relative to the inspected branch and must not be treated as authoritative current state.
 - The old `DATA_FLOW.md` describes an MT5 M1 resampling path, but does not establish the provenance, permissions, timezone, or hash of the user's new-project CSV.
 
+## Deeper static review of CSV replay path
+Reviewed at source ref `golden-librarytallaii/main` commit `36df7c9665ded188ab565d1fd4f25da63197c0f3`; relevant blob SHAs:
+- `backtest/run_csv_backtests.py`: `ad589b6ee7826705ede276495e45abe279a5a574`
+- `module/backtest.py`: `469a74e1201cd912bad81fa0104b88a6066c0e76`
+- `module/strategy_adapter.py`: `58984e11634c7ad8271f7ab74efc023a2027928f`
+- `module/market_data.py`: `d06d0104df832b6af8a941e93a5e240a2c5b6ead`
+- `module/paper.py`: `4877af18d4c07c18920ad3705611710d1e6d9a46`
+
+**Blocking correctness findings:**
+1. `HistoricalReplay.run` calls the strategy before adding the current candle to history, but the strategy receives the current candle separately. `CombinedVotingStrategy.__call__` evaluates indicators on `history + [candle]`, then emits a trade priced at `candle.open`. Indicators such as RSI/MACD/Supertrend use the current candle's close/high/low. This can make a decision using information from the candle's end and fill it at that same candle's open: a look-ahead/timing defect. It must be fixed and tested before this replay can support research conclusions.
+2. The legacy strategy in `run_csv_backtests.py` calculates full-frame indicators first, then uses the current candle index to choose a signal while entering at that candle's open. Since the indicator values are derived from that candle's OHLC, this has the same potential look-ahead/timing defect.
+3. `load_mt5_candles_csv` converts exported date/time values to UTC by attaching `timezone.utc`; it does not prove the original export timestamps were UTC. Source timezone must be established before this conversion is trusted.
+4. `load_mt5_candles_csv` sorts the rows but does not reject duplicate timestamps, unlike the generic candle loader. Data integrity acceptance tests must cover duplicates and ordering.
+5. `PaperBroker` simulates an OHLC path as open→high→low→close for bullish candles and open→low→high→close for bearish candles. This is deterministic, but intrabar order is assumed rather than observed; a bar touching both stop-loss and take-profit may have outcome ambiguity. Such bars need conservative handling or higher-resolution tick data.
+6. The current runner sets default slippage and broker costs to zero unless configured elsewhere. A reported result without explicit spread/commission/slippage settings cannot be treated as cost-valid.
+
+Static review only; these are source-level findings, not runtime test results. They make the CSV runner **not approved for research use as-is**.
+
 ## Stage 0 checks still required
 - [ ] Confirm dataset provenance, source, license, and redistribution permissions.
 - [ ] Confirm MT5 broker/server, export method, timezone, timestamp convention, symbol specification, and coverage.
