@@ -31,6 +31,12 @@ Files found in `backtest/`:
 5. **`run_csv_backtests.py` is the most promising candidate for further review:** it accepts CSV input and uses a paper broker/historical replay, but it still imports legacy indicator code. Signal timing, candle alignment, costs, and reproducibility need tests before it can be accepted.
 6. These are source-level observations, not a test report. No scripts were run and no claim of backtest correctness is made.
 
+## Additional repository-record findings
+- The old repository's `PROJECT_STATE.md` reports a locked dataset SHA256 prefix `a7d856d8…6414`, 480,087 rows, and a split-manifest mismatch recorded as GAP-001. These are claims in the source document, not independently verified against the CSV here.
+- That same `PROJECT_STATE.md` records a PAPER-by-default mode but says LIVE can be enabled by `ENABLE_LIVE_TRADING=YES`. This is incompatible with the new project's no-live-trading boundary; do not transplant the old execution path or configuration.
+- The old `PROJECT_STATE.md` records HEAD as `4448ff0`, while the inspected remote `main` is `36df7c9665ded188ab565d1fd4f25da63197c0f3`. The state document is stale relative to the inspected branch and must not be treated as authoritative current state.
+- The old `DATA_FLOW.md` describes an MT5 M1 resampling path, but does not establish the provenance, permissions, timezone, or hash of the user's new-project CSV.
+
 ## Stage 0 checks still required
 - [ ] Confirm dataset provenance, source, license, and redistribution permissions.
 - [ ] Confirm MT5 broker/server, export method, timezone, timestamp convention, symbol specification, and coverage.
