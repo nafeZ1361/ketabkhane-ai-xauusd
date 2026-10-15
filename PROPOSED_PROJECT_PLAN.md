@@ -28,4 +28,4 @@ No stage advances on assumptions. UNKNOWN, INCOMPLETE, or FAIL is not PASS. Appl
 - Prefer small, simple, import-safe, testable code.
 
 ## Current authorized work
-Stage 0 documentation draft only. No Stage 1 work is authorized by this plan.
+Stage 0 audit and planning documentation only. The old backtest folder has been inventoried and statically reviewed, but no files are approved for reuse. No Stage 1 work is authorized by this plan.
