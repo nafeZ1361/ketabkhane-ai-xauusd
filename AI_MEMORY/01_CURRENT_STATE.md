@@ -37,8 +37,14 @@ Build a reproducible and leakage-resistant XAUUSD ML research/backtest/paper-val
 - `backtest/run_csv_backtests.py`: not approved as-is; static review found possible look-ahead timing, unverified timezone assumptions, duplicate timestamp handling gaps, ambiguous OHLC stop/target paths, and zero-default costs.
 - Static review only; no runtime test results exist.
 
+## Rollback capability requirement
+- User requested a project-wide ability to return safely to a previous stage/state if any stage fails.
+- Design contract recorded in `ROLLBACK_AND_RECOVERY.md`; plan and decision log updated.
+- Status: documented only; no rollback code, checkpoint tags, or tests exist yet.
+- Required before Stage 1 implementation: design review, explicit authorization, implementation, and recovery tests. Preserve all evidence and never rewrite shared history or mutate source data.
+
 ## Current next action
-The user instructed us to proceed on the working assumption that the CSV is usable for research/backtesting and to stop investigating its gaps for now. Record this as a working assumption only; do not alter the CSV. The structural scan outputs are now recorded. Do not begin backtester/model implementation yet: the current human authorization is limited to Stage 0 audit/documentation, and Stage 1 is not authorized until Stage 0 exit and explicit human confirmation.
+The user instructed us to proceed on the working assumption that the CSV is usable for research/backtesting and to stop investigating its gaps for now. Record this as a working assumption only; do not alter the CSV. The structural scan outputs are now recorded. Rollback/recovery is a mandatory pre-Stage-1 requirement, but is currently documentation only. Do not begin backtester/model implementation yet: the current human authorization is limited to Stage 0 audit/documentation, and Stage 1 is not authorized until Stage 0 exit and explicit human confirmation.
 
 ## Stage 0 blockers
 1. Structural scan output has been provided and recorded, but source-time convention and meaning of observed gaps remain unverified; user has asked to treat data as usable for initial research work.
