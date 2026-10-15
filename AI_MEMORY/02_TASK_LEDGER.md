@@ -13,7 +13,7 @@ Statuses: `DONE`, `IN_PROGRESS`, `BLOCKED`, `NOT_STARTED`. A task is not DONE wi
 | S0-003 | Inventory old repository backtest folder | DONE | Static source review at old repo main `36df7c9665ded188ab565d1fd4f25da63197c0f3`; details in `STAGE_0_AUDIT.md` |
 | S0-004 | Review CSV replay timing/cost/timezone risks | DONE | Static review only; `run_csv_backtests.py` not approved as-is |
 | S0-005 | Record user's local CSV metadata and SHA256 | DONE | `AI_MEMORY/01_CURRENT_STATE.md`; user-provided PowerShell output |
-| S0-006 | Scan all CSV rows for malformed records, duplicates, ordering, OHLC validity, gaps | IN_PROGRESS | Simple full-file line-count pass completed in 15.733 s; 3,489,360 lines confirmed. Full row-quality scan still pending. |
+| S0-006 | Scan all CSV rows for malformed records, duplicates, ordering, OHLC validity, gaps | DONE (user-output reviewed) | User-provided full scan: 3,489,359 rows; wrong columns 0; invalid numerics 0; OHLC/negative-value issues 0; adjacent duplicate timestamps 0; out-of-order timestamps 0; zero VOL 3,251,252; zero TICKVOL 3; zero SPREAD 57. Gap scan: 6,505 gaps >60s; 538 >12h; longest 451,560s. Outputs are user-provided, not independently reproduced. Gap causes and timezone remain unverified. |
 | S0-007 | Verify MT5 export method, server/timezone, symbol specification | BLOCKED | Need non-secret MT5 metadata/export settings; no credentials |
 | S0-008 | Establish data rights and public-repository handling | BLOCKED | User owns local export claim does not establish redistribution rights; dataset must not be committed |
 | S0-009 | Finalize code reuse choices and acceptance criteria | IN_PROGRESS | No source files approved for transfer |
@@ -25,8 +25,9 @@ Statuses: `DONE`, `IN_PROGRESS`, `BLOCKED`, `NOT_STARTED`. A task is not DONE wi
 ### 2026-10-15
 - User requested persistent project memory comparable to Obsidian so a new AI can resume without repeating questions.
 - Created repository-native Markdown memory structure under `AI_MEMORY/`.
-- User-provided local CSV metadata recorded; no CSV uploaded or committed.
-- Scope remains documentation and Stage 0 only.
+- User-provided local CSV metadata and full-file scan outputs recorded; no CSV uploaded or committed.
+- User instructed the project to proceed on a working assumption that the data is usable for backtesting/ML; this is an assumption, not an integrity PASS.
+- Scope remains documentation and Stage 0 only; no implementation code has been authorized.
 
 ## How to update this ledger
 1. Mark the task status.
