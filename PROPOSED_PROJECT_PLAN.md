@@ -17,6 +17,9 @@
 ## Mandatory stage gate
 For every stage: AUDIT → RCA → MINIMAL FIX → TEST → VALIDATE → EVIDENCE → PASS/BLOCKED → HUMAN CONFIRMATION → NEXT STAGE.
 
+## Mandatory rollback/recovery capability
+Before Stage 1 implementation begins, design and test the project-wide checkpoint and rollback mechanism in `ROLLBACK_AND_RECOVERY.md`. Every stage must start from a recorded last-known-good checkpoint and either create a new accepted checkpoint or remain BLOCKED. On failure, preserve logs and evidence, restore only through a traceable recovery commit/branch, verify code/config/data hashes and tests, and require human approval for protected actions. Never delete evidence, mutate source data, rewrite shared history, use force-push, or silently downgrade the baseline. This is a required design/test gate, not yet an implemented feature.
+
 No stage advances on assumptions. UNKNOWN, INCOMPLETE, or FAIL is not PASS. Applicable scope, test, validation, reproducibility, evidence, integrity, safety, and governance checks must be reviewed before approval.
 
 ## Frozen safety limits
