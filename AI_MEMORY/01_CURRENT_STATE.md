@@ -20,7 +20,7 @@ Build a reproducible and leakage-resistant XAUUSD ML research/backtest/paper-val
 - Windows file: `XAUUSD_M1_201610030100_202610092354.csv` on Desktop.
 - Size: 214,692,947 bytes.
 - User-reported SHA-256: `E539F77788859C25F6D8B53606F89E7E3531AF1C46FF53207D9F0831DC2ACB9E`.
-- User-reported total lines: 3,489,360, including one header; nominal data lines: 3,489,359.
+- User-reported total lines: 3,489,360, including one header; nominal data lines: 3,489,359. A second full sequential line-count pass completed in 15.733 seconds and returned the same count. This validates readability/count only, not row-level quality.
 - Header fields: DATE, TIME, OPEN, HIGH, LOW, CLOSE, TICKVOL, VOL, SPREAD.
 - First displayed row: 2016-10-03 01:00:00.
 - Last displayed row: 2026-10-09 23:54:00.
