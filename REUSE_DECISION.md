@@ -17,6 +17,12 @@
 ## Review evidence
 The five files were read through GitHub at the ref above. Static review only; no code was executed. File blob SHAs and preliminary findings are recorded in `STAGE_0_AUDIT.md`.
 
+## Deeper replay-path decision
+- `run_csv_backtests.py` is **not approved for reuse as-is**. Static review found potential look-ahead: indicators use the current candle's OHLC while the replay can fill at that same candle's open.
+- `module/strategy_adapter.py` and `module/backtest.py` share the same current-candle timing risk for `CombinedVotingStrategy`.
+- The MT5 CSV loader assumes UTC without validating export timezone, does not reject duplicate timestamps, and the OHLC tick path is a deterministic assumption, not observed intrabar data.
+- Costs default to zero unless explicitly configured; results without explicit cost assumptions are not suitable as validated performance evidence.
+
 ## Additional governance/data warnings
 - The old repository's `PROJECT_STATE.md` records a frozen dataset and evidence, plus a documented split-manifest mismatch (GAP-001). Do not copy or modify those artifacts; their current integrity and provenance were not independently checked in this review.
 - The same source state document says LIVE can be enabled through `ENABLE_LIVE_TRADING=YES`. That execution configuration conflicts with the new project's no-live-trading scope and must not be reused.
