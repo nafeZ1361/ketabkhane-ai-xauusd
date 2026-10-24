@@ -1,0 +1,21 @@
+{
+    "symbol": "XAUUSD.",
+    "timeframe": "3m",
+    "backtest_days": 30,
+    "entry_indicator": "kalman_trend",
+    "confirmation_indicator": "trend_ali",
+    "best_parameters": {
+        "sell_len": 40,
+        "buy_len": 50
+    },
+    "win_rate": 50.0,
+    "roi": 14.000000000000018,
+    "total_trades": 14,
+    "max_drawdown": 8.001754385964917,
+    "final_balance": 5700.000000000001,
+    "timestamp": "2026-08-19 11:24:18",
+    "total_combinations_tested": 45,
+    "valid_results": 39,
+    "train_ratio": 1.0,
+    "out_of_sample": null
+}

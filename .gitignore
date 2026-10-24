@@ -5,9 +5,14 @@ data/*
 # Any CSV anywhere
 *.csv
 
-# Quarantined legacy code (only the quarantine notice is tracked)
-legacy/*
-!legacy/README.md
+# Quarantined legacy code: loose local copies are ignored,
+# the canonical source archive under legacy/source/ is tracked.
+/legacy/backtester.py
+/legacy/bot.ipynb
+/legacy/modifyPosition.py
+/legacy/mt5.py
+/legacy/stg.py
+/legacy/reference/
 
 # Python
 __pycache__/

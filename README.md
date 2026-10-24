@@ -1,9 +1,20 @@
 # ketabkhane-ai-xauusd
 
-XAUUSD research library with quarantined legacy code and a Git-safe repository scaffold.
+Auditable XAUUSD research, backtesting, and validation system.
 
-- `vault/STATUS.md` — current stage and status
-- `config/risk.yaml` — risk limits
-- `legacy/` — quarantined reference code; never executed or imported
-- `data/` — local market data, ignored by Git
-- `src/`, `tests/`, `artifacts/` — implementation, tests, generated outputs
+## Layout
+- `vault/STATUS.md` - current stage and status
+- `config/risk.yaml` - risk limits
+- `src/` - implementation of the new platform
+- `tests/` - automated tests
+- `artifacts/` - generated outputs (ignored by Git)
+- `data/` - local market data (ignored by Git; never commit CSV)
+- `legacy/source/` - original library, preserved verbatim for reference
+- `legacy/README.md` - quarantine notice for legacy code
+- `docs/` - project records (transfer record, decisions)
+
+## Agent entry points
+Read `AGENTS.md` first, then `vault/STATUS.md` and `docs/`.
+
+## Hard rules
+Never commit CSV files, market data, secrets, or files larger than 5 MB.
