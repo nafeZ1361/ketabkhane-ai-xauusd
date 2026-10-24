@@ -1,0 +1,27 @@
+# Local market data (CSV stays out of Git)
+data/*
+!data/.gitkeep
+
+# Any CSV anywhere
+*.csv
+
+# Quarantined legacy code (only the quarantine notice is tracked)
+legacy/*
+!legacy/README.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets
+.env
+*.pem
+*.key
+
+# Obsidian
+.obsidian/workspace.json
+
+# Generated artifacts
+artifacts/*
+!artifacts/.gitkeep
