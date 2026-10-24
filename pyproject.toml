@@ -1,0 +1,14 @@
+[project]
+name = "xauusd-research"
+version = "0.1.0"
+description = "MVP-1 research pipeline (stdlib only)"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["xauusd_research"]

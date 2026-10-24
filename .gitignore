@@ -14,6 +14,9 @@ data/*
 /legacy/stg.py
 /legacy/reference/
 
+# Synthetic test fixture is required and safe to commit
+!tests/fixtures/*.csv
+
 # Python
 __pycache__/
 *.pyc
