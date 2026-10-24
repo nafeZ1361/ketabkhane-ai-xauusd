@@ -10,21 +10,24 @@ from .backtest import run_backtest
 from .report import write_manifest, write_summary, write_trades
 from .schema import SchemaError, load_candles
 from .strategies import STRATEGY_BY_NAME
+from .timezones import POLICIES
 from .validation import validate
 
 
 def build_parser():
     parser = argparse.ArgumentParser(prog="xauusd-research", description="MVP-1 research pipeline")
     sub = parser.add_subparsers(dest="command", required=True)
-    run = sub.add_parser("run", help="validate CSV, run strategy, write trades")
-    run.add_argument("--csv", required=True, help="input CSV path")
+    run = sub.add_parser("run", help="validate data, run strategy, write trades")
+    run.add_argument("--csv", required=True, help="input CSV/TSV path")
     run.add_argument("--out", required=True, help="output directory")
     run.add_argument("--strategy", default="ma_5_20", choices=sorted(STRATEGY_BY_NAME))
+    run.add_argument("--server-tz", default="eu-dst", choices=list(POLICIES),
+                     help="broker server timezone policy (default: eu-dst for Europe/Kyiv)")
     return parser
 
 
-def run_pipeline(csv_path, out_dir, strategy_name):
-    candles = load_candles(csv_path)
+def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst"):
+    candles = load_candles(csv_path, tz_policy=server_tz)
     report = validate(candles)
     if report.fatal:
         return 2, {"status": "INVALID_DATA", "issues": [i.code for i in report.issues]}
@@ -33,11 +36,12 @@ def run_pipeline(csv_path, out_dir, strategy_name):
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     trades_path = write_trades(result, out / "trades.csv")
-    summary_path = write_summary(result, report, out / "summary.json", input_path=csv_path)
+    summary_path = write_summary(result, report, out / "summary.json", input_path=csv_path, server_tz=server_tz)
     manifest_path = write_manifest([csv_path], [trades_path, summary_path], out / "manifest.json")
     return 0, {
         "status": "OK",
         "strategy": spec.name,
+        "server_tz": server_tz,
         "cost_label": result.label,
         "metrics": result.metrics,
         "trades_csv": str(trades_path),
@@ -48,7 +52,7 @@ def run_pipeline(csv_path, out_dir, strategy_name):
 def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
-        code, payload = run_pipeline(args.csv, args.out, args.strategy)
+        code, payload = run_pipeline(args.csv, args.out, args.strategy, args.server_tz)
     except SchemaError as exc:
         print(f"schema error: {exc}", file=sys.stderr)
         return 2

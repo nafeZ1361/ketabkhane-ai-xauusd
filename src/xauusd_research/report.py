@@ -20,19 +20,21 @@ def write_trades(result, path):
     path = Path(path)
     with path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
-        writer.writerow(["entry_time", "exit_time", "entry_price", "exit_price", "pnl", "bars", "reason"])
+        writer.writerow(["entry_time_utc", "exit_time_utc", "entry_price", "exit_price", "pnl", "bars", "reason"])
         for trade in result.trades:
             writer.writerow([trade.entry_time.isoformat(), trade.exit_time.isoformat(),
                              trade.entry_price, trade.exit_price, trade.pnl, trade.bars, trade.reason])
     return path
 
 
-def write_summary(result, report, path, input_path):
+def write_summary(result, report, path, input_path, server_tz="eu-dst"):
     payload = {
         "strategy": result.spec.name,
         "fast": result.spec.fast,
         "slow": result.spec.slow,
         "cost_label": result.label,
+        "server_tz": server_tz,
+        "time_reference": "UTC",
         "rows": report.rows,
         "gaps": report.gaps,
         "issues": [{"code": i.code, "message": i.message, "row": i.row} for i in report.issues],
