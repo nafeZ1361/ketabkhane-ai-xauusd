@@ -5,10 +5,12 @@
 - Destination: `legacy/source/` in this repository
 - Decision: the user requested that the complete library be transferred to this
   public repository and stay accessible/editable by any AI agent.
-- Method: verbatim byte copy; SHA-256 of every file recorded below.
+- Method: verbatim byte copy. `.gitattributes` sets `legacy/source/** -text`
+  so Git never normalizes line endings inside the archive; the SHA-256 values
+  below therefore match the repository blobs exactly.
 - Excluded: no CSV or market data. The 214 MB XAUUSD CSV stays local under
   `data/` and remains gitignored.
-- Status: copy integrity VERIFIED by hash; the code is NOT executed or imported.
+- Status: copy integrity VERIFIED by hash. The code is NOT executed or imported;
   Stage 0 static-review findings still apply.
 
 ## Files (14 files, 337561 bytes)
@@ -29,6 +31,12 @@
 | README.md | 224 | fe3c3e652b30c5a04ea5d7aa9c1ed538bde9619c3be7bf3d7e1b31d0bb091362 |
 | smart money indicator.txt | 23341 | 99216698cf44dfb8fecc86a92cae4b30f90141148774ef3eab77fa425d6fb821 |
 | TelegramSignal.png | 40244 | 8021210faee09c69cace9f65285e60fdc0069e7328225d63c9ef935bd468db8c |
+
+## Verify
+
+    python scripts/verify_transfer.py
+
+The script re-hashes every archived file and compares it with this table.
 
 ## Notes
 - Loose `legacy/*` copies that already existed locally remain gitignored;

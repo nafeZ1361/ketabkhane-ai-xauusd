@@ -1,0 +1,2 @@
+# Keep the legacy archive byte-for-byte identical to the imported source.
+legacy/source/** -text
