@@ -45,6 +45,20 @@ Runs the full test suite and measures line coverage of `src/xauusd_research` (th
 - `docs/DECISION_LOG.md` - decisions, including pre-registered acceptance criteria
 - `docs/evidence/` - audit, coverage, end-to-end, parity and full-run evidence
 
+### Broker costs (optional)
+
+```powershell
+python run_mvp.py run --csv data\sample_300k.tsv --out artifacts\cost_demo ^
+  --mode stream --broker-profile config\broker_profile.json
+```
+
+- Copy `config/broker_profile.example.json` to `config/broker_profile.json` and fill every
+  value from the MT5 symbol specification and your account commission schedule.
+- Missing or null fields are rejected (`UnknownSpecError`): the pipeline never invents costs.
+- Labels: `NO_TRADING_COSTS` (price units), `PROVISIONAL_COST_SCENARIO` (unverified profile),
+  `VERIFIED_COSTS` (documented profile with `verified: true`).
+- `summary.json` reports `pnl_unit` so price-unit and account-currency results are never mixed.
+
 ## Hard rules
 Never commit CSV/TSV market data, secrets, or files larger than 5 MB (the synthetic
 fixture under `tests/fixtures/` is the only committed data file).

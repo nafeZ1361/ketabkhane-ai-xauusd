@@ -28,8 +28,9 @@ class _MovingAverage:
 class StreamingBacktester:
     """Feed candles in order; signals execute at the next bar open."""
 
-    def __init__(self, spec):
+    def __init__(self, spec, profile=None):
         self.spec = spec
+        self.profile = profile
         self.fast = _MovingAverage(spec.fast)
         self.slow = _MovingAverage(spec.slow)
         self.prev_fast = None
@@ -43,7 +44,7 @@ class StreamingBacktester:
 
     def _close_position(self, when, price, reason, index):
         entry_time, entry_price, entry_index = self.position
-        pnl = price - entry_price
+        pnl = self.profile.net_pnl(entry_price, price) if self.profile else price - entry_price
         self.trades.append(Trade(entry_time, when, entry_price, price, round(pnl, 6),
                                  index - entry_index, reason))
         self.equity.append(round(self.equity[-1] + pnl, 6))
@@ -70,14 +71,14 @@ class StreamingBacktester:
     def finish(self):
         if self.position is not None and self.last is not None:
             self._close_position(self.last.time, self.last.close, "end_of_data", self.index)
-        result = BacktestResult(spec=self.spec, label=COST_LABEL_NO_COSTS,
+        result = BacktestResult(spec=self.spec, label=self.profile.label if self.profile else COST_LABEL_NO_COSTS,
                                 trades=self.trades, equity=self.equity)
         result.metrics = compute_metrics(self.trades, self.equity)
         return result
 
 
-def run_stream(candles, spec):
-    engine = StreamingBacktester(spec)
+def run_stream(candles, spec, profile=None):
+    engine = StreamingBacktester(spec, profile)
     for candle in candles:
         engine.feed(candle)
     return engine.finish()

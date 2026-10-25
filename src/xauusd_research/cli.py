@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 from .backtest import run_backtest
+from .costs import BrokerProfile
 from .report import write_manifest, write_summary, write_trades
 from .schema import SchemaError, iter_candles, load_candles
 from .strategies import STRATEGY_BY_NAME
@@ -29,19 +30,22 @@ def build_parser():
                      help="broker server timezone policy (default: eu-dst for Europe/Kyiv)")
     run.add_argument("--mode", default="auto", choices=["auto", "stream", "memory"],
                      help="auto streams files larger than 64 MB")
+    run.add_argument("--broker-profile", default=None,
+                     help="JSON broker profile; enables cost-aware results")
     return parser
 
 
-def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="auto"):
+def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="auto", broker_profile=None):
     started = time.perf_counter()
     path = Path(csv_path)
     if not path.is_file():
         raise SchemaError(f"input file not found: {path}")
     streaming = mode == "stream" or (mode == "auto" and path.stat().st_size > STREAM_THRESHOLD_BYTES)
+    profile = BrokerProfile.load(broker_profile) if broker_profile else None
     spec = STRATEGY_BY_NAME[strategy_name]
 
     if streaming:
-        engine = StreamingBacktester(spec)
+        engine = StreamingBacktester(spec, profile)
         validator = StreamingValidator()
         for candle in iter_candles(path, server_tz):
             validator.feed(candle)
@@ -51,7 +55,7 @@ def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="aut
     else:
         candles = load_candles(path, tz_policy=server_tz)
         report = validate(candles)
-        result = None if report.fatal else run_backtest(candles, spec)
+        result = None if report.fatal else run_backtest(candles, spec, profile)
 
     if report.fatal:
         return 2, {"status": "INVALID_DATA", "issues": [i.code for i in report.issues]}
@@ -59,7 +63,8 @@ def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="aut
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     trades_path = write_trades(result, out / "trades.csv")
-    summary_path = write_summary(result, report, out / "summary.json", input_path=path, server_tz=server_tz)
+    summary_path = write_summary(result, report, out / "summary.json", input_path=path,
+                                 server_tz=server_tz, profile=profile.describe() if profile else None)
     manifest_path = write_manifest([path], [trades_path, summary_path], out / "manifest.json")
     return 0, {
         "status": "OK",
@@ -67,6 +72,7 @@ def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="aut
         "strategy": spec.name,
         "server_tz": server_tz,
         "cost_label": result.label,
+        "broker_profile": profile.profile_id if profile else None,
         "metrics": result.metrics,
         "elapsed_seconds": round(time.perf_counter() - started, 3),
         "trades_csv": str(trades_path),
@@ -77,12 +83,17 @@ def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="aut
 def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
-        code, payload = run_pipeline(args.csv, args.out, args.strategy, args.server_tz, args.mode)
+        code, payload = run_pipeline(args.csv, args.out, args.strategy, args.server_tz,
+                                     args.mode, args.broker_profile)
     except SchemaError as exc:
         print(f"schema error: {exc}", file=sys.stderr)
         return 2
+    except ValueError as exc:
+        print(f"broker profile error: {exc}", file=sys.stderr)
+        return 3
     print(payload.get("status"))
     if code == 0:
-        print(f"mode: {payload['mode']}  trades: {payload['metrics']['trades']}  "
-              f"net_pnl: {payload['metrics']['net_pnl']}  elapsed: {payload['elapsed_seconds']}s")
+        print(f"mode: {payload['mode']}  costs: {payload['cost_label']}  "
+              f"trades: {payload['metrics']['trades']}  net_pnl: {payload['metrics']['net_pnl']}  "
+              f"elapsed: {payload['elapsed_seconds']}s")
     return code

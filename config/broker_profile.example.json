@@ -1,0 +1,17 @@
+{
+  "_how_to": "Copy to config/broker_profile.json and fill every value from the MT5 symbol specification and account terms. Null values are rejected on purpose.",
+  "profile_id": "XAUUSD-AMarkets-2026-10",
+  "symbol": "XAUUSD",
+  "contract_size": null,
+  "point_size": null,
+  "tick_size": null,
+  "tick_value": null,
+  "spread_points": null,
+  "slippage_points": null,
+  "commission_per_lot_round_turn": null,
+  "lots": 0.10,
+  "min_lot": null,
+  "lot_step": null,
+  "verified": false,
+  "source": "MT5 -> Symbol -> Specification (screenshot) + account commission schedule"
+}

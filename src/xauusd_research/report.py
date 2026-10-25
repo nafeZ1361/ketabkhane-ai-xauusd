@@ -27,12 +27,14 @@ def write_trades(result, path):
     return path
 
 
-def write_summary(result, report, path, input_path, server_tz="eu-dst"):
+def write_summary(result, report, path, input_path, server_tz="eu-dst", profile=None):
     payload = {
         "strategy": result.spec.name,
         "fast": result.spec.fast,
         "slow": result.spec.slow,
         "cost_label": result.label,
+        "pnl_unit": "ACCOUNT_CURRENCY" if profile else "PRICE_UNITS",
+        "broker_profile": profile,
         "server_tz": server_tz,
         "time_reference": "UTC",
         "rows": report.rows,

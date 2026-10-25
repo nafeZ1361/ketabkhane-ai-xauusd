@@ -56,7 +56,7 @@ def compute_metrics(trades, equity):
     }
 
 
-def run_backtest(candles, spec, costs=0.0):
+def run_backtest(candles, spec, profile=None):
     """Long-only: signal on close, executed at the next bar open."""
     sig = signals(candles, spec)
     trades = []
@@ -70,7 +70,7 @@ def run_backtest(candles, spec, costs=0.0):
         elif sig[i] == -1 and entry_index is not None:
             exit_index = i + 1
             exit_price = candles[exit_index].open
-            pnl = exit_price - entry_price - costs
+            pnl = profile.net_pnl(entry_price, exit_price) if profile else exit_price - entry_price
             trades.append(Trade(candles[entry_index].time, candles[exit_index].time,
                                 entry_price, exit_price, round(pnl, 6),
                                 exit_index - entry_index, "signal"))
@@ -78,12 +78,12 @@ def run_backtest(candles, spec, costs=0.0):
             entry_index = None
     if entry_index is not None:
         exit_price = candles[-1].close
-        pnl = exit_price - entry_price - costs
+        pnl = profile.net_pnl(entry_price, exit_price) if profile else exit_price - entry_price
         trades.append(Trade(candles[entry_index].time, candles[-1].time,
                             entry_price, exit_price, round(pnl, 6),
                             len(candles) - 1 - entry_index, "end_of_data"))
         equity.append(round(equity[-1] + pnl, 6))
-    result = BacktestResult(spec=spec, label=COST_LABEL_NO_COSTS if costs == 0 else "WITH_COSTS",
+    result = BacktestResult(spec=spec, label=profile.label if profile else COST_LABEL_NO_COSTS,
                             trades=trades, equity=equity)
     result.metrics = compute_metrics(trades, equity)
     return result
