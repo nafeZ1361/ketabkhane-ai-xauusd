@@ -4,14 +4,15 @@
 |---|---|---|---|
 | __init__.py | 2 | 2 |  |
 | backtest.py | 74 | 74 |  |
-| cli.py | 52 | 52 |  |
+| cli.py | 65 | 73 | 39, 44, 45, 46, 47, 48, 49, 50 |
 | report.py | 42 | 42 |  |
-| schema.py | 86 | 86 |  |
+| schema.py | 100 | 100 |  |
 | strategies.py | 38 | 38 |  |
-| timezones.py | 45 | 46 | 55 |
-| validation.py | 43 | 43 |  |
-| **total** | **382** | **383** | |
+| stream.py | 67 | 67 |  |
+| timezones.py | 48 | 49 | 58 |
+| validation.py | 71 | 72 | 72 |
+| **total** | **507** | **517** | |
 
-- total coverage: 99.74%
+- total coverage: 98.07%
 - threshold: 80%
-- tests: 49, failures: 0, errors: 0
+- tests: 53, failures: 0, errors: 0

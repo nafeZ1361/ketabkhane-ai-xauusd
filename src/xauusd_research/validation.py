@@ -1,9 +1,9 @@
-"""Data quality checks for loaded candles."""
+"""Data quality checks for loaded candles (streaming and list API)."""
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
-from statistics import median
 
 FATAL_CODES = frozenset({"EMPTY", "DUPLICATE_TIME", "OUT_OF_ORDER", "BAD_OHLC", "NON_POSITIVE_PRICE"})
 
@@ -29,26 +29,62 @@ class ValidationReport:
         return sorted({issue.code for issue in self.issues})
 
 
-def validate(candles, gap_factor=1.5):
-    report = ValidationReport(rows=len(candles))
-    if not candles:
-        report.issues.append(Issue("EMPTY", "no data rows"))
-        return report
-    for row, candle in enumerate(candles):
+class StreamingValidator:
+    """Constant-memory validator: feed candles one by one, then call report()."""
+
+    def __init__(self, gap_factor=1.5):
+        self.gap_factor = gap_factor
+        self.rows = 0
+        self.issues = []
+        self.deltas = Counter()
+        self._prev = None
+
+    def feed(self, candle):
+        row = self.rows
+        self.rows += 1
         prices = (candle.open, candle.high, candle.low, candle.close)
         if any(p <= 0 for p in prices):
-            report.issues.append(Issue("NON_POSITIVE_PRICE", "price <= 0", row))
+            self.issues.append(Issue("NON_POSITIVE_PRICE", "price <= 0", row))
         if candle.high < max(candle.open, candle.close) or candle.low > min(candle.open, candle.close) or candle.high < candle.low:
-            report.issues.append(Issue("BAD_OHLC", "inconsistent OHLC", row))
-    for row in range(1, len(candles)):
-        prev, cur = candles[row - 1], candles[row]
-        if cur.time == prev.time:
-            report.issues.append(Issue("DUPLICATE_TIME", "duplicate timestamp", row))
-        elif cur.time < prev.time:
-            report.issues.append(Issue("OUT_OF_ORDER", "timestamp goes backwards", row))
-    deltas = [(candles[i].time - candles[i - 1].time).total_seconds() for i in range(1, len(candles))]
-    if deltas:
-        typical = median(deltas)
+            self.issues.append(Issue("BAD_OHLC", "inconsistent OHLC", row))
+        prev = self._prev
+        if prev is not None:
+            delta = (candle.time - prev.time).total_seconds()
+            if delta == 0:
+                self.issues.append(Issue("DUPLICATE_TIME", "duplicate timestamp", row))
+            elif delta < 0:
+                self.issues.append(Issue("OUT_OF_ORDER", "timestamp goes backwards", row))
+            else:
+                self.deltas[int(delta)] += 1
+        self._prev = candle
+
+    def _median_delta(self):
+        if not self.deltas:
+            return 0
+        items = sorted(self.deltas.items())
+        total = sum(self.deltas.values())
+        half = total / 2
+        seen = 0
+        for delta, count in items:
+            seen += count
+            if seen >= half:
+                return delta
+        return items[-1][0]
+
+    def report(self):
+        report = ValidationReport(rows=self.rows, issues=list(self.issues))
+        if self.rows == 0:
+            report.issues.append(Issue("EMPTY", "no data rows"))
+            return report
+        typical = self._median_delta()
         if typical > 0:
-            report.gaps = sum(1 for d in deltas if d > gap_factor * typical)
-    return report
+            report.gaps = sum(count for delta, count in self.deltas.items()
+                              if delta > self.gap_factor * typical)
+        return report
+
+
+def validate(candles, gap_factor=1.5):
+    validator = StreamingValidator(gap_factor)
+    for candle in candles:
+        validator.feed(candle)
+    return validator.report()

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import calendar
 from datetime import date, datetime, time, timedelta, timezone
+from functools import lru_cache
 
 UTC = timezone.utc
 TEHRAN = timezone(timedelta(hours=3, minutes=30))
@@ -35,11 +36,13 @@ def _last_sunday(year: int, month: int) -> date:
     return day
 
 
+@lru_cache(maxsize=64)
 def dst_start(year: int) -> datetime:
     """First instant of DST in local time: last Sunday of March, 03:00."""
     return datetime.combine(_last_sunday(year, 3), time(3))
 
 
+@lru_cache(maxsize=64)
 def dst_end(year: int) -> datetime:
     """First instant after DST in local time: last Sunday of October, 04:00."""
     return datetime.combine(_last_sunday(year, 10), time(4))
