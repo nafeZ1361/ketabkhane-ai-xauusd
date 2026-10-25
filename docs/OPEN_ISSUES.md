@@ -2,7 +2,7 @@
 
 | شناسه | شدت | شرح | شواهد | تالش | وضعیت | شرط بسته‌شدن |
 |---|---|---|---|---|---|---|
-| ISSUE-2026-0001 | high | مشخصات واقعی بروکر موجود نیست؛ نتایج فقط با `NO_TRADING_COSTS` معتبرند | `docs/DECISION_LOG.md` (DEC-2026-005) | 0 | OPEN | ارائهٔ مشخصات نماد/حساب و مدل هزینه |
+| ISSUE-2026-0001 | high | مشخصات بروکر مستند و مدل هزینه فعال شد؛ اما اسپرد ثابت (میانه) فرض شده و اسلیپیج مدل نشده | `docs/evidence/cost_run_full.md` | 1 | RESOLVED (با محدودیت) | مدل اسپرد متغیر/تیک‌داده و اسلیپیج در فاز بعد |
 | ISSUE-2026-0002 | high | منشأ و مجوز انتشار دیتاست تأیید نشده | `docs/evidence/data_audit.md` | 1 | OPEN | تأیید منشأ/مجوز |
 | ISSUE-2026-0003 | high | مهندسی معکوس Builder StrategyQuant در `LEGAL_HOLD` | `docs/PROJECT_CHARTER.md` بند ۴.۳ | 0 | BLOCKED | تصمیم حقوقی ثبت‌شده |
 | ISSUE-2026-0004 | low | نبود `pytest`/`coverage`؛ جایگزین `unittest` + tracer داخلی | `docs/evidence/coverage.md` | 1 | RESOLVED | — |
