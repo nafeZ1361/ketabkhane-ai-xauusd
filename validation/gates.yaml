@@ -1,0 +1,20 @@
+# Pre-registered statistical gates for A2.5 (DEC-2026-025)
+version: 1
+dsr:
+  status: INACTIVE_N_TOO_SMALL      # not "zero": inactive until enough trials
+  activation_threshold: 10
+  min_allowed: 0.95
+  note: "با N کمتر از آستانه، عدد DSR گزارش نمی‌شود"
+pbo:
+  status: INACTIVE_M_LESS_THAN_2
+  activation_threshold: 2
+  max_allowed: 0.20
+  note: "با M کمتر از ۲ استراتژی، PBO قابل محاسبه نیست"
+oos:
+  status: DEFERRED_NO_VALID_OOS
+  pristine_range: null
+  min_trades: 30
+bootstrap:
+  block_size: 60
+  alpha: 0.05
+  decision_rule: "lower_ci_bound"

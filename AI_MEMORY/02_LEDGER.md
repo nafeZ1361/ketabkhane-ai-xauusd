@@ -14,7 +14,7 @@
 | 8 | Sanity 2024–2026 | DONE (درون‌نمونه‌ای) | sanity_check_2024_2026.md |
 | 9 | UI A2.1 | DONE | a2_1_ui_skeleton.md |
 | 10 | UI A2.2 | DONE (ولی طبق v2.0 باید پس از A2.5 باشد) | a2_2_run_form.md |
-| 11 | A2.5 اعتبارسنجی آماری | NOT_STARTED | — |
+| 11 | A2.5 اعتبارسنجی آماری | IN_PROGRESS | gates.yaml + splits.py + AT-STAT-06 (لایهٔ اول) |
 | 12 | ADL.md | DONE | docs/ADL.md |
 | 13 | سند مادر ۲.۰ + AI_MEMORY | DONE | PROJECT_CHARTER_V3.md, AI_MEMORY |
 
