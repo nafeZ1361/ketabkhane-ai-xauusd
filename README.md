@@ -35,7 +35,7 @@ python run_mvp.py run --csv "data\XAUUSD_M1_201610030100_202610092354.csv" --out
 ```powershell
 python -m xauusd_research.ui --port 8765
 # GET http://127.0.0.1:8765/health
-# GET http://127.0.0.1:8765/quality
+# GET http://127.0.0.1:8765/quality`n# GET http://127.0.0.1:8765/  (run form)`n# POST http://127.0.0.1:8765/runs  {"dataset":"<file in data/>","strategy":"ma_5_20"}
 ```
 
 Contract: `docs/UI_CONTRACT.md`. Localhost only, no write endpoints.

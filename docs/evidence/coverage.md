@@ -16,4 +16,4 @@
 
 - total coverage: 95.58%
 - threshold: 80%
-- tests: 76, failures: 0, errors: 0
+- tests: 86, failures: 0, errors: 0
