@@ -15,7 +15,8 @@ import pytest
 
 from stage8.monte_carlo import (MonteCarloError, _drawdown_stats, load_trade_pnls,
                                 run_monte_carlo, verify_frozen_inputs)
-from stage8.landscape import COST_GRID_USD, THRESHOLD_GRID, LandscapeError
+from stage8.landscape import (BASELINE_COST, COST_GRID_USD, THRESHOLD_GRID,
+                              LandscapeError)
 
 REPO = Path(__file__).resolve().parents[1]
 RUN1 = REPO / "stage7" / "evidence" / "run1"
@@ -54,7 +55,7 @@ def test_negative_expectancy_never_positive_in_mc_mean():
 
 
 def test_grid_constants_pre_registered():
-    assert BASELINE := 0.30  # baseline cost pinned to run1 contract
+    assert BASELINE_COST == 0.30  # baseline cost pinned to run1 contract
     assert COST_GRID_USD == (0.00, 0.20, 0.30, 0.50)
     assert THRESHOLD_GRID == (0.50, 0.55, 0.60)
 
