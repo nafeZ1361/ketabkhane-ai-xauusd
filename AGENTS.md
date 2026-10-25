@@ -1,6 +1,6 @@
 # Agent Rules
 
-0. Read `docs/AI_HANDOFF.md` first: it is the entry point for any new agent.
+0. Read `AI_MEMORY/00_START_HERE.md` first, then `docs/AI_HANDOFF.md`. `docs/PROJECT_CHARTER_V3.md` is the governing document.
 
 1. Read `vault/STATUS.md`, `README.md`, and `docs/` before any work.
 2. Never commit CSV files, market data, secrets, or any file larger than 5 MB.
