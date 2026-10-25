@@ -28,9 +28,11 @@ class _MovingAverage:
 class StreamingBacktester:
     """Feed candles in order; signals execute at the next bar open."""
 
-    def __init__(self, spec, profile=None):
+    def __init__(self, spec, profile=None, trend_window=None):
         self.spec = spec
         self.profile = profile
+        self.trend_window = trend_window
+        self.trend = _MovingAverage(trend_window) if trend_window else None
         self.fast = _MovingAverage(spec.fast)
         self.slow = _MovingAverage(spec.slow)
         self.prev_fast = None
@@ -60,9 +62,11 @@ class StreamingBacktester:
 
         fast = self.fast.push(candle.close)
         slow = self.slow.push(candle.close)
+        trend_value = self.trend.push(candle.close) if self.trend else None
         if None not in (fast, slow, self.prev_fast, self.prev_slow):
             if self.prev_fast <= self.prev_slow and fast > slow:
-                self.pending = 1
+                if trend_value is None or candle.close > trend_value:
+                    self.pending = 1
             elif self.prev_fast >= self.prev_slow and fast < slow:
                 self.pending = -1
         self.prev_fast, self.prev_slow = fast, slow
@@ -77,8 +81,8 @@ class StreamingBacktester:
         return result
 
 
-def run_stream(candles, spec, profile=None):
-    engine = StreamingBacktester(spec, profile)
+def run_stream(candles, spec, profile=None, trend_window=None):
+    engine = StreamingBacktester(spec, profile, trend_window)
     for candle in candles:
         engine.feed(candle)
     return engine.finish()

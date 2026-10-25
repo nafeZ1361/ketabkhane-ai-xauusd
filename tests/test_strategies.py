@@ -11,9 +11,10 @@ def series(closes):
 
 
 class StrategyTests(unittest.TestCase):
-    def test_three_strategies_are_defined(self):
-        self.assertEqual(len(STRATEGIES), 3)
-        self.assertIn("ma_5_20", STRATEGY_BY_NAME)
+    def test_strategies_are_defined(self):
+        self.assertGreaterEqual(len(STRATEGIES), 5)
+        for name in ("ma_5_20", "ma_10_50", "ma_20_100", "ma_50_200", "ma_100_400"):
+            self.assertIn(name, STRATEGY_BY_NAME)
 
     def test_sma_values(self):
         self.assertEqual(sma([1, 2, 3, 4, 5], 3), [None, None, 2.0, 3.0, 4.0])

@@ -32,10 +32,13 @@ def build_parser():
                      help="auto streams files larger than 64 MB")
     run.add_argument("--broker-profile", default=None,
                      help="JSON broker profile; enables cost-aware results")
+    run.add_argument("--trend-window", type=int, default=None,
+                     help="optional long-term trend filter window")
     return parser
 
 
-def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="auto", broker_profile=None):
+def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="auto", broker_profile=None,
+                 trend_window=None):
     started = time.perf_counter()
     path = Path(csv_path)
     if not path.is_file():
@@ -45,7 +48,7 @@ def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="aut
     spec = STRATEGY_BY_NAME[strategy_name]
 
     if streaming:
-        engine = StreamingBacktester(spec, profile)
+        engine = StreamingBacktester(spec, profile, trend_window)
         validator = StreamingValidator()
         for candle in iter_candles(path, server_tz):
             validator.feed(candle)
@@ -55,7 +58,7 @@ def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="aut
     else:
         candles = load_candles(path, tz_policy=server_tz)
         report = validate(candles)
-        result = None if report.fatal else run_backtest(candles, spec, profile)
+        result = None if report.fatal else run_backtest(candles, spec, profile, trend_window)
 
     if report.fatal:
         return 2, {"status": "INVALID_DATA", "issues": [i.code for i in report.issues]}
@@ -73,6 +76,7 @@ def run_pipeline(csv_path, out_dir, strategy_name, server_tz="eu-dst", mode="aut
         "server_tz": server_tz,
         "cost_label": result.label,
         "broker_profile": profile.profile_id if profile else None,
+        "trend_window": trend_window,
         "metrics": result.metrics,
         "elapsed_seconds": round(time.perf_counter() - started, 3),
         "trades_csv": str(trades_path),
@@ -84,7 +88,7 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         code, payload = run_pipeline(args.csv, args.out, args.strategy, args.server_tz,
-                                     args.mode, args.broker_profile)
+                                     args.mode, args.broker_profile, args.trend_window)
     except SchemaError as exc:
         print(f"schema error: {exc}", file=sys.stderr)
         return 2

@@ -56,9 +56,9 @@ def compute_metrics(trades, equity):
     }
 
 
-def run_backtest(candles, spec, profile=None):
+def run_backtest(candles, spec, profile=None, trend_window=None):
     """Long-only: signal on close, executed at the next bar open."""
-    sig = signals(candles, spec)
+    sig = signals(candles, spec, trend_window)
     trades = []
     equity = [0.0]
     entry_index = None
