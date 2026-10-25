@@ -118,3 +118,10 @@ Contract 100، digits 2، min/step 0.01، کمیسیون 0 (از تاریخچه�
   4. `docs/WORKING_STYLE.md`: سند الزامی سبک کار (قوانین سخت، ساختار، قالب commit، docstring انگلیسی/مستند فارسی، جریان ۷ مرحله‌ای، ترفند `-p no:libtmux`).
 - شواهد: ۴ آزمون جدید (`test_a3_breakout_runner_end_to_end`, `test_a3_runners_refuse_missing_dataset`, `test_build_report_from_ledger_end_to_end`, `test_gates_cli_renders_contract`)؛ کل سوییت **۱۱۴ آزمون سبز**؛ `check_encoding.py`: صفر mojibake.
 - وضعیت گیت‌ها بدون تغییر: DSR `INACTIVE_N_TOO_SMALL`، PBO `INACTIVE_M_LESS_THAN_2`، OOS `DEFERRED_NO_VALID_OOS`. اجرای واقعی گریدها منتظر دیتاست محلی است (خارج از Git).
+
+## DEC-2026-029 — شروع فاز R1 از طرح‌نامه SQX (Rule-AST + موتور + مولد seed)
+- مبنای تصمیم: `docs/research/SQX_BLUEPRINT.md` بخش H فاز ۱–۳ (داده/موتور/بلوک‌ها/مولد تصادفی) و ADL-006 که ژنتیک AST را «تنها با تأیید انسانی و در شاخه جدا» مجاز دانست؛ کاربر صریحاً «انجام بده» را برای گام بعدی تأیید کرد.
+- دامنه این DEC صرفاً R1 است: AST قوانین، بک‌تست قطعی روی همان مدل هزینه منجمد، و مولد تصادفی با seed. **ژنتیک جزیره‌ای (R2)، اتصال گرید AST به ledger/gates و هر اجرای داده واقعی در این commit انجام نشد.**
+- معیار خروج پیش‌ثبت‌شده (پیش از دیدن نتیجه): الف) ۲۰۰۰ استراتژی با seed ثابت → هش‌های بایت‌یکسان و >۱۵۰۰ یکتا؛ ب) برش آینده نباید سیگنال گذشته را تغییر دهد (تست علیت)؛ ج) اجرای دوباره موتور → متریک‌های یکسان. همه محقق شد — شاهد: `docs/evidence/r1_rule_ast.md`.
+- شواهد: سوییت **۱۲۷ آزمون سبز** (`python -m pytest tests/ -p no:libtmux`)؛ smoke run: `strategies=100 elapsed=0.28s sigs_with_trades=64 batch_hash=cca6d37bce8bc962`؛ `check_encoding.py`: صفر mojibake.
+- محدودیت: اعداد fixture مصنوعی‌اند؛ هیچ ادعای مالی از R1 استخراج نمی‌شود.

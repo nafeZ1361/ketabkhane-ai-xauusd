@@ -20,6 +20,7 @@
 | 14 | سند سبک کار مخزن | DONE | docs/WORKING_STYLE.md |
 | 15 | runner خانواده دوم (Donchian) برای M≥2 | DONE | scripts/a3_breakout.py + test end-to-end |
 | 16 | اجرای واقعی گرید A3 روی دیتاست محلی | NOT_STARTED | نیازمند data/*.csv خارج از Git |
+| 17 | فاز R1 طرح‌نامه SQX: Rule-AST + موتور قطعی + مولد seed | DONE | tests/test_rule_ast.py (AT-R1-*), docs/evidence/r1_rule_ast.md، ۱۲۷ آزمون سبز (DEC-2026-029) |
 
 ## بعدی
 1) اجرای a3_grid.py + a3_breakout.py روی دیتاست محلی → N≥10، M=2.

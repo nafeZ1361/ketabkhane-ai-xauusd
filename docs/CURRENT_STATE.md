@@ -43,3 +43,8 @@
 - آزمون‌ها: **۱۱۴ سبز** (شامل AT-STAT-01..06 + چهار آزمون جدید end-to-end). `gates.yaml` دست‌نخورده؛ `config_hash` با `gates.sha256` تأیید.
 - سند سبک کار: `docs/WORKING_STYLE.md` (قوانین، ساختار، قالب commit، `-p no:libtmux`).
 - گام بعد: اجرای واقعی گریدها روی دیتاست محلی (N≥10، M=2 → فعال‌سازی DSR/PBO)، سپس گزارش `docs/evidence/a3_grid_report.md`. OOS همچنان `DEFERRED_NO_VALID_OOS`.
+
+## به‌روزرسانی ۲۰۲۶-۱۰-۲۶ (فاز R1 — Rule-AST و مولد seed، DEC-2026-029)
+- `src/xauusd_research/rule_ast.py` + `rule_engine.py` + `rule_generator.py`: درخت قوانین سریال‌پذیر، بک‌تست قطعی next-bar با SL/TP بدبینانه، مولد تصادفی بازتولیدپذیر (مرجع: SQX_BLUEPRINT لایه‌های ۲–۴؛ ADL-006 صرفاً مرجع طراحی).
+- آزمون‌ها: **۱۲۷ سبز** (+۱۳ آزمون AT-R1-* شامل اثبات علیت و قطعی‌بودن). شاهد: `docs/evidence/r1_rule_ast.md` (batch_hash=cca6d37bce8bc962، determinism PASS).
+- مرزها بدون تغییر: research/paper-only، بدون کدزایی MT5، بدون ادعای سودآوری. ژنتیک جزیره‌ای (R2) نیازمند تأیید انسانی است.
