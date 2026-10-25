@@ -43,7 +43,8 @@ Runs the full test suite and measures line coverage of `src/xauusd_research` (th
 - `docs/CURRENT_STATE.md` - phase, gate status, next allowed action
 - `docs/OPEN_ISSUES.md` - open issues with IDs and closure conditions
 - `docs/DECISION_LOG.md` - decisions, including pre-registered acceptance criteria
-- `docs/evidence/` - audit, coverage, end-to-end, parity and full-run evidence
+- docs/ROADMAP.md - next phase plan (UI, DSL, optimizer)
+- docs/evidence/ - audit, coverage, end-to-end, parity and full-run evidence
 
 ### Broker costs (optional)
 
