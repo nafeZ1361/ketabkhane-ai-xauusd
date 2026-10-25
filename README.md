@@ -30,6 +30,16 @@ python run_mvp.py run --csv "data\XAUUSD_M1_201610030100_202610092354.csv" --out
 - `--mode auto` streams files larger than 64 MB; `stream` forces constant-memory processing (peak RSS ~21 MB on a 300k-row sample, independent of file size apart from the trade list).
 - Spring-forward gaps and autumn ambiguous hours are rejected instead of silently guessed.
 
+### Local UI (read-only skeleton)
+
+```powershell
+python -m xauusd_research.ui --port 8765
+# GET http://127.0.0.1:8765/health
+# GET http://127.0.0.1:8765/quality
+```
+
+Contract: `docs/UI_CONTRACT.md`. Localhost only, no write endpoints.
+
 ### Quality gate
 
 ```powershell

@@ -1,0 +1,1 @@
+"""Local, read-only UI skeleton (stdlib only)."""
