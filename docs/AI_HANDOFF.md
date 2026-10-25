@@ -20,6 +20,8 @@
 6. `docs/DECISION_LOG.md` — ۲۲ تصمیم ثبت‌شده (شامل معیارهای پیش‌ثبت‌شده)
 7. `docs/ROADMAP.md` — نقشهٔ راه فاز A (UI، DSL، بهینه‌ساز)
 8. `docs/UI_CONTRACT.md` — قرارداد API رابط کاربری
+9. `docs/WORKING_STYLE.md` — سبک کار و قراردادهای مخزن (الزامی برای هر عامل)
+10. `docs/research/SQX_BLUEPRINT.md` — طرح‌نامه مفهومی StrategyQuant X (مرجع طراحی فاز Research Factory؛ طبق ADL-006 صرفاً مرجع است، نه الزام)
 
 ## 2. وضعیت فعلی (۲۰۲۶-۱۰-۲۵)
 
