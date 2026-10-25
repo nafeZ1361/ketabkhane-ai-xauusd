@@ -1,0 +1,17 @@
+{
+    "profile_id":  "XAUUSD-AronMarkets-2026-10-s1",
+    "symbol":  "XAUUSD",
+    "contract_size":  100,
+    "point_size":  0.01,
+    "tick_size":  0.01,
+    "tick_value":  1.0,
+    "spread_points":  30,
+    "slippage_points":  0,
+    "commission_per_lot_round_turn":  0.0,
+    "lots":  0.01,
+    "min_lot":  0.01,
+    "lot_step":  0.01,
+    "swap_daily_pct":  0,
+    "verified":  false,
+    "source":  "MT5 Specification screenshot (AronMarkets-Demo, XAUUSD Gold vs US Dollar/Spot): digits=2, contract_size=100, min_lot=0.01, lot_step=0.01, max_lot=10, stops_level=10, spread=floating. Trade history 2026-09-07: commission=0.00 and swap=0.00 for 0.01 lot; price move 6.05 USD on 0.01 lot = 6.05 USD P/L (confirms contract_size=100). point_size = 10^-digits = 0.01 (MT5 definition). tick_value derived = tick_size * contract_size = 1.0. spread_points = median 30 of the dataset SPREAD column (3,489,359 rows); slippage not modeled. | scenario s1: slippage=0 points round-trip, swap_daily_pct=0"
+}

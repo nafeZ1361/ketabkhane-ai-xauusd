@@ -1,8 +1,7 @@
-"""Broker cost model.
+"""Broker cost model: spread, fixed slippage and a daily swap assumption.
 
-A cost profile is data, not a guess: every field must be supplied from a
-documented source. Missing values are rejected instead of defaulted, because an
-unknown cost presented as real would invalidate every research result.
+A cost profile is data, not a guess: every field must come from a documented
+source. Missing values are rejected instead of defaulted.
 """
 
 from __future__ import annotations
@@ -42,6 +41,7 @@ class BrokerProfile:
     lot_step: float
     verified: bool
     source: str
+    swap_daily_pct: float = 0.0
 
     @classmethod
     def from_dict(cls, data: dict) -> "BrokerProfile":
@@ -63,8 +63,12 @@ class BrokerProfile:
         for key in ("spread_points", "slippage_points", "commission_per_lot_round_turn", "tick_size", "tick_value"):
             if values[key] < 0:
                 raise UnknownSpecError(f"{key} must not be negative")
-        return cls(profile_id=str(data["profile_id"]), symbol=str(data["symbol"]), verified=bool(data.get("verified", False)),
-                   source=str(data["source"]), **values)
+        swap = float(data.get("swap_daily_pct") or 0.0)
+        if swap < 0:
+            raise UnknownSpecError("swap_daily_pct must not be negative")
+        return cls(profile_id=str(data["profile_id"]), symbol=str(data["symbol"]),
+                   verified=bool(data.get("verified", False)), source=str(data["source"]),
+                   swap_daily_pct=swap, **values)
 
     @classmethod
     def load(cls, path) -> "BrokerProfile":
@@ -78,13 +82,22 @@ class BrokerProfile:
         return LABEL_VERIFIED if self.verified else LABEL_PROVISIONAL
 
     def cost_per_trade(self) -> float:
-        """Round-turn cost in account currency for the configured lot size."""
+        """Round-turn trading cost in account currency (spread + slippage + commission)."""
         price_cost = (self.spread_points + self.slippage_points) * self.point_size
         return price_cost * self.contract_size * self.lots + self.commission_per_lot_round_turn * self.lots
 
-    def net_pnl(self, entry_price: float, exit_price: float) -> float:
+    def swap_cost(self, entry_price, nights) -> float:
+        if not self.swap_daily_pct or nights <= 0:
+            return 0.0
+        notional = entry_price * self.contract_size * self.lots
+        return nights * (self.swap_daily_pct / 100.0) * notional
+
+    def net_pnl(self, entry_price: float, exit_price: float, entry_time=None, exit_time=None) -> float:
         gross = (exit_price - entry_price) * self.contract_size * self.lots
-        return round(gross - self.cost_per_trade(), 6)
+        nights = 0
+        if entry_time is not None and exit_time is not None:
+            nights = max((exit_time.date() - entry_time.date()).days, 0)
+        return round(gross - self.cost_per_trade() - self.swap_cost(entry_price, nights), 6)
 
     def describe(self) -> dict:
         return {
@@ -97,6 +110,7 @@ class BrokerProfile:
             "spread_points": self.spread_points,
             "slippage_points": self.slippage_points,
             "commission_per_lot_round_turn": self.commission_per_lot_round_turn,
+            "swap_daily_pct": self.swap_daily_pct,
             "lots": self.lots,
             "cost_per_trade": round(self.cost_per_trade(), 6),
         }

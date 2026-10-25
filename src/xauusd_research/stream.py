@@ -46,7 +46,7 @@ class StreamingBacktester:
 
     def _close_position(self, when, price, reason, index):
         entry_time, entry_price, entry_index = self.position
-        pnl = self.profile.net_pnl(entry_price, price) if self.profile else price - entry_price
+        pnl = self.profile.net_pnl(entry_price, price, entry_time, when) if self.profile else price - entry_price
         self.trades.append(Trade(entry_time, when, entry_price, price, round(pnl, 6),
                                  index - entry_index, reason))
         self.equity.append(round(self.equity[-1] + pnl, 6))

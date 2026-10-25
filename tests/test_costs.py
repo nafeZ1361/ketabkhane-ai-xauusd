@@ -89,6 +89,27 @@ class CostTests(unittest.TestCase):
         self.assertEqual(run_backtest(candles, spec, profile).metrics,
                          run_stream(candles, spec, profile).metrics)
 
+
+    def test_swap_cost_per_night(self):
+        profile = self.profile(swap_daily_pct=0.01, slippage_points=0.0)
+        # notional = 4000 * 100 * 0.1 = 40,000 ; 0.01% = 4.0 per night
+        self.assertAlmostEqual(profile.swap_cost(4000.0, 3), 12.0)
+        self.assertAlmostEqual(profile.swap_cost(4000.0, 0), 0.0)
+
+    def test_net_pnl_includes_swap_for_overnight_trade(self):
+        from datetime import datetime
+        profile = self.profile(swap_daily_pct=0.01, slippage_points=2.0)
+        entry = datetime(2024, 1, 1, 22, 0)
+        exit_ = datetime(2024, 1, 4, 2, 0)  # 3 date boundaries
+        net = profile.net_pnl(4000.0, 4010.0, entry, exit_)
+        gross = 10.0 * 100 * 0.1
+        cost = profile.cost_per_trade()
+        self.assertAlmostEqual(net, round(gross - cost - 12.0, 6))
+
+    def test_slippage_is_round_trip_points(self):
+        profile = self.profile(slippage_points=2.0, spread_points=30.0)
+        self.assertAlmostEqual(profile.cost_per_trade(), (30 + 2) * 0.01 * 100 * 0.1 + 7.0 * 0.1)
+
     def test_example_profile_is_rejected_until_filled(self):
         example = Path(__file__).resolve().parents[1] / "config" / "broker_profile.example.json"
         with self.assertRaises(UnknownSpecError):

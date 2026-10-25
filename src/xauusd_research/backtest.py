@@ -70,7 +70,7 @@ def run_backtest(candles, spec, profile=None, trend_window=None):
         elif sig[i] == -1 and entry_index is not None:
             exit_index = i + 1
             exit_price = candles[exit_index].open
-            pnl = profile.net_pnl(entry_price, exit_price) if profile else exit_price - entry_price
+            pnl = profile.net_pnl(entry_price, exit_price, candles[entry_index].time, candles[exit_index].time) if profile else exit_price - entry_price
             trades.append(Trade(candles[entry_index].time, candles[exit_index].time,
                                 entry_price, exit_price, round(pnl, 6),
                                 exit_index - entry_index, "signal"))
@@ -78,7 +78,7 @@ def run_backtest(candles, spec, profile=None, trend_window=None):
             entry_index = None
     if entry_index is not None:
         exit_price = candles[-1].close
-        pnl = profile.net_pnl(entry_price, exit_price) if profile else exit_price - entry_price
+        pnl = profile.net_pnl(entry_price, exit_price, candles[entry_index].time, candles[-1].time) if profile else exit_price - entry_price
         trades.append(Trade(candles[entry_index].time, candles[-1].time,
                             entry_price, exit_price, round(pnl, 6),
                             len(candles) - 1 - entry_index, "end_of_data"))
