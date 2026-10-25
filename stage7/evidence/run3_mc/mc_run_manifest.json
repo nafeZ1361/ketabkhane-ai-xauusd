@@ -1,0 +1,20 @@
+{
+  "artifact_hashes_sha256": {
+    "monte_carlo_summary.json": "e2362eeb2618ba68af9c67a91fbfcfb496756e918832bccb23f7ac5dd81644b3"
+  },
+  "gap": "GAP-005",
+  "inputs_verified": {
+    "equity_curve.csv": "cbd37d33154a5d3bda45a0ca84c504421f8e86e0d4d7993e2609017206a344ba",
+    "performance_metrics.json": "dc779b366dc82657cbe64a60bb83c6680e1599cb7396b593e9e40ad53f015c0f",
+    "predictions.csv": "4ebe01e5c5e35c0fd33681b0d806a441f0d6e375dea03cd1b5cca9c49b55b8a7",
+    "trades.csv": "d62c43cc63969010e2027860827cf665877bf12feb4900a3b09086127b8eb5e9"
+  },
+  "params": {
+    "base_seed": 42,
+    "initial_equity": 100000.0,
+    "replicates": 2000
+  },
+  "summary_payload_sha256": "29bef76f5f93cad2b10347b375259b616695374bec5a5b601bb62cd1b9522b19",
+  "tool": "stage8.monte_carlo",
+  "version": "stage8-v1"
+}

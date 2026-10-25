@@ -1,0 +1,44 @@
+{
+  "base_seed": 42,
+  "distribution_final_pnl": {
+    "mean": -49118.184533,
+    "median": -49100.450273,
+    "p5": -53912.113307,
+    "p95": -44304.624725
+  },
+  "distribution_max_drawdown_pct": {
+    "mean": -49.248163,
+    "median": -49.251954,
+    "p5": -54.020991,
+    "p95": -44.481295
+  },
+  "distribution_max_drawdown_usd": {
+    "max": -39290.389669,
+    "mean": -49289.970034,
+    "median": -49272.80151,
+    "min": -59782.814838,
+    "p5": -54068.021362,
+    "p95": -44550.890069
+  },
+  "gap": "GAP-005",
+  "initial_equity": 100000.0,
+  "method": "iid bootstrap with replacement over run1 holdout trade PnLs",
+  "observed": {
+    "max_drawdown_pct": -49.256289,
+    "max_drawdown_usd": -49290.5548,
+    "net_pnl": -49197.10372
+  },
+  "replicates": 2000,
+  "seed_version": "pcg64-v1",
+  "source_run": "run1",
+  "source_run_manifest_sha256": "c342ca670027ad3f1a048cfc0bce0e80253e7313a563bfad3f57328d151c2d2f",
+  "source_trades_sha256": "d62c43cc63969010e2027860827cf665877bf12feb4900a3b09086127b8eb5e9",
+  "tail_probabilities": {
+    "p_dd_exceeds_25pct_equity": 1.0,
+    "p_dd_exceeds_50pct_equity": 0.409,
+    "p_dd_worse_than_observed": 0.4985,
+    "p_final_pnl_positive": 0.0
+  },
+  "trades_per_replicate": 121647,
+  "version": "stage8-v1"
+}

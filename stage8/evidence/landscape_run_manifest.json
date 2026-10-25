@@ -1,0 +1,18 @@
+{
+  "artifact_hashes_sha256": {
+    "landscape_summary.json": "927a04639d12a6f5470494f83e9a94337bfdc0f4a2926d86b141f8cf452041f7"
+  },
+  "gaps": [
+    "GAP-006",
+    "GAP-007"
+  ],
+  "inputs_verified": {
+    "equity_curve.csv": "cbd37d33154a5d3bda45a0ca84c504421f8e86e0d4d7993e2609017206a344ba",
+    "performance_metrics.json": "dc779b366dc82657cbe64a60bb83c6680e1599cb7396b593e9e40ad53f015c0f",
+    "predictions.csv": "4ebe01e5c5e35c0fd33681b0d806a441f0d6e375dea03cd1b5cca9c49b55b8a7",
+    "trades.csv": "d62c43cc63969010e2027860827cf665877bf12feb4900a3b09086127b8eb5e9"
+  },
+  "summary_payload_sha256": "1eb1903bfc24b6cc6d792c28d78e0bc62794f0ba92ef1741746f3738823b6d3b",
+  "tool": "stage8.landscape",
+  "version": "stage8-v1"
+}
