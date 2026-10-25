@@ -35,3 +35,11 @@
 - `validation/splits.py` + آزمون‌های `AT-STAT-06` (۶ آزمون) اضافه شد؛ کل آزمون‌ها ۹۲.
 - A3 فعال شد (فقط گرید پارامتری، بدون GA) — `docs/A3_SCOPE.md`.
 - A2.2 منجمد؛ ledger/metrics لایهٔ A2.5 هنوز ساخته نشده و گام بعد است.
+
+
+## به‌روزرسانی ۲۰۲۶-۱۰-۲۶ (تکمیل لایهٔ A2.5 — DEC-2026-028)
+- `validation/ledger.py` (دفتر append-only با زنجیرهٔ هش)، `validation/metrics.py` (PSR/DSR/CSCV-PBO/block-bootstrap، stdlib-only) و CLI گیت (`python -m validation.gates --ledger ... --out ...`) ساخته شد.
+- `scripts/a3_grid.py` (خانواده MA، گرید پیش‌ثبت) و `scripts/a3_breakout.py` (خانواده Donchian، entry∈{20,55}/exit=10) — هر دو بدون دیتاست exit 2 و «عدد جعلی» تولید نمی‌کنند.
+- آزمون‌ها: **۱۱۴ سبز** (شامل AT-STAT-01..06 + چهار آزمون جدید end-to-end). `gates.yaml` دست‌نخورده؛ `config_hash` با `gates.sha256` تأیید.
+- سند سبک کار: `docs/WORKING_STYLE.md` (قوانین، ساختار، قالب commit، `-p no:libtmux`).
+- گام بعد: اجرای واقعی گریدها روی دیتاست محلی (N≥10، M=2 → فعال‌سازی DSR/PBO)، سپس گزارش `docs/evidence/a3_grid_report.md`. OOS همچنان `DEFERRED_NO_VALID_OOS`.

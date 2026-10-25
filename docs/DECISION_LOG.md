@@ -107,3 +107,14 @@ Contract 100، digits 2، min/step 0.01، کمیسیون 0 (از تاریخچه�
 - قاعدهٔ حکم: هم‌پوشانی CI ⇒ نسخهٔ کامل مرجع؛ نبود هم‌پوشانی ⇒ توقف و تحلیل ریشه‌ای، بدون انتخاب نسخه.
 - ممنوعیت‌ها: تغییر قاعده پس از قفل، اجرا روی OOS، انتخاب بر اساس PF بالاتر.
 - **یادداشت یکپارچگی:** این DEC به `data_full_sha256 = a7d856…` (مربوط به پروژهٔ قبلی) و فایل اصلاح‌شدهٔ موجود ارجاع می‌داد که در این مخزن نبودند؛ هش واقعی دیتاست فعلی ثبت شد و `data_corrected` تا تولید فایل `TBD` می‌ماند. همچنین `DEC-2026-026` در تاریخچهٔ این مخزن وجود ندارد (شماره‌گذاری از منبع دیگری آمده است).
+
+
+## DEC-2026-028 — تکمیل لایهٔ A2.5، گرید Donchian برای M≥2، و سند سبک کار
+- مبنای تصمیم: `A3_SCOPE.md` قید ۴ (دو خانوادهٔ استراتژی) و بند «معیار خروج» نیازمند runner دوم و ابزار گزارش gates است؛ همچنین سبک کار مخزن تا این تاریخ فقط ضمنی بود.
+- تصمیم‌ها:
+  1. `validation/gates.py`: API جدید `build_report_from_ledger` + CLI (`python -m validation.gates --ledger ... --out ...`) که گزارش قرارداد JSON را مستقیم از دفتر آزمایش تولید می‌کند. آستانه‌های `gates.yaml` دست نخورد (`config_hash` تأییدشده با `gates.sha256`).
+  2. `scripts/a3_breakout.py`: گرید پیش‌ثبت Donchian (entry ∈ {20,55}، exit=10، long-only، اجرای next-bar-open) به‌عنوان خانوادهٔ دوم برای فعال‌سازی شرط M≥2. بدون دیتا exit code 2 («refusing to fabricate evidence»).
+  3. هر دو runner از متغیر محیط `A3_LEDGER_PATH` برای هدایت دفتر به بیرون از `artifacts/` در تست‌ها پشتیبانی می‌کنند.
+  4. `docs/WORKING_STYLE.md`: سند الزامی سبک کار (قوانین سخت، ساختار، قالب commit، docstring انگلیسی/مستند فارسی، جریان ۷ مرحله‌ای، ترفند `-p no:libtmux`).
+- شواهد: ۴ آزمون جدید (`test_a3_breakout_runner_end_to_end`, `test_a3_runners_refuse_missing_dataset`, `test_build_report_from_ledger_end_to_end`, `test_gates_cli_renders_contract`)؛ کل سوییت **۱۱۴ آزمون سبز**؛ `check_encoding.py`: صفر mojibake.
+- وضعیت گیت‌ها بدون تغییر: DSR `INACTIVE_N_TOO_SMALL`، PBO `INACTIVE_M_LESS_THAN_2`، OOS `DEFERRED_NO_VALID_OOS`. اجرای واقعی گریدها منتظر دیتاست محلی است (خارج از Git).
