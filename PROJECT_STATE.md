@@ -1,10 +1,9 @@
 # PROJECT_STATE.md
 
-Last updated (UTC): 2026-10-26T00:00:00Z
+Last updated (UTC): 2026-10-08T11:57:00Z
 Updated by: QCode/nafeZ1361
-Current stage: Stage 8 Validation Research (GAP-005/006/007 implemented on feat/stage8-validation-research)
+Current stage: Stage 7.3 Governance Alignment
 Current HEAD (main): 4448ff0
-Stage 8 branch HEAD: b5c0caf (feat/stage8-validation-research)
 
 ## PROJECT GOAL
 
@@ -12,11 +11,9 @@ golden-librarytallaii یک مخزن پژوهشی و اعتبارسنجی برا�
 
 ## CURRENT STATUS
 
-- Baseline test suite: 179 passed + 2 subtests (pytest tests/ -q, full green; includes 8 Stage 8 tests).
+- Baseline test suite: 171 passed + 2 subtests (pytest tests/ -q, full green).
 - Stage 7.1 Technical Closure: approved (Decision 4), code fixes staged in PRs below.
 - Stage 7.3 Governance Alignment: DONE (pending final signature).
-- Stage 8 GAP-005 Monte Carlo: IMPLEMENTED (stage8/monte_carlo.py) — conclusion: no edge, not bad luck (P(final PnL > 0) = 0.0 over 2000 replicates on run1 holdout trades).
-- Stage 8 GAP-006/007 Parameter landscape: IMPLEMENTED (stage8/landscape.py) — baseline cell reproduces run1 byte-exact (status PASS); threshold 0.60 positive across all cost levels but selection bias on same holdout applies — NOT a claim of edge until out-of-sample test.
 - Runtime mode: PAPER by default; LIVE blocked unless ENABLE_LIVE_TRADING=YES.
 
 ## LOCKED
@@ -39,13 +36,13 @@ Tracked in stage7/GAPS.md (PR #16):
 
 ## POTENTIAL ENHANCEMENTS
 
-Tracked in stage7/GAPS.md:
+Tracked in stage7/GAPS.md (GAP-003..GAP-008; none implemented):
 
 - GAP-003 — Time-of-Day regime — RESEARCH GAP — Stage 7.2/8 — no impl
 - GAP-004 — ATR/Volatility regime — RESEARCH GAP — Stage 8 — no impl
-- GAP-005 — Monte Carlo trade-sequence — VALIDATION GAP — Stage 8 — IMPLEMENTED (stage8/monte_carlo.py, evidence/stage8/evidence/monte_carlo_summary.json)
-- GAP-006 — Parameter landscape — VALIDATION GAP — Stage 8 — IMPLEMENTED (stage8/landscape.py, evidence/stage8/evidence/landscape_summary.json)
-- GAP-007 — Slippage/execution friction — VALIDATION GAP — HIGH PRIORITY — Stage 8 — IMPLEMENTED as cost grid (0.00/0.20/0.30/0.50 USD) inside landscape.py
+- GAP-005 — Monte Carlo trade-sequence — VALIDATION GAP — Stage 8 — no impl
+- GAP-006 — Parameter landscape — VALIDATION GAP — Stage 8 — no impl
+- GAP-007 — Slippage/execution friction — VALIDATION GAP — HIGH PRIORITY — Stage 8 (before any filter work) — no impl (rationale: Stage 7.1 post-cost negative; validate friction first)
 - GAP-008 — OFI/Depth Skew — RESEARCH CANDIDATE — Stage 7.2 — dep: L2/L3 data — no impl
 
 ## COMPLETED WORK
@@ -58,8 +55,6 @@ Tracked in stage7/GAPS.md:
 | F-003 | PR #15 | commits 8df7799, 1dcfff6 |
 | F-004 | PR #16 | commit 222b76b |
 | GAPS registry | PR #16 | commit 80f5cf3 (stage7/GAPS.md) |
-| GAP-005 Monte Carlo | Stage 8 branch | commit b5c0caf (stage8/monte_carlo.py + tests) |
-| GAP-006/007 Landscape | Stage 8 branch | commit b5c0caf (stage8/landscape.py + tests) |
 
 Merged into main (2026-10-08): #17 → be8da8c, #15 → c5bb24b, #16 → 7f61d64.
 
@@ -70,8 +65,6 @@ Merged into main (2026-10-08): #17 → be8da8c, #15 → c5bb24b, #16 → 7f61d64
 3. DONE — Human Confirmation for PR #16 merge (received; merged 7f61d64).
 4. DONE — Human Confirmation for PROJECT_STATE PR merges (received; #17 merged be8da8c, #18 merged 4448ff0).
 5. Stage 8 Final Audit (after Stage 7.3 final signature).
-6. DONE — GAP-005 Monte Carlo + GAP-006/007 landscape implemented and tested (branch feat/stage8-validation-research, commits b5c0caf + fix commit).
-7. NEXT — Honest out-of-sample test for threshold-0.60 candidate: fresh unseen holdout window (no re-selection on it), then PR merge with separate Human Confirmation.
 
 ## HARD CONSTRAINTS
 

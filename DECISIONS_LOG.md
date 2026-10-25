@@ -12,6 +12,3 @@
 | 8 | 2026-10-09 | F-006 | A | document as GAP only; no code change; defer to Stage 8 |
 | 9 | 2026-10-09 | F-004 | B | FIX NOW — config.py single source + execution.py:53 → from_env() |
 | 10 | 2026-10-09 | GAP location | A | new stage7/GAPS.md |
-| 11 | 2026-10-26 | Stage 8 GAP-005/006/007 | A | implement Monte Carlo + parameter landscape on dedicated branch; frozen run1 untouched; evidence committed |
-| 12 | 2026-10-26 | MC verdict interpretation | A | P(positive)=0.0 ⇒ no-edge (not bad luck); hold paper/live block |
-| 13 | 2026-10-26 | thr-0.60 positive cells | A | NOT a claim of edge — selection bias on same holdout; requires fresh out-of-sample test before any adoption |

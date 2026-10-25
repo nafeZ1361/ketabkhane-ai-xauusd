@@ -58,27 +58,27 @@ SCOPE: stage7/GAPS.md (new), module/execution.py:53, module/config.py (docs only
 - Implementation: none ("no impl")
 - Status: **OPEN**
 
-## GAP-005 — Monte Carlo trade-sequence — IMPLEMENTED (VALIDATION GAP)
+## GAP-005 — Monte Carlo trade-sequence — OPEN (VALIDATION GAP)
 
 - Type: VALIDATION GAP
 - Target stage: Stage 8
-- Implementation: stage8/monte_carlo.py (iid bootstrap, seed pcg64-v1, base_seed=42, 2000 replicates); evidence: stage8/evidence/monte_carlo_summary.json; tests: tests/test_stage8_validation.py
-- Status: **IMPLEMENTED** — Verdict: no-edge, not bad luck. P(final PnL > 0) = 0.0; median maxDD ≈ -49.3% of equity on run1 holdout trades at baseline cost 0.30 USD.
+- Implementation: none ("no impl")
+- Status: **OPEN**
 
-## GAP-006 — Parameter landscape — IMPLEMENTED (VALIDATION GAP)
+## GAP-006 — Parameter landscape — OPEN (VALIDATION GAP)
 
 - Type: VALIDATION GAP
 - Target stage: Stage 8
-- Implementation: stage8/landscape.py (pre-registered grid: cost {0.00,0.20,0.30,0.50} × threshold {0.50,0.55,0.60}); evidence: stage8/evidence/landscape_summary.json (baseline cell reproduces run1 byte-exact, status PASS)
-- Status: **IMPLEMENTED** — thr=0.60 cells positive across all cost levels (PF 1.51–1.62, only 478 trades). CAVEAT: selection on same holdout ⇒ NOT an edge claim until fresh out-of-sample test.
+- Implementation: none ("no impl")
+- Status: **OPEN**
 
-## GAP-007 — Slippage/execution friction — IMPLEMENTED (VALIDATION GAP, HIGH PRIORITY)
+## GAP-007 — Slippage/execution friction — OPEN (VALIDATION GAP, HIGH PRIORITY)
 
 - Type: VALIDATION GAP
 - Priority: HIGH — Stage 8, before any filter work
 - Rationale: Stage 7.1 post-cost result is negative; validate friction first.
-- Implementation: cost grid inside stage8/landscape.py (per-trade friction 0.00–0.50 USD)
-- Status: **IMPLEMENTED** — Edge evaporates with friction at thr=0.50 (net -49k at 0.30); thr=0.60 survives up to 0.50 USD but sample is tiny (478 trades).
+- Implementation: none ("no impl")
+- Status: **OPEN**
 
 ## GAP-008 — OFI/Depth Skew — OPEN (RESEARCH CANDIDATE)
 

@@ -1,35 +1,18 @@
-# Local market data (CSV stays out of Git)
-data/*
-!data/.gitkeep
-
-# Any CSV anywhere
-*.csv
-
-# Quarantined legacy code: loose local copies are ignored,
-# the canonical source archive under legacy/source/ is tracked.
-/legacy/backtester.py
-/legacy/bot.ipynb
-/legacy/modifyPosition.py
-/legacy/mt5.py
-/legacy/stg.py
-/legacy/reference/
-
-# Synthetic test fixture is required and safe to commit
-!tests/fixtures/*.csv
-
-# Python
 __pycache__/
 *.pyc
 .venv/
-
-# Secrets
+venv/
+env/
 .env
-*.pem
-*.key
-
-# Obsidian
-.obsidian/workspace.json
-
-# Generated artifacts
-artifacts/*
-!artifacts/.gitkeep
+.env.local
+.vscode/
+.idea/
+*.log
+logs/*.jsonl
+trade_state.json
+paper_state.json
+volume_state.json
+memory/*.jsonl
+*.csv
+*.zip
+*.rar
