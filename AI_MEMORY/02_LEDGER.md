@@ -18,6 +18,7 @@
 | 12 | ADL.md | DONE | docs/ADL.md |
 | 13 | سند مادر ۲.۰ + AI_MEMORY | DONE | PROJECT_CHARTER_V3.md, AI_MEMORY |
 | 14 | ارتقای نهادی: Meta-Labeling + FracDiff + Regime | DONE | docs/evidence/institutional_enhancements.md |
+| 15 | اندیکاتورهای TradingView + حلقه بازخورد یادگیری ماشین (DEC-2026-029) | DONE | docs/evidence/tv_indicators_ml_feedback.md |
 
 ## بعدی
 1) `ADL.md` بساز (سند پنجم الزامی).
