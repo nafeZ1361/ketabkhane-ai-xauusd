@@ -17,6 +17,7 @@
 | 11 | A2.5 اعتبارسنجی آماری | IN_PROGRESS | gates.yaml + splits.py + AT-STAT-06 (لایهٔ اول) |
 | 12 | ADL.md | DONE | docs/ADL.md |
 | 13 | سند مادر ۲.۰ + AI_MEMORY | DONE | PROJECT_CHARTER_V3.md, AI_MEMORY |
+| 14 | ارتقای نهادی: Meta-Labeling + FracDiff + Regime | DONE | docs/evidence/institutional_enhancements.md |
 
 ## بعدی
 1) `ADL.md` بساز (سند پنجم الزامی).
