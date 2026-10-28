@@ -13,6 +13,7 @@
 | ISSUE-2026-0009 | high | MA 5/20 اقتصادی نبود (ناخالص منفی، ۱۱۴ هزار معامله) | `docs/evidence/strategy_attempts.md` | 3 | RESOLVED (تلاش ۳) | MA 100/400 + فیلتر روند |
 | ISSUE-2026-0010 | high | اعتبارسنجی خارج از نمونه: دادهٔ M1 معتبر در دسترس نیست | `docs/evidence/out_of_sample_validation_2008_2015.md` | 0 | DEFERRED | دادهٔ M1 ۲۰۰۸–۲۰۱۵ یا دادهٔ پس از ۲۰۲۶-۱۰-۰۹ |
 | ISSUE-2026-0011 | high | مدل‌سازی هزینهٔ واقعی (اسلیپیج + سواپ) | `docs/evidence/cost_modeling.md` | 1 | RESOLVED | سناریوی کامل مثبت ماند |
+| ISSUE-2026-0012 | medium | نبود گیت CI روی GitHub؛ تست‌ها فقط محلی اجرا می‌شدند و امکان false-green داشتند | PR #1 (`a22ae23`)، PR #2 (`229a65d`)، artifact `ci_evidence.json` (run 40694483115: passed=109, failed=0) | 3 | RESOLVED | `.github/workflows/ci.yml` (gate تست + evidence JSON) و `.github/workflows/gov-drift.yml` (نگهبان drift روزانه) فعال و سبز روی main |
 
 | DATA_2008_2015_RECOVERY | high | تأمین دادهٔ M1 معتبر ۲۰۰۸–۲۰۱۵ (بروکر فعلی → Dukascopy → HistData)؛ سقف سه تلاش | `docs/evidence/out_of_sample_validation_2008_2015.md` | 1 | OPEN | داده با ≥ ۳۰ معامله در OOS یا پذیرش رسمی BLOCKED |
 

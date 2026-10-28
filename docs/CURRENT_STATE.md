@@ -35,3 +35,10 @@
 - `validation/splits.py` + آزمون‌های `AT-STAT-06` (۶ آزمون) اضافه شد؛ کل آزمون‌ها ۹۲.
 - A3 فعال شد (فقط گرید پارامتری، بدون GA) — `docs/A3_SCOPE.md`.
 - A2.2 منجمد؛ ledger/metrics لایهٔ A2.5 هنوز ساخته نشده و گام بعد است.
+
+## به‌روزرسانی ۲۰۲۶-۱۰-۲۸ (زیرساخت حاکمیتی CI — ISSUE-2026-0012 RESOLVED)
+- گیت تست روی GitHub Actions فعال شد: `.github/workflows/ci.yml` — اجرای کامل suite در هر push/PR + تولید artifact ماشین‌قابل‌بررسی `ci_evidence.json` (schema `ci-test-evidence/v1`). **فقط‌خواندنی** است؛ هیچ auto-commit/push/merge ندارد (Human-in-the-loop حفظ شده).
+- نگهبان drift: `.github/workflows/gov-drift.yml` — cron روزانه؛ شمارش واقعی تست‌ها را با ادعاهای `AI_MEMORY/01_STATE.md` مقایسه و در صورت drift fail می‌کند.
+- رفع باگ collect در pytest 9: `pytest.ini` با `-p no:libtmux` (پلاگین bundled مخرب؛ پروژه هیچ استفاده‌ای از libtmux ندارد).
+- شواهد: PR #1 (`a22ae23`) + PR #2 (`229a65d`)؛ run نهایی main: test-gate ✅ (هر دو پایتون 3.10/3.12)، sentinel ✅ «No document/repo drift detected»؛ evidence: passed=109, failed=0.
+- تگ rollback: `checkpoint/pre-ci-gate-main` (روی `a0c67bd`).
