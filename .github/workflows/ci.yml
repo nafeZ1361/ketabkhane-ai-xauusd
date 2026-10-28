@@ -1,13 +1,18 @@
 name: CI — Test & Evidence Gate
 
 # Read-only validation workflow. It NEVER commits, pushes, merges, or rewrites
-# history (see AGENTS.md "Non-negotiable rules" and PROJECT_STATE.md HARD
-# CONSTRAINTS). Merge remains gated on separate Human Confirmation.
+# history (AGENTS.md rules; charter boundaries). Merge remains gated on
+# separate Human Confirmation.
+#
+# The suite is stdlib-only (pyproject: dependencies = []), so no pip install
+# step is needed. pytest.ini supplies pythonpath/testpaths and disables the
+# bundled libtmux plugin, which otherwise crashes collection under pytest>=9.
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,42 +20,50 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']   # 3.10 = requires-python floor
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: pip
+          python-version: ${{ matrix.python-version }}
 
-      # MetaTrader5 wheel is Windows-only; tests mock it, so we skip its install.
-      - name: Install dependencies
-        run: |
-          grep -vi '^MetaTrader5' requirements.txt > requirements.ci.txt
-          python -m pip install --upgrade pip
-          pip install -r requirements.ci.txt
+      - name: Run test suite
+        run: python -m pytest | tee test_output.log
 
-      - name: Run test suite (exact counts)
-        run: pytest tests/ -q | tee test_output.log
+      - name: Quality gate (tests + coverage >= 80%, project's own script)
+        run: python scripts/quality.py
+
+      - name: Encoding guard (no mojibake, project rule)
+        run: python scripts/check_encoding.py
 
       - name: Emit machine-checkable evidence JSON
         if: always()
         run: |
-          PASSED=$(grep -oE '[0-9]+ passed' test_output.log | head -1 | awk '{print $1}' || echo 0)
-          FAILED=$(grep -oE '[0-9]+ failed' test_output.log | head -1 | awk '{print $1}' || echo 0)
-          SUBTESTS=$(grep -oE '[0-9]+ subtests passed' test_output.log | head -1 | awk '{print $1}' || echo 0)
-          python - <<EOF
-          import json, os
+          python - <<'EOF'
+          import json, os, re
+          log = ""
+          try:
+              log = open("test_output.log", encoding="utf-8", errors="replace").read()
+          except FileNotFoundError:
+              pass
+          m_pass = re.search(r"(\d+) passed", log)
+          m_fail = re.search(r"(\d+) failed", log)
+          m_err = re.search(r"(\d+) error", log)
           evidence = {
-            "schema": "ci-test-evidence/v1",
-            "commit_sha": os.environ.get("GITHUB_SHA", ""),
-            "run_id": os.environ.get("GITHUB_RUN_ID", ""),
-            "passed": int("${PASSED:-0}" or 0),
-            "failed": int("${FAILED:-0}" or 0),
-            "subtests_passed": int("${SUBTESTS:-0}" or 0),
-            "status": "PASS" if int("${FAILED:-0}" or 0) == 0 and int("${PASSED:-0}" or 0) > 0 else "FAIL",
+              "schema": "ci-test-evidence/v1",
+              "commit_sha": os.environ.get("GITHUB_SHA", ""),
+              "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "python": os.environ.get("python-version") or os.environ.get("ImageVersion", ""),
+              "passed": int(m_pass.group(1)) if m_pass else 0,
+              "failed": int(m_fail.group(1)) if m_fail else 0,
+              "errors": int(m_err.group(1)) if m_err else 0,
+              "status": "PASS" if (m_pass and not m_fail and not m_err) else "FAIL",
           }
           with open("ci_evidence.json", "w") as f:
               json.dump(evidence, f, indent=2)
@@ -61,7 +74,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-evidence
+          name: ci-evidence-py${{ matrix.python-version }}
           path: |
             ci_evidence.json
             test_output.log
