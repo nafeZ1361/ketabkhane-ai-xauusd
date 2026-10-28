@@ -27,6 +27,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install test runner (CI infrastructure only, not a project dependency)
+        run: python -m pip install --quiet pytest==8.3.4
+
       - name: Compare doc claims vs real repo state
         env:
           PYTHONPATH: src
