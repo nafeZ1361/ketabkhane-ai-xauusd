@@ -33,6 +33,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # The library itself is stdlib-only (pyproject: dependencies = []), but
+      # the *test runner* needs pytest, which is not vendored in the repo.
+      # Pin it for reproducible evidence; no other packages are installed.
+      - name: Install test runner (pytest only)
+        run: python -m pip install --disable-pip-version-check "pytest==8.3.4"
+
       - name: Run test suite
         # NOTE: `set -o pipefail` so a pytest failure fails the step even
         # though output is piped to tee (default shell pipeline status would
