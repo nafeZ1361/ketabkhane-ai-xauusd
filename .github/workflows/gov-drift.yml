@@ -1,0 +1,85 @@
+name: Governance — Drift Sentinel
+
+# Read-only audit of the repo's own governance claims. It NEVER commits,
+# pushes, merges, or edits files (AGENTS.md rules 2-6; charter boundaries).
+# A failure here means docs drifted from reality and reconciliation must
+# happen via a dedicated branch + PR with separate Human Confirmation.
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/CURRENT_STATE.md', 'docs/OPEN_ISSUES.md', 'vault/STATUS.md',
+            'AI_MEMORY/01_STATE.md', '.github/workflows/gov-drift.yml']
+  pull_request:
+    paths: ['docs/CURRENT_STATE.md', 'docs/OPEN_ISSUES.md', 'vault/STATUS.md',
+            'AI_MEMORY/01_STATE.md']
+  schedule:
+    - cron: '0 6 * * *'   # daily re-verification (re-verify what you rely on)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare doc claims vs real repo state
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'EOF'
+          import os, re, subprocess, sys
+
+          problems = []
+
+          # 1) Every issue row in docs/OPEN_ISSUES.md must carry a known status.
+          issues = open("docs/OPEN_ISSUES.md", encoding="utf-8").read()
+          known = {"OPEN", "RESOLVED", "BLOCKED", "DEFERRED", "IN PROGRESS"}
+          ids = set()
+          for r in issues.splitlines():
+              if not r.strip().startswith("|"):
+                  continue
+              cols = [c.strip() for c in r.strip().strip("|").split("|")]
+              if len(cols) < 7 or not re.fullmatch(r"(ISSUE-\d{4}-\d{4}|[A-Z0-9_]{4,})", cols[0]):
+                  continue
+              ids.add(cols[0])
+              status = cols[5].split("(")[0].strip()   # col idx 5 == ستون وضعیت
+              if status not in known:
+                  problems.append(f"{cols[0]}: unknown/unparsable status '{cols[5]}'")
+          print(f"OPEN_ISSUES.md: {len(ids)} unique issue ids parsed")
+
+          # 2) Claimed test counts must include what pytest actually collects.
+          fa2en = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
+          docs = (open("docs/CURRENT_STATE.md", encoding="utf-8").read() + "\n"
+                  + open("AI_MEMORY/01_STATE.md", encoding="utf-8").read())
+          claimed = {m.translate(fa2en) for m in re.findall(r"([\d\u0660-\u0669]+)\s*(?:آزمون|tests)", docs)}
+          out = subprocess.run([sys.executable, "-m", "pytest", "--co", "-q"],
+                               capture_output=True, text=True).stdout
+          actual = sum(int(m) for m in re.findall(r":\s*(\d+)", out))
+          print(f"actual collected tests : {actual}")
+          print(f"doc-claimed test counts: {sorted(claimed, key=int)}")
+          if str(actual) not in claimed:
+              problems.append(f"test-count drift: docs claim {sorted(claimed)}, pytest collects {actual}")
+
+          # 3) vault/STATUS.md must point at an existing authoritative doc.
+          vstat = open("vault/STATUS.md", encoding="utf-8").read()
+          m = re.search(r"Authoritative state:\s*`([^`]+)`", vstat)
+          if not m:
+              problems.append("vault/STATUS.md: no 'Authoritative state' pointer")
+          elif not os.path.exists(m.group(1)):
+              problems.append(f"vault/STATUS.md points to missing file: {m.group(1)}")
+
+          if problems:
+              print("\nDRIFT DETECTED:")
+              for p in problems:
+                  print(" -", p)
+              sys.exit(1)
+          print("\nNo document/repo drift detected.")
+          EOF
+
+      - name: "Encoding guard (project rule: no mojibake)"
+        run: python scripts/check_encoding.py
