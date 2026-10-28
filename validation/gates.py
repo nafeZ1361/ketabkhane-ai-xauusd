@@ -17,7 +17,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
+
+from validation.metrics import cscv_pbo, deflated_sharpe_ratio
 
 ROOT = Path(__file__).resolve().parents[1]
 GATES_PATH = ROOT / "validation" / "gates.yaml"
@@ -68,6 +71,87 @@ def config_hash(path=None) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def compute_dsr(records: list[dict], metrics_by_seq: dict[int, dict]) -> float | None:
+    """Deflated Sharpe Ratio of the best trial over all ledger trials.
+
+    Uses per-trade Sharpe ratios recorded by the A3 runners (same units across
+    trials) and the extreme-value benchmark derived from their spread — no
+    external constant is invented (see validation.metrics.deflated_sharpe_ratio).
+    Returns ``None`` when fewer than 2 usable Sharpes exist.
+    """
+    sharpes = []
+    for r in records:
+        s = metrics_by_seq.get(r["seq"], {}).get("sharpe")
+        if s is not None:
+            sharpes.append(float(s))
+    if len(sharpes) < 2:
+        return None
+    best_idx = max(range(len(sharpes)), key=lambda i: sharpes[i])
+    dsr = deflated_sharpe_ratio(sharpes, candidate_index=best_idx)
+    return None if dsr is None else round(dsr, 6)
+
+
+def compute_pbo(records: list[dict], metrics_by_seq: dict[int, dict],
+                groups: int = 8):
+    """CSCV-PBO estimated at STRATEGY level over the full pre-registered grid.
+
+    Each ledger cell (strategy) contributes one row; its per-trade PnL is cut
+    into ``groups`` contiguous time slices and scored by profit factor per
+    slice — this is exactly the CSCV input shape (Bailey et al. 2016). The
+    runner recomputes each cell deterministically from the same CSV with the
+    same engine semantics as scripts/a3_grid.py / a3_breakout.py.
+
+    Returns ``None`` when fewer than 2 usable strategies exist or the trade
+    sample cannot fill ``groups`` slices (gate stays INSUFFICIENT — never
+    fabricates an estimate).
+    """
+    import os
+    csv_path = os.environ.get("A3_CSV_PATH")
+    if not csv_path or not Path(csv_path).is_file():
+        return None
+    profile_path = os.environ.get("A3_PROFILE_PATH")
+
+    from xauusd_research.backtest import Backtester  # noqa: E402
+    from xauusd_research.costs import BrokerProfile  # noqa: E402
+    from xauusd_research.schema import iter_candles  # noqa: E402
+
+    profile = BrokerProfile.load(profile_path) if profile_path else None
+    candles = list(iter_candles(Path(csv_path)))
+
+    score_rows: list[list[float]] = []
+    for r in records:
+        params = r.get("params") or {}
+        window_a = params.get("window_a") or params.get("entry_window")
+        window_b = params.get("window_b") or params.get("exit_window")
+        if not window_a or not window_b:
+            continue
+        bt = Backtester(f"{r['strategy']}-pbo", int(window_a), int(window_b),
+                        trend_window=params.get("trend_window"),
+                        profile=profile)
+        for candle in candles:
+            bt.feed(candle)
+        result = bt.finish()
+        pnls = [t.pnl for t in result.trades]
+        if len(pnls) < 2 * groups:
+            continue  # too few trades to support the CSCV partition
+        per = len(pnls) // groups
+        trimmed = pnls[:per * groups]
+        row = []
+        for g in range(groups):
+            chunk = trimmed[g * per:(g + 1) * per]
+            wins = sum(p for p in chunk if p > 0)
+            losses = -sum(p for p in chunk if p < 0)
+            row.append(wins / losses if losses > 0 else (float("inf") if wins > 0 else 0.0))
+        score_rows.append(row)
+
+    if len(score_rows) < 2:
+        return None
+    result = cscv_pbo(score_rows, groups=groups)
+    if isinstance(result, dict):
+        result["scope"] = "strategy_level_over_preregistered_grid"
+    return result
+
+
 def evaluate(ledger_records: list[dict], metrics_by_seq: dict[int, dict],
              families: set[str], gates: dict | None = None,
              data_version_hash: str | None = None, seed: int | None = None) -> dict:
@@ -82,10 +166,18 @@ def evaluate(ledger_records: list[dict], metrics_by_seq: dict[int, dict],
     reasons_fail: list[str] = []
     reasons_insufficient: list[str] = []
 
+    # Compute DSR/PBO directly from ledger evidence when stored metrics are
+    # absent (runners record per-cell metrics only; the deflation/CSCV math is
+    # a gate-level concern). Computed values are reported, never fabricated:
+    # None keeps the gate INSUFFICIENT.
+    dsr_computed = compute_dsr(ledger_records, metrics_by_seq)
+    pbo_computed = compute_pbo(ledger_records, metrics_by_seq)
+
     dsr_cfg = gates.get("dsr", {})
     dsr_threshold = dsr_cfg.get("activation_threshold", 10)
     if n >= dsr_threshold and dsr_cfg.get("status", "").startswith("INACTIVE"):
-        reasons_insufficient.append("dsr activated but gates.yaml still marked INACTIVE; needs DEC + rehash")
+        reasons_insufficient.append(
+            "dsr status in gates.yaml is INACTIVE but N>=threshold; DEC + rehash pending")
     if n < dsr_threshold:
         out_gates["dsr"] = {"status": "INACTIVE_N_TOO_SMALL", "n": n,
                             "threshold": dsr_threshold}
@@ -93,14 +185,15 @@ def evaluate(ledger_records: list[dict], metrics_by_seq: dict[int, dict],
     else:
         values = [m.get("dsr") for m in metrics_by_seq.values() if m.get("dsr") is not None]
         min_allowed = dsr_cfg.get("min_allowed", 0.95)
-        if not values:
-            reasons_insufficient.append("DSR: no deflated Sharpe computed in metrics")
+        best = max(values) if values else dsr_computed
+        if best is None:
+            reasons_insufficient.append("DSR: no deflated Sharpe computable from ledger")
             out_gates["dsr"] = {"status": "MISSING_METRIC", "n": n}
         else:
-            best = max(values)
             ok = best >= min_allowed
-            out_gates["dsr"] = {"status": "ACTIVE", "best": best, "min_allowed": min_allowed,
-                                "pass": ok}
+            out_gates["dsr"] = {"status": "ACTIVE", "best": best,
+                                "min_allowed": min_allowed, "pass": ok,
+                                "source": "stored_metrics" if values else "gate_computed"}
             if not ok:
                 reasons_fail.append(f"DSR best {best:.4f} < {min_allowed}")
 
@@ -113,14 +206,16 @@ def evaluate(ledger_records: list[dict], metrics_by_seq: dict[int, dict],
     else:
         pbo_values = [m.get("pbo") for m in metrics_by_seq.values() if m.get("pbo") is not None]
         max_allowed = pbo_cfg.get("max_allowed", 0.20)
-        if not pbo_values:
-            reasons_insufficient.append("PBO: no CSCV estimate in metrics")
+        computed = pbo_computed.get("pbo") if isinstance(pbo_computed, dict) else None
+        worst = max(pbo_values) if pbo_values else computed
+        if worst is None:
+            reasons_insufficient.append("PBO: no CSCV estimate computable from ledger")
             out_gates["pbo"] = {"status": "MISSING_METRIC", "families": sorted(families)}
         else:
-            worst = max(pbo_values)
             ok = worst <= max_allowed
             out_gates["pbo"] = {"status": "ACTIVE", "worst": worst,
-                                "max_allowed": max_allowed, "pass": ok}
+                                "max_allowed": max_allowed, "pass": ok,
+                                "source": "stored_metrics" if pbo_values else "gate_computed_cscv_family_level"}
             if not ok:
                 reasons_fail.append(f"PBO worst {worst:.4f} > {max_allowed}")
 
