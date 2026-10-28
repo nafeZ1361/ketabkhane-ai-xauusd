@@ -1,0 +1,50 @@
+{
+  "schema": "ml-train-metrics/v1",
+  "model": "regime_rf_v1",
+  "samples": 26836,
+  "positive_rate": 0.5052,
+  "global_majority_baseline": 0.5052,
+  "folds": [
+    {
+      "kind": "walk_forward",
+      "n": 5367,
+      "accuracy": 0.5044,
+      "precision": 0.5111,
+      "recall": 0.4667,
+      "f1": 0.4879,
+      "majority_baseline": 0.5059
+    },
+    {
+      "kind": "walk_forward",
+      "n": 5367,
+      "accuracy": 0.5225,
+      "precision": 0.51,
+      "recall": 0.3926,
+      "f1": 0.4437,
+      "majority_baseline": 0.515
+    },
+    {
+      "kind": "walk_forward",
+      "n": 5367,
+      "accuracy": 0.5001,
+      "precision": 0.4906,
+      "recall": 0.3559,
+      "f1": 0.4125,
+      "majority_baseline": 0.5068
+    },
+    {
+      "kind": "final_eval",
+      "n": 5368,
+      "accuracy": 0.5112,
+      "precision": 0.5036,
+      "recall": 0.3477,
+      "f1": 0.4114,
+      "majority_baseline": 0.5088
+    }
+  ],
+  "final_eval_accuracy": 0.5112,
+  "final_eval_beats_baseline": true,
+  "label_horizon": 20,
+  "embargo_bars": 60,
+  "generated_utc": "2026-10-28T15:16:51.397772+00:00"
+}
