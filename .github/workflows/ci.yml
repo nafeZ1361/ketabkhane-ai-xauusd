@@ -34,7 +34,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Run test suite
-        run: python -m pytest | tee test_output.log
+        # NOTE: `set -o pipefail` so a pytest failure fails the step even
+        # though output is piped to tee (default shell pipeline status would
+        # otherwise take tee's exit code and mask failures).
+        run: set -o pipefail; python -m pytest | tee test_output.log
 
       - name: Quality gate (tests + coverage >= 80%, project's own script)
         run: python scripts/quality.py
