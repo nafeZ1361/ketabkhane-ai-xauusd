@@ -1,0 +1,72 @@
+name: Governance — Drift Sentinel
+
+# Read-only audit: compares claims in PROJECT_STATE.md against actual Git state.
+# It NEVER commits, pushes, merges, or edits files (AGENTS.md non-negotiable
+# rules; PROJECT_STATE.md HARD CONSTRAINTS). A failure here means the docs
+# drifted and a human/agent must reconcile via a dedicated branch + PR.
+
+on:
+  push:
+    branches: [main]
+    paths: ['PROJECT_STATE.md', 'DECISIONS_LOG.md', 'stage7/GAPS.md', '.github/workflows/governance-drift.yml']
+  pull_request:
+    paths: ['PROJECT_STATE.md', 'DECISIONS_LOG.md', 'stage7/GAPS.md']
+  schedule:
+    - cron: '0 6 * * *'   # daily re-verification (Entry rule: re-verify what you rely on)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compare PROJECT_STATE.md claims vs real git state
+        run: |
+          python - <<'EOF'
+          import re, subprocess, sys
+
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+          doc = open("PROJECT_STATE.md", encoding="utf-8").read()
+          m = re.search(r"Current HEAD \(main\):\s*([0-9a-f]{7,40})", doc)
+          claims = {
+              "head_sha": m.group(1) if m else None,
+              "baseline": (re.search(r"Baseline test suite:\s*(.+)", doc) or [None, None])[1],
+              "stage71": "NOT FINAL-PASS" if "NOT FINAL-PASS" in doc else ("FINAL-PASS?" if "Stage 7.1" in doc else None),
+          }
+
+          print(f"actual HEAD            : {head}")
+          print(f"PROJECT_STATE claim    : {claims['head_sha']}")
+          print(f"PROJECT_STATE baseline : {claims['baseline']}")
+          print(f"PROJECT_STATE stage7.1 : {claims['stage71']}")
+
+          problems = []
+          if claims["head_sha"] and not head.startswith(claims["head_sha"]) and not claims["head_sha"].startswith(head):
+              problems.append(f"HEAD drift: doc says {claims['head_sha']}, actual is {head}")
+
+          gaps = open("stage7/GAPS.md", encoding="utf-8").read()
+          for gap_id in re.findall(r"## (GAP-\d+)", gaps):
+              block = gaps.split(f"## {gap_id}")[1].split("\n## ")[0]
+              status = re.search(r"Status:\s*\*\*([^*]+)\*\*", block)
+              print(f"{gap_id}: {status.group(1) if status else 'NO STATUS FIELD'}")
+              if not status:
+                  problems.append(f"{gap_id} has no machine-parsable Status field")
+
+          if problems:
+              print("\nDRIFT DETECTED:")
+              [print(" -", p) for p in problems]
+              sys.exit(1)
+          print("\nNo document/git drift detected.")
+          EOF
+
+      - name: Run full test suite (docs claim it must be green)
+        run: |
+          grep -vi '^MetaTrader5' requirements.txt > requirements.ci.txt
+          pip install -r requirements.ci.txt
+          pytest tests/ -q
