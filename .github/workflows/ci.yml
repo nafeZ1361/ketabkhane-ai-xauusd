@@ -1,0 +1,67 @@
+name: CI — Test & Evidence Gate
+
+# Read-only validation workflow. It NEVER commits, pushes, merges, or rewrites
+# history (see AGENTS.md "Non-negotiable rules" and PROJECT_STATE.md HARD
+# CONSTRAINTS). Merge remains gated on separate Human Confirmation.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      # MetaTrader5 wheel is Windows-only; tests mock it, so we skip its install.
+      - name: Install dependencies
+        run: |
+          grep -vi '^MetaTrader5' requirements.txt > requirements.ci.txt
+          python -m pip install --upgrade pip
+          pip install -r requirements.ci.txt
+
+      - name: Run test suite (exact counts)
+        run: pytest tests/ -q | tee test_output.log
+
+      - name: Emit machine-checkable evidence JSON
+        if: always()
+        run: |
+          PASSED=$(grep -oE '[0-9]+ passed' test_output.log | head -1 | awk '{print $1}' || echo 0)
+          FAILED=$(grep -oE '[0-9]+ failed' test_output.log | head -1 | awk '{print $1}' || echo 0)
+          SUBTESTS=$(grep -oE '[0-9]+ subtests passed' test_output.log | head -1 | awk '{print $1}' || echo 0)
+          python - <<EOF
+          import json, os
+          evidence = {
+            "schema": "ci-test-evidence/v1",
+            "commit_sha": os.environ.get("GITHUB_SHA", ""),
+            "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "passed": int("${PASSED:-0}" or 0),
+            "failed": int("${FAILED:-0}" or 0),
+            "subtests_passed": int("${SUBTESTS:-0}" or 0),
+            "status": "PASS" if int("${FAILED:-0}" or 0) == 0 and int("${PASSED:-0}" or 0) > 0 else "FAIL",
+          }
+          with open("ci_evidence.json", "w") as f:
+              json.dump(evidence, f, indent=2)
+          print(json.dumps(evidence, indent=2))
+          EOF
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence
+          path: |
+            ci_evidence.json
+            test_output.log
