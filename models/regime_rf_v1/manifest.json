@@ -1,0 +1,21 @@
+{
+  "schema": "ml-manifest/v1",
+  "model": "regime_rf_v1",
+  "config": {
+    "name": "regime_rf_v1",
+    "n_estimators": 200,
+    "max_depth": 8,
+    "min_samples_leaf": 50,
+    "random_state": 7,
+    "n_splits": 4,
+    "eval_fraction": 0.2,
+    "stride": 5
+  },
+  "data_file": "XAUUSD._M1_202601020100_202610270041-1111.csv",
+  "data_sha256": "11b3015f730a38dfe27a641e725906b45ea991bb5f7e874805753748eabe69db",
+  "candles_loaded": 289520,
+  "python": "3.12.10",
+  "sklearn": "1.9.1",
+  "numpy": "2.3.1",
+  "generated_utc": "2026-10-28T15:16:51.397772+00:00"
+}

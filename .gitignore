@@ -33,3 +33,6 @@ __pycache__/
 # Generated artifacts
 artifacts/*
 !artifacts/.gitkeep
+# Trained model binaries: reproducible from scripts/train_regime_model.py + data hash.
+# Only metrics.json / manifest.json (evidence) are committed under models/.
+models/**/*.joblib
