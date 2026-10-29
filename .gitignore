@@ -33,3 +33,7 @@ __pycache__/
 # Generated artifacts
 artifacts/*
 !artifacts/.gitkeep
+# Archives and raw exports must never be committed
+*.rar
+*.zip
+*.7z
