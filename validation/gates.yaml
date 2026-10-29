@@ -6,7 +6,7 @@ dsr:
   min_allowed: 0.95
   note: "با N کمتر از آستانه، عدد DSR گزارش نمی‌شود"
 pbo:
-  status: ACTIVE
+  status: INACTIVE_M_LESS_THAN_2
   activation_threshold: 2
   max_allowed: 0.20
   note: "با M کمتر از ۲ استراتژی، PBO قابل محاسبه نیست"

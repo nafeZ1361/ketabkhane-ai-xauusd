@@ -134,5 +134,12 @@ Contract 100، digits 2، min/step 0.01، کمیسیون 0 (از تاریخچه�
 - **انحراف ثبت‌شده:** نسخهٔ «۴ استراتژی breakout» خواسته شده بود اما استراتژی breakout در مخزن وجود ندارد؛ به‌جای آن ۴ نسخهٔ MA با فیلتر روند اجرا شد. این انحراف باید با DEC جداگانه تعیین تکلیف شود.
 - `gates.yaml`: DSR و PBO از `INACTIVE` به `ACTIVE` تغییر کرد؛ `config_hash = 26413711fe144ca3d93a7a1fe58153d8d99a331b5135c253b009ca05ca59a264`.
 - نتیجه: **FAIL** — PBO=0.729 > 0.20 و DSR=0.0071 < 0.95؛ شواهد مهارت آماری وجود ندارد.
-- شواهد: `docs/evidence/a3_experiments.jsonl`، `a3_ledger.jsonl`، `a3_stats.json`.
+- شواهد: `docs/evidence/a3_experiments.jsonl`
+- Pre-registration file was written after grid execution; methodological deviation, recorded honestly. Result remains valid as a negative finding, but cannot be used as confirmatory evidence.، `a3_ledger.jsonl`، `a3_stats.json`.
 - وضعیت استراتژی: همچنان `DEFERRED_NO_VALID_OOS`؛ این گرید فقط ابزار آماری را فعال کرد، نه اعتبار استراتژی.
+
+## DEC-2026-032 — تصحیح M و غیرفعال‌سازی PBO
+- Breakout family not implemented; 4 MA variants with trend filter used. M=1 (MA crossover only), not 2. PBO undefined with M<2.
+- `pbo.status` به `INACTIVE_M_LESS_THAN_2` بازگردانده شد؛ آستانهٔ `pbo.max_allowed` بدون تغییر ماند.
+- `validation/gates.yaml` منبع فعلی است؛ نسخهٔ `config/gates.yaml` برای هم‌راستایی با قاعدهٔ پوشه ساخته شد (منبع یگانه در چرخهٔ بعد یکدست می‌شود).
+- DSR با N=23 همچنان `ACTIVE` است (N≥10).
