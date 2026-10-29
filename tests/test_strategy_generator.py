@@ -20,7 +20,15 @@ class StrategyGeneratorTests(unittest.TestCase):
                 self.assertGreater(item.spec.slow, item.spec.fast)
 
     def test_space_covers_three_families(self):
-        self.assertEqual(set(SPACE), {"ma", "breakout", "mean_reversion"})
+        self.assertGreaterEqual(len(SPACE), 4)
+        self.assertTrue({"ma", "breakout", "mean_reversion"} <= set(SPACE))
+
+
+    def test_at_a4_02_five_strategies_four_families(self):
+        items = generate(12, seed=5)
+        self.assertGreaterEqual(len(items), 5)
+        from xauusd_research.strategy_generator import SPACE
+        self.assertGreaterEqual(len(SPACE), 4)
 
 
 if __name__ == "__main__":

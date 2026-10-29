@@ -1,4 +1,4 @@
-"""Compute and store the SHA-256 of validation/gates.yaml (config_hash)."""
+"""Compute and store the SHA-256 of config/gates.yaml (config_hash)."""
 
 from __future__ import annotations
 
