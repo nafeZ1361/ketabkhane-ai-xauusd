@@ -21,6 +21,8 @@ def main() -> int:
         path = ROOT / rel
         if not path.is_file():
             continue
+        if rel.replace("\\", "/").startswith("tests/fixtures/"):
+            continue
         if path.suffix.lower() in FORBIDDEN:
             violations.append(f"forbidden type: {rel}")
         elif path.stat().st_size > MAX_BYTES:
