@@ -57,3 +57,6 @@ python -m unittest discover -s tests -t .
 2. `validation/ledger.py` و `metrics.py` (PSR/DSR/PBO/بوت‌استرپ) را بساز.
 3. گرید A3 (بدون GA) برای رسیدن به N≥10 و M≥2.
 4. پس از فعال‌شدن آستانه‌ها، `gates.yaml` را به‌روز و `config_hash` را دوباره ثبت کن.
+
+## History Debt (Layer 2)
+دو بلاب ~۱۸MB در تاریخچهٔ گیت باقی است (`git log --all -- XAUUSD*`). گزینه‌ها: `git filter-repo` یا BFG + force-push. **بدون مجوز صریح اجرا نمی‌شود.**
