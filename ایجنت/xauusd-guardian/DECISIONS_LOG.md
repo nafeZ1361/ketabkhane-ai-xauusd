@@ -119,3 +119,18 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 **Reason:** the three verified blockers from `reports/PHASE2-REMEDIATION-REPORT.md`; the old quarantine was write-only.
 **Effect:** replay run `3087c765…` reproduces the original digest `799bc8c7…` exactly; the original 7 840 rows are unchanged and the run is quarantined pending human review.
 **Rollback:** drop the evidence DB; `python scripts/quarantine.py restore --run-id e01f4fe7…`.
+
+## D-016 — Signal persistence: exact Decimal, bar-derived identity, fail-closed conflicts
+**Status:** IMPLEMENTED (2026-11-08, Phase 3 / S5); pending independent Inspector sign-off
+**Decision:**
+1. `migrations/0003_signals.sql` is additive only and adds `signals` (PRIMARY KEY `(symbol, timeframe, bar_time_utc, strategy_id)`) and `signal_runs`. Applied migrations 0001/0002 are untouched.
+2. `signals.strength` is stored as `TEXT`, not `REAL`. The contract requires a finite `Decimal`; a REAL column would round-trip through binary floating point and silently change the replay digest. Bars stay `REAL` because they arrive from the broker as floats.
+3. `signal_runs` carries `symbol` in addition to `strategy_id`/`timeframe`, so a run that emits zero signals is still attributable to one instrument.
+4. The run window and `run_id` are derived from the bars alone: `from_utc` = first bar time, `to_utc` = last bar close, `run_id` = `run_` + SHA-256 over strategy, version, timeframe, symbol, window, bar count and bar digest. Wall-clock `now` never enters the identity, so re-running later over the same closed bars yields the same `run_id` and the same digest.
+5. Closed-bar filtering is explicit in the service (`bar_time_utc + timeframe.minutes <= now`), because `mt5_market.rates()` starts at position 0 and therefore stores the forming bar. `ema_cross.evaluate()` keeps its own forming-bar refusal as defence in depth; the service must never hand it a forming bar.
+6. Every signal read excludes quarantined feed runs (`run_id NOT IN (SELECT run_id FROM feed_runs WHERE status = 'QUARANTINED')`), including `scripts/replay_signals.py`, which previously read bars unfiltered.
+7. A stored signal that disagrees with a recomputation (`direction`, `strength` or `reason_code`) raises `SignalError` and rolls the transaction back. The service never overwrites a published signal; resolving a revised bar is a human decision.
+8. S6 (reversibility) is deliberately not implemented in this stage. The reverse is `DROP TABLE IF EXISTS signals; DROP TABLE IF EXISTS signal_runs;`, recorded as a manual statement, because `db.py` discovers forward migrations with `^[0-9]{4}_[a-z0-9_]+\.sql$` and would apply a `0003_*_down*.sql` file as the next forward step.
+**Reason:** S5 of `PHASE3_PLAN.md`; independent Inspector review of the plan returned four must-fix defects (forming bar, silent `INSERT OR IGNORE`, unfiltered replay read, missing decision record), all incorporated before implementation.
+**Effect:** 252/252 tests pass, up from 220; suite exit 0; `compileall` exit 0. Five existing assertions that pinned the migration inventory were updated to include `0003_signals.sql`; no assertion was weakened or removed.
+**Rollback:** `DROP TABLE IF EXISTS signals; DROP TABLE IF EXISTS signal_runs;` and delete `0003_signals.sql` from any database that never applied it.

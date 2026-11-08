@@ -17,7 +17,7 @@ START = datetime(2026, 11, 4, 14, 0, tzinfo=timezone.utc)
 def store(tmp_path, project_root):
     conn = connect(tmp_path / "market.sqlite3")
     applied = apply_migrations(conn, project_root / "migrations")
-    assert applied == [1, 2], applied
+    assert applied == [1, 2, 3], applied
     return MarketStore(conn, quota_bytes=50_000_000), conn
 
 

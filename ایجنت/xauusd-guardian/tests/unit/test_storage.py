@@ -18,7 +18,7 @@ def test_migrations_apply_once(project_root, tmp_path):
     db = connect(tmp_path / "guardian.sqlite3")
     try:
         applied = apply_migrations(db, project_root / "migrations")
-        assert applied == [1, 2]
+        assert applied == [1, 2, 3]
 
         again = apply_migrations(db, project_root / "migrations")
         assert again == []
@@ -28,14 +28,14 @@ def test_migrations_apply_once(project_root, tmp_path):
             for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
         assert {"symbol_snapshots", "risk_decisions", "audit_events", "schema_migrations"} <= tables
-        assert len(migration_history(db)) == 2
+        assert len(migration_history(db)) == 3
     finally:
         db.close()
 
 
 def test_migration_discovery_is_sorted(project_root):
     files = discover_migrations(project_root / "migrations")
-    assert [f.name for f in files] == ["0001_init.sql", "0002_market_data.sql"]
+    assert [f.name for f in files] == ["0001_init.sql", "0002_market_data.sql", "0003_signals.sql"]
 
 
 def test_tampered_migration_is_detected(project_root, tmp_path):
