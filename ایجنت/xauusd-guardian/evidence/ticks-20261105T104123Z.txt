@@ -1,0 +1,20 @@
+﻿command: scripts/collect.py --ticks-minutes 10
+exit_code: 0
+
+{
+  "status": "OK",
+  "reasons": [],
+  "runs": [
+    {
+      "run_id": "e01f4fe785344c39a7957c35692fc4cb",
+      "kind": "ticks",
+      "timeframe": null,
+      "status": "OK",
+      "inserted": 7840,
+      "revised": 0,
+      "gaps": 0,
+      "reason": ""
+    }
+  ],
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3"
+}

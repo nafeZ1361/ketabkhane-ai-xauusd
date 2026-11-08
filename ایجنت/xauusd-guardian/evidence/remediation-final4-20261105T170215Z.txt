@@ -1,0 +1,12 @@
+﻿........................................................................ [ 41%]
+........................................................................ [ 82%]
+..............................                                           [100%]
+174 passed in 28.12s
+
+PYTEST EXIT: 0
+
+COMPILEALL EXIT: 0
+694DCE5A21D2B24F5125871788BFBEA5C2B73A054F86B2B064D703AF5DEAC3F5  mt5_market.py
+E6964B2C315923635A4A3018BF3A0A61B096E98522EB84A995F9BC5F5A6C7130  market_data_service.py
+AD545DBC4813383BF6BA77D26353BF0B5352643A9FAC1A91B343128AD123913F  test_market_adapter.py
+AC7D497646E12FD817FC8622542875E066521B0D525FD9DFD798CB5BA4F56CFF  test_market_service.py

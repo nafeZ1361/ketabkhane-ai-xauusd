@@ -1,0 +1,84 @@
+﻿== status-before ==
+python.exe : usage: quarantine.py [-h] [--run-id RUN_ID] [--reason REASON] [--db DB]
+At line:1 char:255
++ ... pend $log; (& .\.venv\Scripts\python.exe scripts\quarantine.py @args  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (usage: quaranti...ASON] [--db DB]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                     {apply,restore,status}
+quarantine.py: error: the following arguments are required: action
+
+exit=2
+== apply ==
+python.exe : usage: quarantine.py [-h] [--run-id RUN_ID] [--reason REASON] [--db DB]
+At line:1 char:255
++ ... pend $log; (& .\.venv\Scripts\python.exe scripts\quarantine.py @args  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (usage: quaranti...ASON] [--db DB]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                     {apply,restore,status}
+quarantine.py: error: the following arguments are required: action
+
+exit=2
+== status-quarantined ==
+python.exe : usage: quarantine.py [-h] [--run-id RUN_ID] [--reason REASON] [--db DB]
+At line:1 char:255
++ ... pend $log; (& .\.venv\Scripts\python.exe scripts\quarantine.py @args  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (usage: quaranti...ASON] [--db DB]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                     {apply,restore,status}
+quarantine.py: error: the following arguments are required: action
+
+exit=2
+== restore ==
+python.exe : usage: quarantine.py [-h] [--run-id RUN_ID] [--reason REASON] [--db DB]
+At line:1 char:255
++ ... pend $log; (& .\.venv\Scripts\python.exe scripts\quarantine.py @args  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (usage: quaranti...ASON] [--db DB]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                     {apply,restore,status}
+quarantine.py: error: the following arguments are required: action
+
+exit=2
+== status-restored ==
+python.exe : usage: quarantine.py [-h] [--run-id RUN_ID] [--reason REASON] [--db DB]
+At line:1 char:255
++ ... pend $log; (& .\.venv\Scripts\python.exe scripts\quarantine.py @args  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (usage: quaranti...ASON] [--db DB]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                     {apply,restore,status}
+quarantine.py: error: the following arguments are required: action
+
+exit=2
+== apply-final ==
+python.exe : usage: quarantine.py [-h] [--run-id RUN_ID] [--reason REASON] [--db DB]
+At line:1 char:255
++ ... pend $log; (& .\.venv\Scripts\python.exe scripts\quarantine.py @args  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (usage: quaranti...ASON] [--db DB]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                     {apply,restore,status}
+quarantine.py: error: the following arguments are required: action
+
+exit=2
+== status-final ==
+python.exe : usage: quarantine.py [-h] [--run-id RUN_ID] [--reason REASON] [--db DB]
+At line:1 char:255
++ ... pend $log; (& .\.venv\Scripts\python.exe scripts\quarantine.py @args  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (usage: quaranti...ASON] [--db DB]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                     {apply,restore,status}
+quarantine.py: error: the following arguments are required: action
+
+exit=2

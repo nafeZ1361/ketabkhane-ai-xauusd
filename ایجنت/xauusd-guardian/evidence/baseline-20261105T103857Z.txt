@@ -1,0 +1,11 @@
+﻿baseline_utc: 2026-11-05T10:38:57.0571788Z head: 82ab8b56cd4586ca63da429f427827052b62dfbe dirty: 57
+sha256 src\guardian\adapters\mt5_market.py C9F2BA9E05EE3B1EBF2D624C0AA024AC2CBF64C296E0986DAEDA7EABDC9E7B23
+sha256 src\guardian\application\market_data_service.py A1300B69D9BE4F7EF6037B729DF36542CD5226DD10798ABA0B32A9502F2236DB
+sha256 tests\unit\test_market_adapter.py EEC91418EF0293787C3C6230223C69F099D957B2469A55BFEACA7B16EC36DE09
+sha256 tests\unit\test_market_service.py 6FE4D1C72D90C57A473C50F616735898AB55E9A865985E32DB92ED15948C4FA6
+db_bytes: 7274496
+run ('M5', 'DEGRADED', 135, 'clock_unverified:no_fresh_ticks')
+run ('M1', 'DEGRADED', 671, 'clock_unverified:no_fresh_ticks')
+run ('H1', 'DEGRADED', 0, 'gaps:4; max_gap_bars:4; clock_unverified:no_fresh_ticks')
+run ('M5', 'DEGRADED', 0, 'clock_unverified:no_fresh_ticks')
+bars 9806 ticks 0

@@ -1,0 +1,4 @@
+﻿stored_m5_bars: 3141
+digest_1: 9a1dcfc8130e12ded256407a7589d6df4f43c82c9c069f7018fc38c542c2f98e
+digest_2: 9a1dcfc8130e12ded256407a7589d6df4f43c82c9c069f7018fc38c542c2f98e
+replay_equal: True

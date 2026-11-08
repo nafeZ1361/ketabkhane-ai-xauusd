@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "preflight",
+  "created_utc": "2026-11-05T10:08:59.010869+00:00",
+  "settings_source": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\configs\\config.toml",
+  "policy": "xauusd_identity_v3",
+  "symbol": {
+    "status": "VERIFIED",
+    "name": "XAUUSD.",
+    "reason": "exact identity 'XAUUSD.' corroborated by live broker metadata",
+    "mismatches": [],
+    "observed": {
+      "name": "XAUUSD.",
+      "path": "Pure\\Spot Metals\\Gold\\XAUUSD.",
+      "description": "Gold vs US Dollar / Spot",
+      "currency_base": "USD",
+      "currency_profit": "USD",
+      "contract_size": "100",
+      "digits": "2",
+      "point": "0.01",
+      "tick_size": "0.01",
+      "tick_value": "1",
+      "volume_min": "0.01",
+      "volume_max": "10",
+      "volume_step": "0.01",
+      "trade_mode": "4",
+      "stops_level": "10",
+      "freeze_level": "0",
+      "filling_mode": "1"
+    },
+    "ranked": ""
+  },
+  "checks": [
+    {
+      "check": "python",
+      "status": "PASS",
+      "value": "3.11.8",
+      "note": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\.venv\\Scripts\\python.exe"
+    },
+    {
+      "check": "config",
+      "status": "PASS",
+      "value": "schema=1 mode=DRY_RUN",
+      "note": "policy=xauusd_identity_v3"
+    },
+    {
+      "check": "terminal_exe",
+      "status": "PASS",
+      "value": "C:\\Program Files\\Aron Markets MT5\\terminal64.exe",
+      "note": "126997136 bytes"
+    },
+    {
+      "check": "metatrader5",
+      "status": "PASS",
+      "value": "5.0.6231",
+      "note": ""
+    },
+    {
+      "check": "terminal_attach",
+      "status": "PASS",
+      "value": "C:\\Program Files\\Aron Markets MT5",
+      "note": "build=6230"
+    },
+    {
+      "check": "account_identity",
+      "status": "PASS",
+      "value": "{\"company\": \"Aron Markets Ltd\", \"currency\": \"USD\", \"leverage\": \"400\", \"server\": \"AronMarkets-Demo\", \"trade_mode\": \"DEMO\"}",
+      "note": ""
+    },
+    {
+      "check": "account_mode",
+      "status": "PASS",
+      "value": "DEMO",
+      "note": "AronMarkets-Demo"
+    },
+    {
+      "check": "symbol_resolution",
+      "status": "PASS",
+      "value": "VERIFIED",
+      "note": "exact identity 'XAUUSD.' corroborated by live broker metadata"
+    },
+    {
+      "check": "spread_points",
+      "status": "PASS",
+      "value": "[17, 17, 17]",
+      "note": ""
+    }
+  ],
+  "exit_code": 0,
+  "checks_sha256": "sha256:d15dd11c885fbc22a49e86a060e2c9a6150dbb96a14cf2f4dbc5bbaadceadd79"
+}

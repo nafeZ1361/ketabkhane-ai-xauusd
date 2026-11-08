@@ -1,0 +1,17 @@
+﻿{
+  "status": "OK",
+  "reasons": [],
+  "runs": [
+    {
+      "run_id": "129437e25f904f29a5fa4877276600be",
+      "kind": "ticks",
+      "timeframe": null,
+      "status": "OK",
+      "inserted": 1554,
+      "revised": 0,
+      "gaps": 0,
+      "reason": ""
+    }
+  ],
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3"
+}

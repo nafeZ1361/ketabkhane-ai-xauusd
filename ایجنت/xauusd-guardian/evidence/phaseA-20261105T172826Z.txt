@@ -1,0 +1,13 @@
+﻿........................................................................ [ 36%]
+........................................................................ [ 73%]
+.....................................................                    [100%]
+197 passed in 19.50s
+
+PYTEST EXIT: 0
+
+COMPILEALL EXIT: 0
+64C2D5820A22B3B675D22ADC5176B4B31138DD972A1D731084E21ABC958E3232  market_store.py
+22C4D9DFAECCBBFDF2F5BA77954B6139EC235487892113B11A6D0B3A300EAD13  collect.py
+13F7D5262D1FA9DF9C410F43E13193759B12EEBF3B668B2DBF1FAB8C0881830C  quarantine.py
+F30D7FE4B1406AAC0713FF9C95B81ECB155B62BD3D911B723626D0F4021F6008  test_quarantine.py
+99D3DCBBF2DD6468FBB31063BF550CCB514C5675CFF11355DEFBBDB31338C88A  test_collect_cli.py

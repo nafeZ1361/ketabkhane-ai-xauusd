@@ -1,0 +1,62 @@
+﻿{
+  "original": {
+    "db": "data/guardian.sqlite3",
+    "run_id": "e01f4fe785344c39a7957c35692fc4cb",
+    "rows": 7840,
+    "sha256": "799bc8c72b5bb2c1a2bc58be2d874e979ea4b67fe1ecefe6c968d8cf61ed8f56",
+    "first": "2026-11-05T10:31:53.372000+00:00",
+    "last": "2026-11-05T10:41:53.282000+00:00",
+    "unique_keys": 7840,
+    "duplicate_key_rows": 0
+  },
+  "recollected": {
+    "db": "data\\evidence\\recollect-20261105T172902Z.sqlite3",
+    "rows": 7840,
+    "sha256": "799bc8c72b5bb2c1a2bc58be2d874e979ea4b67fe1ecefe6c968d8cf61ed8f56",
+    "first": "2026-11-05T10:31:53.372000+00:00",
+    "last": "2026-11-05T10:41:53.282000+00:00",
+    "unique_keys": 7840,
+    "duplicate_key_rows": 0
+  },
+  "comparison": {
+    "row_count_equal": true,
+    "digest_equal": true,
+    "missing_in_new": 0,
+    "extra_in_new": 0,
+    "common_keys": 7840,
+    "field_differences": {},
+    "per_minute_original": {
+      "2026-11-05T10:31": 97,
+      "2026-11-05T10:32": 804,
+      "2026-11-05T10:33": 795,
+      "2026-11-05T10:34": 770,
+      "2026-11-05T10:35": 789,
+      "2026-11-05T10:36": 799,
+      "2026-11-05T10:37": 770,
+      "2026-11-05T10:38": 762,
+      "2026-11-05T10:39": 786,
+      "2026-11-05T10:40": 775,
+      "2026-11-05T10:41": 693
+    },
+    "per_minute_recollected": {
+      "2026-11-05T10:31": 97,
+      "2026-11-05T10:32": 804,
+      "2026-11-05T10:33": 795,
+      "2026-11-05T10:34": 770,
+      "2026-11-05T10:35": 789,
+      "2026-11-05T10:36": 799,
+      "2026-11-05T10:37": 770,
+      "2026-11-05T10:38": 762,
+      "2026-11-05T10:39": 786,
+      "2026-11-05T10:40": 775,
+      "2026-11-05T10:41": 693
+    },
+    "utc_minus_msc_original": {
+      "-7200.0": 7840
+    },
+    "utc_minus_msc_recollected": {
+      "-7200.0": 7840
+    },
+    "timestamp_order_ok": true
+  }
+}

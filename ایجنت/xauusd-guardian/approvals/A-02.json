@@ -1,0 +1,12 @@
+{
+  "action": "create isolated venv and install pinned dependencies",
+  "approval_id": "A-02",
+  "approver": "icFixer.ir (human, AutoClaw chat 2026-11-04)",
+  "expires": "none",
+  "granted_utc": "2026-11-04T16:38:16.960139+00:00",
+  "note": "index unreachable; interim --system-site-packages venv, see D-008",
+  "phase": "1",
+  "prev_sha256": "sha256:74127b5f9dfe4459a940b6824c1b2ebbe1f93437cd17a4d3297a96022c06e500",
+  "record_sha256": "sha256:15070563a75374bfda017b32582c324bad840d2ef8f674d0eab2366a7a76fecd",
+  "scope": "xauusd-guardian/.venv (local only, no global install, no PATH change)"
+}

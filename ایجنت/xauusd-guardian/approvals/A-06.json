@@ -1,0 +1,12 @@
+{
+  "action": "implement D-003 exact-identity resolver + fix ranked display defects",
+  "approval_id": "A-06",
+  "approver": "icFixer.ir (human, AutoClaw chat 2026-11-04, message PHASE 1 - SYMBOL RESOLUTION FIX + PREFLIGHT CORRECTIONS)",
+  "expires": "none",
+  "granted_utc": "2026-11-04T17:46:15.510641+00:00",
+  "note": "D-003 + audit findings F1-F4 remediation; live MT5 read-only verification only",
+  "phase": "1",
+  "prev_sha256": "sha256:a45547c5dfd78db8a361c2cf1cb9322d47f0dd4dcf639413ef2d7c1d001c4f99",
+  "record_sha256": "sha256:30b0612d3f61271aaff2eb5147a29c5f9ee424302800eda468226abbbba7cb2b",
+  "scope": "src/guardian/{contracts,domain,config,application,reporting}, scripts/preflight.py, configs/config.toml, tests/**; no commit, no order path"
+}

@@ -1,0 +1,9 @@
+﻿python.exe : Traceback (most recent call last):
+At line:18 char:6
++ '@ | & .\.venv\Scripts\python.exe - 2>&1 | Tee-Object -Variable o | O ...
++      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<stdin>", line 3, in <module>
+ModuleNotFoundError: No module named 'guardian'

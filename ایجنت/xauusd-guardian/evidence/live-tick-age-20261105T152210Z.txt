@@ -1,0 +1,6 @@
+﻿attach: {'terminal_path': 'C:\\Program Files\\Aron Markets MT5', 'build': 6230, 'connected': True, 'trade_allowed': True}
+measured offset (s, mad, samples): (7200, 0, 5)
+model offset now (s): 7200
+sample 0 host_now_z= 15:22:07 tick_z= 17:22:09 age_s= -2 fresh= True bid= 4109.11 ask= 4109.29
+sample 1 host_now_z= 15:22:08 tick_z= 17:22:10 age_s= -2 fresh= True bid= 4109.18 ask= 4109.37
+sample 2 host_now_z= 15:22:09 tick_z= 17:22:11 age_s= -2 fresh= True bid= 4109.24 ask= 4109.39

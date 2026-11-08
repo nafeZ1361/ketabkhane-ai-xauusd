@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "preflight",
+  "created_utc": "2026-11-04T16:37:08.031325+00:00",
+  "settings_source": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\configs\\config.toml",
+  "checks": [
+    {
+      "check": "python",
+      "status": "PASS",
+      "value": "3.11.8",
+      "note": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\.venv\\Scripts\\python.exe"
+    },
+    {
+      "check": "config",
+      "status": "PASS",
+      "value": "schema=1 mode=DRY_RUN",
+      "note": "policy=xauusd_strict_v1"
+    },
+    {
+      "check": "terminal_exe",
+      "status": "PASS",
+      "value": "C:\\Program Files\\Aron Markets MT5\\terminal64.exe",
+      "note": "126997136 bytes"
+    },
+    {
+      "check": "metatrader5",
+      "status": "PASS",
+      "value": "5.0.6231",
+      "note": ""
+    },
+    {
+      "check": "terminal_attach",
+      "status": "FAIL",
+      "value": "error",
+      "note": "terminal path mismatch: connected to 'C:\\\\Program Files\\\\Aron Markets MT5', approved 'C:\\\\Program Files\\\\Aron Markets MT5\\\\terminal64.exe'"
+    }
+  ],
+  "exit_code": 1,
+  "checks_sha256": "sha256:168686b56c742e7a1c5ad4a3809b4f5c4fcb8a3c4e83b431b04e405d1a12e8d5"
+}

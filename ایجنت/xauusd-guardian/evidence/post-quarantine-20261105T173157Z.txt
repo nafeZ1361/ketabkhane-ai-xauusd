@@ -1,0 +1,16 @@
+﻿run_rows_still_present: 7840
+run_digest_sha256: 799bc8c72b5bb2c1a2bc58be2d874e979ea4b67fe1ecefe6c968d8cf61ed8f56
+run_status: QUARANTINED
+ticks_total: 9394
+audit_events_for_run: [{'event_type': 'QUARANTINE_APPLIED', 'message': 'pre-A2 request window; replay identical; pending human review'}, {'event_type': 'QUARANTINE_LIFTED', 'message': 'restored by operator'}, {'event_type': 'QUARANTINE_APPLIED', 'message': 'pre-A2 request window; replay identical; pending human review'}]
+db_bytes: 9199616
+db_sha256_after: cf1dac7c598c2468837ca799216d606a1aacf02422767e3cbaff90806346a4b4
+
+    "bars": 9843,
+    "ticks": 1554,
+    "runs": 12,
+    "quarantined_runs": 1,
+      "kind": "ticks",
+      "kind": "ticks",
+
+

@@ -1,0 +1,97 @@
+﻿== status-before ==
+{
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3",
+  "quarantined_runs": [],
+  "health": {
+    "bars": 9843,
+    "bar_revisions": 9845,
+    "ticks": 9394,
+    "runs": 12,
+    "quarantined_runs": 0,
+    "usage_bytes": 9232384,
+    "quota_bytes": 2000000000
+  }
+}
+
+exit=0
+== apply ==
+{
+  "action": "apply",
+  "run_id": "e01f4fe785344c39a7957c35692fc4cb",
+  "previous_status": "OK",
+  "status": "QUARANTINED",
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3"
+}
+
+exit=0
+== status-quarantined ==
+{
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3",
+  "quarantined_runs": [
+    "e01f4fe785344c39a7957c35692fc4cb"
+  ],
+  "health": {
+    "bars": 9843,
+    "bar_revisions": 9845,
+    "ticks": 1554,
+    "runs": 12,
+    "quarantined_runs": 1,
+    "usage_bytes": 9232384,
+    "quota_bytes": 2000000000
+  }
+}
+
+exit=0
+== restore ==
+{
+  "action": "restore",
+  "run_id": "e01f4fe785344c39a7957c35692fc4cb",
+  "status": "OK",
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3"
+}
+
+exit=0
+== status-restored ==
+{
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3",
+  "quarantined_runs": [],
+  "health": {
+    "bars": 9843,
+    "bar_revisions": 9845,
+    "ticks": 9394,
+    "runs": 12,
+    "quarantined_runs": 0,
+    "usage_bytes": 9232384,
+    "quota_bytes": 2000000000
+  }
+}
+
+exit=0
+== apply-final ==
+{
+  "action": "apply",
+  "run_id": "e01f4fe785344c39a7957c35692fc4cb",
+  "previous_status": "OK",
+  "status": "QUARANTINED",
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3"
+}
+
+exit=0
+== status-final ==
+{
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3",
+  "quarantined_runs": [
+    "e01f4fe785344c39a7957c35692fc4cb"
+  ],
+  "health": {
+    "bars": 9843,
+    "bar_revisions": 9845,
+    "ticks": 1554,
+    "runs": 12,
+    "quarantined_runs": 1,
+    "usage_bytes": 9232384,
+    "quota_bytes": 2000000000
+  }
+}
+
+exit=0

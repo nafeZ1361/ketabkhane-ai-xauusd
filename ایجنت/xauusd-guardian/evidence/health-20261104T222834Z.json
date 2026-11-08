@@ -1,0 +1,79 @@
+﻿{
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3",
+  "health": {
+    "bars": 9000,
+    "bar_revisions": 9000,
+    "ticks": 0,
+    "runs": 6,
+    "usage_bytes": 6709248,
+    "quota_bytes": 2000000000
+  },
+  "last_bars": {
+    "M1": {
+      "time_utc": "2026-11-04T21:58:00+00:00",
+      "close": 4060.03
+    },
+    "M5": {
+      "time_utc": "2026-11-04T21:55:00+00:00",
+      "close": 4060.03
+    },
+    "M15": null,
+    "H1": {
+      "time_utc": "2026-11-04T21:00:00+00:00",
+      "close": 4060.03
+    },
+    "H4": null
+  },
+  "recent_runs": [
+    {
+      "run_id": "9706297d31844b72895235ad34081460",
+      "kind": "bars",
+      "timeframe": "H1",
+      "status": "DEGRADED",
+      "inserted": 0,
+      "revised": 0,
+      "gaps": 4,
+      "started_utc": "2026-11-04T22:29:41.683619+00:00"
+    },
+    {
+      "run_id": "a8813d072fb74449a0ec04e9e2835aba",
+      "kind": "bars",
+      "timeframe": "M5",
+      "status": "DEGRADED",
+      "inserted": 0,
+      "revised": 0,
+      "gaps": 0,
+      "started_utc": "2026-11-04T22:29:39.261303+00:00"
+    },
+    {
+      "run_id": "2c23744e98e34faeba89d276755ed9fd",
+      "kind": "bars",
+      "timeframe": "M1",
+      "status": "DEGRADED",
+      "inserted": 0,
+      "revised": 0,
+      "gaps": 0,
+      "started_utc": "2026-11-04T22:29:36.943705+00:00"
+    },
+    {
+      "run_id": "41b9366b156c4d548b885c48f3c94d6a",
+      "kind": "bars",
+      "timeframe": "H1",
+      "status": "DEGRADED",
+      "inserted": 3000,
+      "revised": 0,
+      "gaps": 4,
+      "started_utc": "2026-11-04T22:27:53.356367+00:00"
+    },
+    {
+      "run_id": "f8534d2c200a4559b21f10f92af696d6",
+      "kind": "bars",
+      "timeframe": "M5",
+      "status": "DEGRADED",
+      "inserted": 3000,
+      "revised": 0,
+      "gaps": 0,
+      "started_utc": "2026-11-04T22:27:51.240472+00:00"
+    }
+  ]
+}

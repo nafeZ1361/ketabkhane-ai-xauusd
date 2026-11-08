@@ -1,0 +1,9 @@
+﻿........................................................................ [ 41%]
+........................................................................ [ 83%]
+.............................                                            [100%]
+PYTEST EXIT: 0
+COMPILEALL EXIT: 0
+68AB41E3A5DE4A63CDB8E15D0C46510CFA36C00983A41A5A89236008D305E8DB  mt5_market.py
+E6964B2C315923635A4A3018BF3A0A61B096E98522EB84A995F9BC5F5A6C7130  market_data_service.py
+22C23B24E4A88288662EC50C5823043CDFA85F37E4AB63CC8209D16C8FAE931C  test_market_adapter.py
+AC7D497646E12FD817FC8622542875E066521B0D525FD9DFD798CB5BA4F56CFF  test_market_service.py

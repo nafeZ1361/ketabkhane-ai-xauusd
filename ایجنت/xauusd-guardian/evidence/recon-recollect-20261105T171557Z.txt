@@ -1,0 +1,12 @@
+﻿db_path: C:\Users\icFixer.ir\AppData\Roaming\AutoClaw-oversea-official\accounts\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\projects\ایجنت\xauusd-guardian\data\guardian.sqlite3
+db_bytes: 9199616
+db_sha256: d45a088b039ec5b02bc7f66f31779aee323c8ca37729e96251f574d5b5cbbcb8
+target_run: e01f4fe785344c39a7957c35692fc4cb
+target_rows: 7840
+target_digest_sha256: 799bc8c72b5bb2c1a2bc58be2d874e979ea4b67fe1ecefe6c968d8cf61ed8f56
+target_first: 2026-11-05T10:31:53.372000+00:00 target_last: 2026-11-05T10:41:53.282000+00:00
+ticks_total: 9394
+feed_runs_total: 12
+quarantined_rows: 0
+run_status: {'run_id': 'e01f4fe785344c39a7957c35692fc4cb', 'status': 'OK', 'inserted': 7840, 'started_utc': '2026-11-05T10:41:53.360966+00:00', 'finished_utc': '2026-11-05T10:43:38.865364+00:00'}
+TIMESTAMP: 20261105T171557Z

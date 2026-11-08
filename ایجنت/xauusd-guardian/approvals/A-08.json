@@ -1,0 +1,12 @@
+{
+  "action": "Phase 2 implementation (market data layer) - confirmed by the human",
+  "approval_id": "A-08",
+  "approver": "icFixer.ir (human, AutoClaw chat 2026-11-05, message: PHASE 2 - SCOPE CONFIRMATION AND ACCEPTANCE)",
+  "expires": "none",
+  "granted_utc": "2026-11-05T17:49:53.528133+00:00",
+  "note": "Supersedes A-07 as evidence: its provenance could not be established. A-07 is retained unchanged as history. Human confirmed the Phase 2 scope and the evidence hashes in reports/PHASE2-REMEDIATION-REPORT.md.",
+  "phase": "2",
+  "prev_sha256": "sha256:5ecbb48c1fb0b0e8437e0a6353270bfe15137d100dbf6df6c0c459dd54469dfb",
+  "record_sha256": "sha256:d7126270255acacc2badfc3836ba8106fc4efc0670e3882457a9286d6d6acdf9",
+  "scope": "xauusd-guardian Phase 2 only: contracts/market, domain/market, adapters/mt5_market, application/market_data_service, storage/market_store, migrations 0001-0002, scripts/collect|data_health|quarantine, tests/**; no commit, no Phase 3, no order path"
+}

@@ -1,0 +1,5 @@
+﻿attach: {'terminal_path': 'C:\\Program Files\\Aron Markets MT5', 'build': 6230, 'connected': True, 'trade_allowed': True}
+model_offset_s: 7200
+arg passed: 1793904778 int expected: 1793904778
+rows: 2116
+window_start_z: 16:52:58 first_z: 16:52:58 delta_s: 0 last_z: 16:55:00

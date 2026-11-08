@@ -1,0 +1,12 @@
+{
+  "action": "initialize local git repository and first commit",
+  "approval_id": "A-03",
+  "approver": "icFixer.ir (human, AutoClaw chat 2026-11-04)",
+  "expires": "none",
+  "granted_utc": "2026-11-04T16:38:17.321341+00:00",
+  "note": "",
+  "phase": "1",
+  "prev_sha256": "sha256:15070563a75374bfda017b32582c324bad840d2ef8f674d0eab2366a7a76fecd",
+  "record_sha256": "sha256:a45547c5dfd78db8a361c2cf1cb9322d47f0dd4dcf639413ef2d7c1d001c4f99",
+  "scope": "xauusd-guardian/** local repo, no remotes"
+}

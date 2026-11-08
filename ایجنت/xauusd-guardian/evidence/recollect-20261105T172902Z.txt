@@ -1,0 +1,20 @@
+﻿command: collect.py --ticks-start 2026-11-05T10:31:53.372Z --ticks-end 2026-11-05T10:41:53.282Z --db data\evidence\recollect-20261105T172902Z.sqlite3
+{
+  "status": "OK",
+  "reasons": [],
+  "runs": [
+    {
+      "run_id": "3087c7657c3f4005804f8d223cbfc1eb",
+      "kind": "ticks",
+      "timeframe": null,
+      "status": "OK",
+      "inserted": 7840,
+      "revised": 0,
+      "gaps": 0,
+      "reason": ""
+    }
+  ],
+  "db": "data\\evidence\\recollect-20261105T172902Z.sqlite3"
+}
+
+exit_code: 0

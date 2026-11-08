@@ -1,0 +1,12 @@
+{
+  "action": "create project workspace",
+  "approval_id": "A-01",
+  "approver": "icFixer.ir (human, AutoClaw chat 2026-11-04)",
+  "expires": "none",
+  "granted_utc": "2026-11-04T16:38:16.616177+00:00",
+  "note": "Phase 0.5 approval; no code existed before",
+  "phase": "1",
+  "prev_sha256": "GENESIS",
+  "record_sha256": "sha256:74127b5f9dfe4459a940b6824c1b2ebbe1f93437cd17a4d3297a96022c06e500",
+  "scope": "xauusd-guardian/** (structure, src, tests, configs, docs)"
+}

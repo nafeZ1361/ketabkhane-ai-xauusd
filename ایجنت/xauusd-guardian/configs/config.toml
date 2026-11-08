@@ -1,0 +1,55 @@
+schema_version = 1
+
+[execution]
+# DRY_RUN | SIMULATED | DEMO
+# DEMO is rejected by the loader until approval A-05 exists in approvals/.
+mode = "DRY_RUN"
+terminal_path = 'C:\Program Files\Aron Markets MT5\terminal64.exe'
+# xauusd_identity_v3 (production, D-003) | xauusd_strict_v1 | spot_metal_usd_v2
+symbol_policy = "xauusd_identity_v3"
+require_terminal_path_match = true
+[account]
+expected_trade_mode = "DEMO"
+expected_server = "AronMarkets-Demo"
+expected_company = "Aron Markets Ltd"
+currency = "USD"
+reject_on_mismatch = true
+
+# Broker profile for metadata corroboration (D-003). Versioned: bump
+# schema_version when the shape changes, not when a value changes.
+[symbol_expectations]
+schema_version = 1
+# One name, verified exactly. Widen only with a recorded decision.
+aliases = ["XAUUSD."]
+required_symbol_name = "XAUUSD."
+required_path_token = "Spot Metals"
+required_profit_currency = "USD"
+contract_size = 100.0
+tick_size = 0.01
+digits = 2
+require_full_trade_mode = true
+
+[risk]
+risk_percent = 0.25
+min_effective_risk_ratio = 0.5
+max_spread_points = 30
+require_stop_loss = true
+
+[logging]
+level = "INFO"
+redact = true
+
+[market_data]
+gap_tolerance_bars = 1
+stale_after_bars = 2
+tick_quota_gb = 2.0
+max_tick_window_h = 6
+min_bars_per_day = 0.5
+data_root = "data"
+
+[market_data.session]
+anchor_tz = "America/New_York"
+week_open = "sun 18:00"
+week_close = "fri 17:00"
+daily_break = "17:00-18:00"
+calibrate_from_history_days = 30

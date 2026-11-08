@@ -1,0 +1,4 @@
+﻿attach: {'terminal_path': 'C:\\Program Files\\Aron Markets MT5', 'build': 6230, 'connected': True, 'trade_allowed': True}
+host_now_z: 16:52:04 intended_start_z: 16:51:04 model_offset_s: 7200
+current form  passed= 2026-11-05T18:21:04 -> first tick z= 12:51:04
+epoch form    passed= 1793897464 -> first tick z= 14:51:04

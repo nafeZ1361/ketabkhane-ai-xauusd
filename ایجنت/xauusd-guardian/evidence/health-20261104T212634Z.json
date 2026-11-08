@@ -1,0 +1,79 @@
+﻿{
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3",
+  "health": {
+    "bars": 8007,
+    "bar_revisions": 8009,
+    "ticks": 0,
+    "runs": 5,
+    "usage_bytes": 6000640,
+    "quota_bytes": 2000000000
+  },
+  "last_bars": {
+    "M1": {
+      "time_utc": "2026-11-04T21:27:00+00:00",
+      "close": 4061.82
+    },
+    "M5": {
+      "time_utc": "2026-11-04T21:25:00+00:00",
+      "close": 4061.8
+    },
+    "M15": null,
+    "H1": {
+      "time_utc": "2026-11-04T21:00:00+00:00",
+      "close": 4061.74
+    },
+    "H4": null
+  },
+  "recent_runs": [
+    {
+      "run_id": "238b0538e1f54e9786ac0e4301932a09",
+      "kind": "bars",
+      "timeframe": "H1",
+      "status": "DEGRADED",
+      "inserted": 2000,
+      "revised": 0,
+      "gaps": 1,
+      "started_utc": "2026-11-04T21:27:10.384314+00:00"
+    },
+    {
+      "run_id": "bba7ead2b3704ffb9fae5b68f101fa52",
+      "kind": "bars",
+      "timeframe": "M5",
+      "status": "DEGRADED",
+      "inserted": 1,
+      "revised": 1,
+      "gaps": 1,
+      "started_utc": "2026-11-04T21:27:09.359160+00:00"
+    },
+    {
+      "run_id": "135fc458346f45b59d432c008cedff32",
+      "kind": "bars",
+      "timeframe": "M1",
+      "status": "OK",
+      "inserted": 6,
+      "revised": 1,
+      "gaps": 0,
+      "started_utc": "2026-11-04T21:27:08.604097+00:00"
+    },
+    {
+      "run_id": "6ce464c4ffd74041b5aea7fa9390ee0d",
+      "kind": "bars",
+      "timeframe": "M5",
+      "status": "DEGRADED",
+      "inserted": 3000,
+      "revised": 0,
+      "gaps": 2,
+      "started_utc": "2026-11-04T21:21:46.384525+00:00"
+    },
+    {
+      "run_id": "9bf5e90c313043dd8ca7ddd4e50c450a",
+      "kind": "bars",
+      "timeframe": "M1",
+      "status": "OK",
+      "inserted": 3000,
+      "revised": 0,
+      "gaps": 0,
+      "started_utc": "2026-11-04T21:21:45.322980+00:00"
+    }
+  ]
+}

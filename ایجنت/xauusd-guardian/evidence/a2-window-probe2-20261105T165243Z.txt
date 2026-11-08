@@ -1,0 +1,5 @@
+﻿attach: {'terminal_path': 'C:\\Program Files\\Aron Markets MT5', 'build': 6230, 'connected': True, 'trade_allowed': True}
+intended_start_z: 16:51:42
+epoch+offset -> 16:51:42 delta_s= 0
+datetime(local wall of start+offset) -> 16:51:42 delta_s= 0
+datetime(local wall of start) -> 14:51:42 delta_s= -7200

@@ -1,0 +1,30 @@
+﻿command: scripts/collect.py --bars M1,M5 --count 1000
+exit_code: 0
+
+{
+  "status": "OK",
+  "reasons": [],
+  "runs": [
+    {
+      "run_id": "7fe44f491b3a4beeb7e6dce26cd88abd",
+      "kind": "bars",
+      "timeframe": "M1",
+      "status": "OK",
+      "inserted": 31,
+      "revised": 1,
+      "gaps": 0,
+      "reason": ""
+    },
+    {
+      "run_id": "16102c95344947a08dba43a519d75fbf",
+      "kind": "bars",
+      "timeframe": "M5",
+      "status": "OK",
+      "inserted": 6,
+      "revised": 1,
+      "gaps": 0,
+      "reason": ""
+    }
+  ],
+  "db": "C:\\Users\\icFixer.ir\\AppData\\Roaming\\AutoClaw-oversea-official\\accounts\\7f9fa7c15983c9654b410a0d812b523be39e835c034f44ac0c2e8061a1288073\\projects\\\u0627\u06cc\u062c\u0646\u062a\\xauusd-guardian\\data\\guardian.sqlite3"
+}

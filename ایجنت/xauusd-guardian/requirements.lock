@@ -1,0 +1,11 @@
+# Pinned runtime + test dependencies for xauusd-guardian
+# Python: 3.11.8 x64 (C:\Python311\python.exe)
+#
+# NOTE (D-008): the package index was unreachable on 2026-11-04
+# (ProxyError: mirror.runflare.com), so `.venv` was created with
+# --system-site-packages and inherits these exact versions from the approved
+# base interpreter. Nothing was installed globally and nothing was downloaded.
+# Replace this file's semantics with a hermetic venv before Phase 5.
+
+MetaTrader5==5.0.6231
+pytest==9.2.0
