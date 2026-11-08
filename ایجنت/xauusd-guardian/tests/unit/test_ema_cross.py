@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 from decimal import Decimal
 
 import pytest
@@ -13,6 +13,30 @@ from guardian.domain.strategy import ema_cross
 
 T0 = datetime(2026, 11, 5, 8, 0, tzinfo=timezone.utc)
 NOW = T0 + timedelta(minutes=5 * 120 + 5)  # after the last fixture bar closes
+
+class _NoOffsetTZ(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+
+class _InvalidTypeOffsetTZ(tzinfo):
+    def utcoffset(self, dt):
+        return "not-a-timedelta"
+
+    def dst(self, dt):
+        return None
+
+
+class _OutOfRangeOffsetTZ(tzinfo):
+    def utcoffset(self, dt):
+        return timedelta(hours=24)
+
+    def dst(self, dt):
+        return None
+
 
 
 def bar(i: int, close: float) -> MarketBar:
@@ -94,3 +118,13 @@ def test_forming_bar_is_refused():
 def test_incomplete_series_is_refused():
     with pytest.raises(SignalError):
         ema_cross.evaluate(series()[:40], now=NOW)
+
+
+@pytest.mark.parametrize(
+    "zone",
+    [_NoOffsetTZ(), _InvalidTypeOffsetTZ(), _OutOfRangeOffsetTZ()],
+)
+def test_now_requires_a_valid_utc_offset(zone):
+    now = datetime(2026, 11, 5, 20, 0, tzinfo=zone)
+    with pytest.raises(SignalError, match="valid UTC offset"):
+        ema_cross.evaluate(series(), now=now)
