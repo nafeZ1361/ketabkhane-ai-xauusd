@@ -1,6 +1,6 @@
 # PHASE 3 — Analysis & strategy (definition, revision 1)
 
-Status: **DRAFT FOR HUMAN APPROVAL** (no code written yet). Phase 2 accepted via A-08.
+Status: **ACTIVE — S1–S4 PASS; W1 timezone validation PASS; S5–S7 OPEN.** Phase 2 accepted via A-08. This plan is the approved execution baseline; no Phase 4 work is authorized.
 
 ## 1. Scope
 
