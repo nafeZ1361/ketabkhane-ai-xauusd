@@ -44,6 +44,12 @@ def evaluate(bars: Sequence[MarketBar], strategy_id: str = SPEC.id, *, now: date
     moment = now
     if moment.tzinfo is None:
         raise SignalError("now must be timezone-aware")
+    try:
+        utc_offset = moment.utcoffset()
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise SignalError("now must have a valid UTC offset") from exc
+    if utc_offset is None:
+        raise SignalError("now must have a valid UTC offset")
     for bar in bars:
         close_at = bar.time_utc + timedelta(minutes=MINUTES[bar.timeframe])
         if close_at > moment:
