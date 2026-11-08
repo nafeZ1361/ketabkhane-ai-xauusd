@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-04 (Phase 1)
+Last updated: 2026-11-08 (Phase 3 / W1)
 
 ## Phase status
 
@@ -9,8 +9,8 @@ Last updated: 2026-11-04 (Phase 1)
 | 0 Reconnaissance | DONE | 2026-11-03, `READY_WITH_BLOCKERS` |
 | 0.5 Reconciliation | DONE | `PHASE_0_5_RESOLUTION.md` (workspace root), 4 blockers mapped |
 | 1 Foundation | **PASS** (provisional, awaiting human sign-off) | structure, config, contracts, logging, storage, migrations, tests, identity resolver; three independent audit passes, no must-fix open |
-| 2 Market data | **INCOMPLETE — verification blocker** | collector, broker clock, session calendar, validators, store, CLI; 163 tests green; F2 closed by audit, F1 fixed twice but the recheck could not run inside the daily halt |
-| 3 Analysis/strategy | **IN PROGRESS** | S1 PASS · S2 PASS (`ema_cross_v1`) · S3 PASS (replay `9a1dcfc8…`) · S4 PASS (explicit `now` in tests, MT5 boundary 5/5) · S5–S7 open |
+| 2 Market data | **ACCEPTED** | Phase 2 accepted under A-08 (2026-11-05); see `reports/PHASE2-REMEDIATION-REPORT.md` and approval chain A-01→A-08 |
+| 3 Analysis/strategy | **IN PROGRESS** | S1–S4 PASS; W1 timezone validation PASS (independent Inspector; 220/220 tests on `fix/w1-timezone-validation`); S5–S7 open |
 | 4 Risk | NOT STARTED | |
 | 5 Firewall | NOT STARTED | |
 | 6 Backtest | NOT STARTED | |
