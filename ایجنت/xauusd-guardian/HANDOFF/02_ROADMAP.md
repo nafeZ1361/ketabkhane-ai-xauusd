@@ -12,8 +12,8 @@ project has not already written down; where the source is silent, it says **TBD 
 | S3 | replay determinism on stored bars (same digest twice) | PASS | `evidence/phase3-S3-*` |
 | S4 | no `MetaTrader5` import outside adapters | PASS | `tests/security/test_boundaries.py` |
 | S5 | suite green | PASS | 252/252 at S5, commit `9a3b53a` |
-| S6 | migration 0003 additive and reversible | **PASS at the S6 inspection; F1 and F1b found at S7, both fixed** | `evidence/phase3-S6-20261112T191535Z.txt` |
-| S7 | independent Inspector PASS on Phase 3 | **BLOCK ×2 (F1, F1b) → both fixed (274/274) → re-review pending** | `HANDOFF/artifacts/REPORT-S7*.md` |
+| S6 | migration 0003 additive and reversible | **PASS at the S6 inspection; F1, F1b, F1c found at S7, all fixed** | `evidence/phase3-S6-20261112T203848Z.txt` |
+| S7 | independent Inspector PASS on Phase 3 | **BLOCK ×3 (F1, F1b, F1c) → all fixed (279/279) → re-review pending** | `HANDOFF/artifacts/REPORT-S7*.md` |
 
 ### S7 — what the reviewer must establish
 

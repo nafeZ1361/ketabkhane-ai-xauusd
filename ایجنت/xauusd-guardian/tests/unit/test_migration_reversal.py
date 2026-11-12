@@ -287,7 +287,7 @@ def test_reversal_plan_is_reviewable_before_acting(tmp_path, project_root):
     assert plan.down_filename == "0003_signals.down.sql"
     assert plan.tables == ("signal_runs", "signals")
     assert plan.indexes == ("idx_signal_runs_window", "idx_signals_run")
-    assert len(plan.statements) == 2
+    assert len(plan.drops) == 2
 
     down_text = (project_root / "migrations" / "rollback" / "0003_signals.down.sql").read_text(encoding="utf-8")
     assert plan.down_sha256 == "sha256:" + hashlib.sha256(down_text.encode("utf-8")).hexdigest()
@@ -439,3 +439,123 @@ def test_failed_migration_leaves_no_partial_schema(tmp_path, project_root):
 
     assert "probe" not in table_names(conn), "a failed migration must not leave its objects behind"
     assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+# --------------------------------------------------------------------------- #
+# S7 round 3: provenance, schema qualification, quoted identifiers
+# --------------------------------------------------------------------------- #
+
+
+def test_legacy_database_without_provenance_refuses_revert(tmp_path, project_root):
+    """A database applied by the pre-provenance build has no safe reverse; refuse it."""
+    conn = connect(tmp_path / "legacy.sqlite3")
+    assert apply_migrations(conn, legacy_dir(tmp_path, project_root)) == [1, 2]
+
+    conn.execute(
+        "CREATE TABLE signals (symbol TEXT, timeframe TEXT, bar_time_utc TEXT, strategy_id TEXT, "
+        "direction TEXT, strength TEXT, reason_code TEXT, run_id TEXT, created_utc TEXT)"
+    )
+    conn.execute(
+        "CREATE TABLE signal_runs (run_id TEXT PRIMARY KEY, symbol TEXT, strategy_id TEXT, "
+        "timeframe TEXT, from_utc TEXT, to_utc TEXT, bars_seen INTEGER, signals INTEGER, "
+        "written INTEGER, identical INTEGER, status TEXT, created_utc TEXT)"
+    )
+    digest = "sha256:" + hashlib.sha256(
+        (project_root / "migrations" / "0003_signals.sql").read_text(encoding="utf-8").encode("utf-8")
+    ).hexdigest()
+    conn.execute(
+        "INSERT INTO schema_migrations (version, filename, sha256, applied_at) VALUES (?,?,?,?)",
+        (3, "0003_signals.sql", digest, START.isoformat()),
+    )
+    conn.execute(
+        "INSERT INTO signals VALUES ('XAUUSD.','M5','t','legacy','LONG','0.5','LEGACY','r','t')"
+    )
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="no object provenance"):
+        revert_migration(conn, project_root / "migrations", 3)
+
+    assert "signals" in table_names(conn)
+    assert conn.execute("SELECT COUNT(*) AS c FROM signals").fetchone()["c"] == 1
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_revert_never_targets_a_temp_table(tmp_path, project_root):
+    """An unqualified DROP resolves against temp first; the reverse must not be able to."""
+    conn = prepared_db(tmp_path, project_root, "temp.sqlite3")
+    conn.execute("DROP TABLE signals")
+    conn.execute("CREATE TEMP TABLE signals (x INTEGER)")
+    conn.execute("INSERT INTO temp.signals VALUES (1)")
+    conn.commit()
+
+    with pytest.raises(sqlite3.OperationalError):
+        revert_migration(conn, project_root / "migrations", 3)
+
+    assert conn.execute("SELECT COUNT(*) AS c FROM temp.signals").fetchone()["c"] == 1
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_apply_refuses_adoption_of_a_quoted_declaration(tmp_path, project_root):
+    """``CREATE TABLE IF NOT EXISTS "probe_q"`` must be parsed, not ignored."""
+    migrations = tmp_path / "mig"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        'CREATE TABLE IF NOT EXISTS "probe_q" (id INTEGER PRIMARY KEY);\n', encoding="utf-8"
+    )
+    (migrations / "rollback" / "0004_probe.down.sql").write_text(
+        'DROP TABLE "probe_q";\n', encoding="utf-8"
+    )
+
+    conn = connect(tmp_path / "quoted.sqlite3")
+    assert apply_migrations(conn, legacy_dir(tmp_path, project_root)) == [1, 2]
+    conn.execute('CREATE TABLE "PROBE_Q" (id INTEGER PRIMARY KEY, legacy TEXT)')
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="would adopt"):
+        apply_migrations(conn, migrations)
+
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+    columns = {row["name"] for row in conn.execute('PRAGMA main.table_info("PROBE_Q")')}
+    assert "legacy" in columns, "the pre-existing table must be left exactly as it was"
+
+
+def test_down_file_may_use_quoted_and_main_qualified_names(tmp_path, project_root):
+    """The parser accepts the identifier spellings SQLite accepts — on both sides."""
+    migrations = tmp_path / "mig"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        'CREATE TABLE "probe_q" (id INTEGER PRIMARY KEY);\n', encoding="utf-8"
+    )
+    (migrations / "rollback" / "0004_probe.down.sql").write_text(
+        'DROP TABLE main."probe_q";\n', encoding="utf-8"
+    )
+
+    conn = connect(tmp_path / "qualified.sqlite3")
+    assert apply_migrations(conn, migrations) == [1, 2, 3, 4]
+    assert revert_migration(conn, migrations, 4) == 4
+    assert "probe_q" not in table_names(conn)
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_revert_refuses_an_index_left_behind(tmp_path, project_root):
+    """The index half of the post-condition is load-bearing, not decoration."""
+    migrations = tmp_path / "mig"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TABLE probe (id INTEGER PRIMARY KEY);\n"
+        "CREATE INDEX idx_probe ON bars (symbol);\n",
+        encoding="utf-8",
+    )
+    (migrations / "rollback" / "0004_probe.down.sql").write_text(
+        "DROP TABLE probe;\n", encoding="utf-8"
+    )
+
+    conn = connect(tmp_path / "index.sqlite3")
+    assert apply_migrations(conn, migrations) == [1, 2, 3, 4]
+
+    with pytest.raises(MigrationError, match="left objects behind"):
+        revert_migration(conn, migrations, 4)
+
+    assert "idx_probe" in index_names(conn)
+    assert "probe" in table_names(conn)
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3, 4]
