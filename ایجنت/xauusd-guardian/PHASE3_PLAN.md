@@ -39,7 +39,7 @@ Migration `0003_signals.sql` adds:
 
 `signals.strength` is `TEXT`: the contract requires an exact finite `Decimal`, and a `REAL` column would round-trip through binary floating point and change the replay digest. `signal_runs.symbol` keeps a zero-signal run attributable.
 
-The migration is additive only (no `ALTER`/`DROP` of `0001`/`0002`). Its reverse is `DROP TABLE IF EXISTS signals; DROP TABLE IF EXISTS signal_runs;`, recorded as a manual statement rather than a `0003_*_down*.sql` file, because `db.py` discovers forward migrations with `^[0-9]{4}_[a-z0-9_]+\.sql$` and would apply a down-migration as the next forward step. S6 owns making that reversible in code.
+The migration is additive only (no `ALTER`/`DROP` of `0001`/`0002`). Its reverse lives in `migrations/rollback/0003_signals.down.sql` — `DROP TABLE signals;` then `DROP TABLE signal_runs;`, with no `IF EXISTS` so a drifted schema fails loudly — and is executed by `guardian.storage.db.revert_migration`, which validates it with `reversal_plan` first, runs it and the `schema_migrations` delete inside one explicit transaction, and refuses to act when the ledger and the files disagree (unapplied version, a later version still applied, or a forward file whose hash no longer matches the recorded one). A reverse may only drop objects its forward created, may not drop a table whose live shape drifted, and must leave none of those objects behind; otherwise the whole reversal rolls back. Down files carry a dotted name (`0003_signals.down.sql`) that cannot match the forward discovery pattern, so they are never applied as forward migrations. S6 makes that reversible in code.
 
 Reads must exclude quarantined runs (reuse `_QUARANTINED_RUNS` / the identical predicate in the service).
 
@@ -47,7 +47,7 @@ Reads must exclude quarantined runs (reuse `_QUARANTINED_RUNS` / the identical p
 
 S1 look-ahead property test · S2 boundary/warmup tests · S3 replay determinism on stored bars (same digest twice) · S4 no MT5 import outside adapters · S5 suite green · S6 migration is additive and reversible · S7 independent Inspector PASS.
 
-Current gate state: S1–S4 PASS. **S5 candidate** — full suite 252/252 green, `compileall` exit 0; awaiting independent Inspector sign-off. S6 OPEN (reversibility not implemented, see §5). S7 OPEN (this sign-off).
+Current gate state: S1–S5 PASS (252/252 suite green, `compileall` exit 0, S5 committed as `9a3b53a`). **S6 candidate** — reversibility implemented in code and exercised by tests; awaiting independent Inspector sign-off. S7 OPEN.
 
 ## 7. Deliverables
 
