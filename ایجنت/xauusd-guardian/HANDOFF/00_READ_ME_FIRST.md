@@ -11,9 +11,10 @@ A DEMO-only, offline-first XAUUSD research system. Python 3.11, standard library
 ## State in one paragraph
 
 Phase 3 (analysis & strategy) is **in progress**. Stages S1–S5 are PASS. S6 (migration 0003
-additive + reversible) is **implemented and independently inspected: PASS, no must-fix**, but the
-working tree is **uncommitted** (see `01_STATE_SNAPSHOT.md`). Gate **S7** (independent Inspector
-sign-off of Phase 3) is **OPEN**. Phase 4 and everything after it is **NOT AUTHORIZED**.
+additive + reversible) is **implemented, independently inspected: PASS, no must-fix**, committed as
+`2e56ae7`; this handoff pack is committed as `f3f6644`, and the branch is pushed to `origin`. Gate
+**S7** (independent Inspector sign-off of Phase 3) is **OPEN**. Phase 4 and everything after it is
+**NOT AUTHORIZED**.
 
 ## Hard rules — do not negotiate these
 
@@ -22,8 +23,8 @@ sign-off of Phase 3) is **OPEN**. Phase 4 and everything after it is **NOT AUTHO
    no `order_check`, no trade-request construction anywhere else.
 3. Never read `balance`, `equity`, `margin*`, `profit` — no approval A-04 exists.
 4. Never log account numbers, credentials, tokens or secrets (redaction filter must stay in place).
-5. **No git write or network operation without explicit human authorization:** no commit, push,
-   pull, fetch, merge, rebase, reset, amend, stash, branch deletion, or `git add -A`.
+5. **No git write or network operation without an explicit human go-ahead.** That means no commit,
+   push, pull, fetch, merge, rebase, reset, amend, stash, branch deletion, or `git add -A`.
 6. No new dependency without a written justification and human approval. pandas/numpy/scipy/
    matplotlib are banned without approval.
 7. Never edit an **applied** migration. Its SHA-256 is pinned in `schema_migrations`; editing it
@@ -70,8 +71,8 @@ Never bulk-read `src/` or `tests/`. Use `rg` for the symbol you need.
   is over **raw bytes**; `git hash-object` and `sha256sum` of the working file can differ from the
   blob. State which one you measured.
 - `git add -A` would sweep in the untracked S5 evidence file. Always add explicit paths.
-- `origin/fix/w1-timezone-validation` is **behind** the local branch: the S5 commit `9a3b53a`
-  exists only locally. Do not "fix" that by pushing without being asked.
+- `origin/fix/w1-timezone-validation` is in sync as of `f3f6644` (pushed 2026-11-12). Before that,
+  the S5 commit existed only locally. Pushing is still a human-authorized action, not a routine one.
 
 ## What to do next
 

@@ -35,10 +35,13 @@ have to re-explain the project to a fresh model.
 
 ---
 
-## 2. Commit the S6 delta (only with explicit human authorization)
+## 2. Commit a change set (only with explicit human authorization)
 
-> Authorized action: create **one** commit on `fix/w1-timezone-validation` containing exactly the S6
-> delta. Do not push. Do not amend or reset. Do not `git add -A`.
+> Already done for S6: commit `2e56ae7` on `fix/w1-timezone-validation`. This template is kept for the
+> next authorized change set.
+>
+> Authorized action: create **one** commit on `fix/w1-timezone-validation` containing exactly the
+> change set below. Do not push. Do not amend or reset. Do not `git add -A`.
 >
 > Add exactly these paths (relative to `ایجنت/xauusd-guardian/`):
 > `src/guardian/storage/db.py`, `tests/unit/test_migration_reversal.py`,

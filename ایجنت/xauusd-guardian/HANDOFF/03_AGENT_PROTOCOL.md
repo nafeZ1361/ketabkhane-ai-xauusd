@@ -20,8 +20,8 @@ already true — the second is the smallest diff that changes it.
 - Before and after any work, record `git rev-parse HEAD` and `git status --porcelain`. If the
   before/after differ and you did not intend it, you have a finding, not a clean session.
 - The S5 commit `9a3b53a` must never be recreated, amended or replaced. It is the accepted baseline.
-- `origin/fix/w1-timezone-validation` is behind local (`08ce5f3`). That is expected; do not
-  "repair" it by pushing.
+- The branch is in sync with `origin` as of `f3f6644` (2026-11-12). Pushing is still a human-authorized
+  action, not a routine one.
 
 ## 3. Change discipline
 

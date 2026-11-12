@@ -8,13 +8,14 @@ If `git rev-parse HEAD` differs from the table below, this file is history — r
 | Item | Value |
 |---|---|
 | Branch | `fix/w1-timezone-validation` |
-| HEAD | `9a3b53af95267c6ecaeca6b567006f671786ecd7` — `feat(signals): complete Phase 3 S5 signal service` |
+| HEAD now | `f3f6644768a64f25757bcbb606c233461644989c` — handoff commit (see the chain below) |
+| HEAD at S6 inspection | `9a3b53af95267c6ecaeca6b567006f671786ecd7` — `feat(signals): complete Phase 3 S5 signal service` |
 | HEAD parent | `08ce5f331a72d5b13c5757654e098ac397ba9d1b` |
 | `main` | `1dad9588083f210fca868f49358aff44826e6f2f` (unchanged) |
 | Parallel branch `fix/xauusd-guardian-w1-timezone` | `76d468eda3e15e2c7d87a4fdcfe0f7b45c620b45` (unchanged, deliberately kept) |
-| `origin/fix/w1-timezone-validation` | `08ce5f3` — **one commit behind local**: the S5 commit is local-only and unpushed |
-| New commits for S6 | **none** at inspection time (deliberate: the S6 prompt forbade committing) |
-| Handoff commit | created immediately after this snapshot: it adds the S6 delta **and** `HANDOFF/`. Read `git log -1` for its hash; this snapshot describes the tree *before* it. |
+| `origin/fix/w1-timezone-validation` | `f3f6644` — in sync since 2026-11-12 (before that `08ce5f3`; the S5 commit was local-only) |
+| S6 commit | `2e56ae7` — `feat(s6): reversible migration 0003 with guarded reversal` |
+| Handoff commit | `f3f6644` — `docs(handoff): agent handoff pack for S7 and beyond` |
 
 ## S6 delta — the working-tree change set as inspected
 
