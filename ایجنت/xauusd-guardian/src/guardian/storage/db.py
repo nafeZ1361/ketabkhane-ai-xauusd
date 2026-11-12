@@ -135,6 +135,14 @@ def apply_migrations(conn: sqlite3.Connection, migrations_dir: str | Path) -> li
                 )
             continue
 
+        adopted = _existing_objects(conn, tuple(_created_objects(sql)))
+        if adopted:
+            raise MigrationError(
+                f"migration {path.name} would adopt existing object(s) {adopted} instead of "
+                f"creating them; refusing to record a migration that creates nothing. "
+                f"Resolve the database manually, then re-run."
+            )
+
         conn.executescript(sql)
         conn.execute(
             "INSERT INTO schema_migrations (version, filename, sha256, applied_at) VALUES (?, ?, ?, ?)",
@@ -194,12 +202,30 @@ def _split_sql_statements(sql: str, source: str) -> list[str]:
 
 
 def _created_objects(forward_sql: str) -> dict[str, str]:
-    """Map object name -> ``table``/``index`` for every CREATE in a migration."""
-    return {match.group("name"): match.group("kind").lower() for match in _CREATE_RE.finditer(forward_sql)}
+    """Map object name -> ``table``/``index`` for every CREATE in a migration.
+
+    Comments are stripped first, so a ``--`` comment that happens to mention
+    ``CREATE TABLE bars`` cannot widen the reverse whitelist.
+    """
+    return {
+        match.group("name"): match.group("kind").lower()
+        for match in _CREATE_RE.finditer(_strip_comments(forward_sql))
+    }
 
 
-def _declared_columns(forward_sql: str, table: str) -> tuple[str, ...]:
-    """Column names declared by ``CREATE TABLE <table> (...)``, in order."""
+def _existing_objects(conn: sqlite3.Connection, names: tuple[str, ...]) -> list[str]:
+    """Names from ``names`` that already exist in ``sqlite_master``, sorted."""
+    if not names:
+        return []
+    placeholders = ",".join("?" for _ in names)
+    rows = conn.execute(
+        f"SELECT name FROM sqlite_master WHERE name IN ({placeholders})", names
+    ).fetchall()
+    return sorted(row["name"] for row in rows)
+
+
+def _declared_shape(forward_sql: str, table: str) -> tuple[tuple[str, str], ...]:
+    """``(column, declared type)`` pairs for ``CREATE TABLE <table> (...)``, in order."""
     match = re.search(
         r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?" + re.escape(table) + r"\s*\(",
         forward_sql,
@@ -234,14 +260,15 @@ def _declared_columns(forward_sql: str, table: str) -> tuple[str, ...]:
             current.append(char)
     items.append("".join(current))
 
-    columns: list[str] = []
+    columns: list[tuple[str, str]] = []
     for item in items:
         tokens = _strip_comments(item).split()
         if not tokens:
             continue
         if tokens[0].upper() in _TABLE_CONSTRAINT_KEYWORDS:
             continue
-        columns.append(tokens[0].strip('"`[]').lower())
+        declared_type = tokens[1].upper() if len(tokens) > 1 else ""
+        columns.append((tokens[0].strip('"`[]').lower(), declared_type))
     return tuple(columns)
 
 
@@ -289,11 +316,12 @@ def _check_declared_shapes(
     forward_name: str,
     tables: tuple[str, ...],
 ) -> None:
-    """Refuse to drop a table whose live shape is not the one the forward declares.
+    """Refuse to drop a table whose live columns or declared types drifted.
 
-    Guards the ``CREATE TABLE IF NOT EXISTS`` adoption case: if a table with this
-    name already existed, the forward migration created nothing and recorded
-    itself anyway. Dropping it would then destroy data the migration never owned.
+    Catches manual DDL between apply and revert: an added column, a changed
+    type, a replaced table. Adoption of a pre-existing table cannot reach this
+    check: :func:`apply_migrations` refuses to record a migration whose objects
+    already exist, so a table named by an applied migration was created by it.
     """
     for table in tables:
         present = conn.execute(
@@ -302,12 +330,18 @@ def _check_declared_shapes(
         if present is None:
             # A missing table fails loudly at DROP time, inside the transaction.
             continue
-        declared = _declared_columns(forward_sql, table)
+        declared = _declared_shape(forward_sql, table)
         if not declared:
             raise MigrationError(
                 f"{forward_name} declares no columns for {table!r}; refusing to drop an unverifiable table"
             )
-        actual = tuple(row["name"].lower() for row in conn.execute(f'PRAGMA table_info("{table}")'))
+        actual = tuple(
+            (
+                row["name"].lower(),
+                row["type"].upper().split()[0] if row["type"].strip() else "",
+            )
+            for row in conn.execute(f'PRAGMA table_info("{table}")')
+        )
         if declared != actual:
             raise MigrationError(
                 f"table {table!r} does not match {forward_name} "

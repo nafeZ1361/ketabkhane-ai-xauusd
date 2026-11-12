@@ -1,0 +1,282 @@
+﻿### PHASE 3 / S6 - EVIDENCE (migration 0003 additive & reversible)
+GENERATED_UTC : 20261112T182517Z
+NOTE          : supersedes phase3-S6-20261109T170723Z.txt (abandoned attempt) and phase3-S6-20261109T173019Z.txt (pre-F1 inspection snapshot)
+PYTHON        : Python 3.11.8
+PYTEST        : pytest 9.2.0
+
+### REPOSITORY STATE
+CLONE         : C:\GS5\repo (carries the S5 commit)
+BRANCH        : fix/w1-timezone-validation
+HEAD          : b2057d2fe74c3dd4f89a6d3943b51065e6194e52
+HEAD_SUBJECT  : docs(handoff): record S6 and handoff commits, remote sync
+HEAD_PARENT   : f3f6644768a64f25757bcbb606c233461644989c
+S5_COMMIT     : 9a3b53af95267c6ecaeca6b567006f671786ecd7
+S5_IS_HEAD    : False
+S5_PARENT_OK  : False
+UPSTREAM_REF  : b2057d2fe74c3dd4f89a6d3943b51065e6194e52  (origin ref is pre-S5; the S5 commit is local-only and unpushed)
+AHEAD_OF_REF  : 0
+
+MAIN / PARALLEL REFS (read from the untouched snapshot clone _work/ketabkhane-ai-xauusd; no fetch or push performed)
+MAIN          : 1dad9588083f210fca868f49358aff44826e6f2f
+PARALLEL      : 76d468eda3e15e2c7d87a4fdcfe0f7b45c620b45
+UNCOMMITTED   : 8 paths (no commit authorized)
+
+### CHANGED FILES SINCE HEAD
+ M "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/DECISIONS_LOG.md"
+ M "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/PHASE3_PLAN.md"
+ M "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/PROJECT_STATE.md"
+ M "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/src/guardian/storage/db.py"
+ M "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/tests/unit/test_migration_reversal.py"
+?? "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/evidence/phase3-S5-20261108T202628Z.txt"
+?? "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/evidence/phase3-S6-20261109T170723Z.txt"
+?? "\330\247\333\214\330\254\331\206\330\252/xauusd-guardian/evidence/phase3-S6-20261112T182517Z.txt"
+
+ .../xauusd-guardian/DECISIONS_LOG.md"              |  2 +-
+ .../xauusd-guardian/PHASE3_PLAN.md"                |  6 +-
+ .../xauusd-guardian/PROJECT_STATE.md"              |  2 +-
+ .../xauusd-guardian/src/guardian/storage/db.py"    | 58 ++++++++++++----
+ .../tests/unit/test_migration_reversal.py"         | 79 ++++++++++++++++++++++
+ 5 files changed, 130 insertions(+), 17 deletions(-)
+
+FILES CHANGED BY 9a3b53a (must be the S5 set, not S6):
+9a3b53a feat(signals): complete Phase 3 S5 signal service
+ .../xauusd-guardian/DECISIONS_LOG.md"              |  15 +
+ .../xauusd-guardian/PHASE3_PLAN.md"                |  20 +-
+ .../xauusd-guardian/PROJECT_STATE.md"              |   2 +-
+ .../xauusd-guardian/migrations/0003_signals.sql"   |  46 +++
+ .../xauusd-guardian/scripts/replay_signals.py"     |  27 +-
+ .../xauusd-guardian/scripts/signals.py"            |  96 ++++++
+ .../src/guardian/application/signal_service.py"    | 268 +++++++++++++++++
+ .../tests/unit/test_market_store.py"               |   2 +-
+ .../tests/unit/test_signal_migration.py"           |  95 ++++++
+ .../tests/unit/test_signal_service.py"             | 321 +++++++++++++++++++++
+ .../tests/unit/test_signals_cli.py"                | 118 ++++++++
+ .../xauusd-guardian/tests/unit/test_storage.py"    |   6 +-
+ 12 files changed, 1000 insertions(+), 16 deletions(-)
+
+### SHA-256 OF S6 FILES
+8b5e42635e887387ec4dc44d2d7dcf10d59476ce12a243b41e1c08cc7437aa42  migrations\rollback\0003_signals.down.sql
+0e8a77396752c6c11e7436ce135d3447f51199a1b85c2a710804e74913b3051d  src\guardian\storage\db.py
+772c255db3cb5444c1f1510accb3e491c3a4beae2c4db64dcc9127ea2cc5cef9  tests\unit\test_migration_reversal.py
+f4266db8ac76a570a3ae363768c847b72e8b370b6029f22c8fbe5bcae7cf66f9  DECISIONS_LOG.md
+36c3d23446ffe0c7d28df3d2b735716b1ce6a82e204a9b368fd8815acef5ab98  PHASE3_PLAN.md
+443c8a76f9e2b6c893ba3ebd1ea9fa364c2f2ad4b430e482122fbf0583e43484  PROJECT_STATE.md
+
+HASH_METHOD   : SHA-256 over raw file bytes exactly as checked out on disk
+
+### S6 TARGETED TESTS
+============================= test session starts =============================
+platform win32 -- Python 3.11.8, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\GS5\repo\ایجنت\xauusd-guardian
+configfile: pyproject.toml
+collected 18 items
+
+tests\unit\test_migration_reversal.py ..................                 [100%]
+
+--------- generated xml file: C:\GS5\s6_targeted_20261112T182517Z.xml ---------
+============================= 18 passed in 13.28s =============================
+EXIT CODE     : 0
+TEST NODES    : 18 (failures=0)
+
+### FULL PROJECT SUITE
+........................................................................ [ 26%]
+........................................................................ [ 53%]
+........................................................................ [ 80%]
+......................................................                   [100%]
+EXIT CODE     : 0
+JUNIT         : tests=270 failures=0 errors=0 skipped=0 time=237.58s
+
+### COMPILEALL
+EXIT CODE     : 0
+
+### MUTATION / NEGATIVE CONTROLS
+COMMAND       : C:\Python311\python.exe C:\GS5\mutation_probe.py
+SHA-256       : 49d3766325f95a4b9837336a4f1e3917692cc3954a91e805c0dfcf730de20963  C:\GS5\mutation_probe.py
+M1-whitelist-removed: exit=1 test_killed=True | FAILED tests/unit/test_migration_reversal.py::test_down_script_may_only_drop_objects_the_forward_created
+M2-post-condition-removed: exit=1 test_killed=True | FAILED tests/unit/test_migration_reversal.py::test_incomplete_down_script_is_refused_and_rolled_back
+M3-transaction-removed: exit=1 test_killed=True | FAILED tests/unit/test_migration_reversal.py::test_revert_is_atomic_when_a_table_is_missing
+M4-shape-check-removed: exit=1 test_killed=True | FAILED tests/unit/test_migration_reversal.py::test_revert_refuses_a_drifted_table
+M5-adoption-guard-removed: exit=1 test_killed=True | FAILED tests/unit/test_migration_reversal.py::test_apply_refuses_to_adopt_a_preexisting_table
+M6-comment-strip-removed: exit=1 test_killed=True | FAILED tests/unit/test_migration_reversal.py::test_comment_in_forward_cannot_widen_the_reverse_whitelist
+MUTATION_SUMMARY: probes=6 unkilled=0
+EXIT CODE     : 0
+
+### LIVE REVERSAL DEMONSTRATION
+COMMAND       : C:\Python311\python.exe C:\GS5\s6_demo.py
+SHA-256       : 5a460ad419836623e7bf45ff52c09408facf1731fad8d107323b4a9fdb764038  C:\GS5\s6_demo.py
+1) apply 0001+0002 -> [1, 2]
+   seeded pre-0003 rows: bars=2 feed_runs=2
+2) apply 0003 -> [3]
+   signals+signal_runs present: True
+   post-0003 rows: signals=1 signal_runs=1
+   ledger: [1, 2, 3]
+3) reversal plan: version=3 down=0003_signals.down.sql sha256=sha256:8b5e42635e887387ec4dc44d2d7dcf10d59476ce12a243b41e1c08cc7437aa42
+   tables to drop: ['signal_runs', 'signals']  indexes: ['idx_signal_runs_window', 'idx_signals_run']
+4) revert 0003 -> 3
+   0003 objects still present: []
+   pre-0003 rows intact: bars=2 (was 2) feed_runs=2 (was 2)
+   ledger: [1, 2]
+5) re-apply 0003 -> [3]
+   tables back, rows in signals = 0
+   bars still 2  ledger: [1, 2, 3]
+   second apply is a no-op -> []
+6) guard refused a reverse that would drop a pre-0003 table:
+   MigrationError: 0003_signals.down.sql would drop 'bars', which 0003_signals.sql did not create
+   bars still 2  ledger: [1, 2, 3]
+7) apply refused to adopt a pre-existing signals table:
+   MigrationError: migration 0003_signals.sql would adopt existing object(s) ['signals'] instead of creating them; refusing to record a migration that creates nothing. Resolve the database manually, then re-run.
+   legacy rows still 1  ledger: [1, 2]
+RESULT: additive + reversible + pre-0003 data preserved + deterministic re-apply + adoption refused
+EXIT CODE     : 0
+
+### DEMO SCRIPT SOURCE (self-contained reproduction)
+"""S6 live demonstration: additive apply, reversal, pre-0003 preservation, re-apply.
+
+Run from the project root with the approved interpreter:
+    C:\\Python311\\python.exe C:\\GS5\\s6_demo.py
+"""
+
+from __future__ import annotations
+
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(r"C:\GS5\repo") / "ایجنت" / "xauusd-guardian"
+sys.path.insert(0, str(ROOT / "src"))
+
+from guardian.storage.db import (  # noqa: E402
+    MigrationError,
+    apply_migrations,
+    connect,
+    migration_history,
+    reversal_plan,
+    revert_migration,
+)
+
+MIGRATIONS = ROOT / "migrations"
+START = "2026-11-05T08:00:00+00:00"
+
+
+def tables(conn) -> list[str]:
+    return sorted(row["name"] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'"))
+
+
+def ledger(conn) -> list[int]:
+    return [entry.version for entry in migration_history(conn)]
+
+
+def counted(conn, table: str) -> int:
+    return conn.execute(f"SELECT COUNT(*) AS c FROM {table}").fetchone()["c"]
+
+
+def main() -> int:
+    work = Path(tempfile.mkdtemp(prefix="s6-demo-"))
+    db = work / "demo.sqlite3"
+    legacy = work / "legacy"
+    legacy.mkdir()
+    for name in ("0001_init.sql", "0002_market_data.sql"):
+        shutil.copy(MIGRATIONS / name, legacy / name)
+
+    conn = connect(db)
+
+    print("1) apply 0001+0002 ->", apply_migrations(conn, legacy))
+    for run_id, close, bar_time in (("run-a", 1.5, START), ("run-b", 2.5, "2026-11-05T08:05:00+00:00")):
+        conn.execute(
+            "INSERT INTO feed_runs (run_id, symbol, kind, started_utc, status) VALUES (?,?,?,?,?)",
+            (run_id, "XAUUSD.", "bars", START, "OK"),
+        )
+        conn.execute(
+            "INSERT INTO bars (symbol, timeframe, time_utc, open, high, low, close, tick_volume, "
+            "spread_points, real_volume, content_sha256, first_seen_utc, last_seen_utc, run_id) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("XAUUSD.", "M5", bar_time, 1.0, 2.0, 0.5, close, 10, 0, 0.0, "sha-" + run_id, START, START, run_id),
+        )
+    conn.commit()
+    pre_bars, pre_runs = counted(conn, "bars"), counted(conn, "feed_runs")
+    print(f"   seeded pre-0003 rows: bars={pre_bars} feed_runs={pre_runs}")
+
+    print("2) apply 0003 ->", apply_migrations(conn, MIGRATIONS))
+    print("   signals+signal_runs present:", {"signals", "signal_runs"} <= set(tables(conn)))
+    conn.execute(
+        "INSERT INTO signal_runs (run_id, symbol, strategy_id, timeframe, from_utc, to_utc, bars_seen, "
+        "signals, written, identical, status, created_utc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        ("run_s6", "XAUUSD.", "ema_cross", "M5", START, START, 2, 1, 1, 0, "OK", START),
+    )
+    conn.execute(
+        "INSERT INTO signals (symbol, timeframe, bar_time_utc, strategy_id, direction, strength, "
+        "reason_code, run_id, created_utc) VALUES (?,?,?,?,?,?,?,?,?)",
+        ("XAUUSD.", "M5", START, "ema_cross", "LONG", "0.5", "EMA_CROSS", "run_s6", START),
+    )
+    conn.commit()
+    print(f"   post-0003 rows: signals={counted(conn, 'signals')} signal_runs={counted(conn, 'signal_runs')}")
+    print("   ledger:", ledger(conn))
+
+    plan = reversal_plan(conn, MIGRATIONS, 3)
+    print(f"3) reversal plan: version={plan.version} down={plan.down_filename} sha256={plan.down_sha256}")
+    print(f"   tables to drop: {list(plan.tables)}  indexes: {list(plan.indexes)}")
+
+    print("4) revert 0003 ->", revert_migration(conn, MIGRATIONS, 3))
+    after = set(tables(conn))
+    print("   0003 objects still present:", sorted({"signals", "signal_runs", "idx_signals_run"} & after))
+    print(f"   pre-0003 rows intact: bars={counted(conn, 'bars')} (was {pre_bars}) "
+          f"feed_runs={counted(conn, 'feed_runs')} (was {pre_runs})")
+    print("   ledger:", ledger(conn))
+
+    print("5) re-apply 0003 ->", apply_migrations(conn, MIGRATIONS))
+    print("   tables back, rows in signals =", counted(conn, "signals"))
+    print(f"   bars still {counted(conn, 'bars')}  ledger: {ledger(conn)}")
+    print("   second apply is a no-op ->", apply_migrations(conn, MIGRATIONS))
+
+    hostile = work / "hostile"
+    shutil.copytree(MIGRATIONS, hostile)
+    (hostile / "rollback" / "0003_signals.down.sql").write_text(
+        "DROP TABLE signals;\nDROP TABLE signal_runs;\nDROP TABLE bars;\n", encoding="utf-8"
+    )
+    try:
+        revert_migration(conn, hostile, 3)
+        print("6) guard: FAILED - a reverse reached a pre-0003 table")
+        return 1
+    except MigrationError as exc:
+        print("6) guard refused a reverse that would drop a pre-0003 table:")
+        print("   MigrationError:", exc)
+    print(f"   bars still {counted(conn, 'bars')}  ledger: {ledger(conn)}")
+
+    adopt = work / "adopt"
+    adopt.mkdir()
+    for name in ("0001_init.sql", "0002_market_data.sql"):
+        shutil.copy(MIGRATIONS / name, adopt / name)
+    adopt_conn = connect(work / "adopt.sqlite3")
+    apply_migrations(adopt_conn, adopt)
+    adopt_conn.execute(
+        "CREATE TABLE signals (symbol TEXT, timeframe TEXT, bar_time_utc TEXT, strategy_id TEXT, "
+        "direction TEXT, strength REAL, reason_code TEXT, run_id INTEGER, created_utc TEXT)"
+    )
+    adopt_conn.execute(
+        "INSERT INTO signals VALUES ('XAUUSD.','M5','2026-11-05T08:00:00+00:00','legacy','LONG',0.5,"
+        "'LEGACY',7,'2026-11-05T08:00:00+00:00')"
+    )
+    adopt_conn.commit()
+    try:
+        apply_migrations(adopt_conn, MIGRATIONS)
+        print("7) adoption guard: FAILED - a pre-existing table was adopted")
+        return 1
+    except MigrationError as exc:
+        print("7) apply refused to adopt a pre-existing signals table:")
+        print("   MigrationError:", exc)
+    print(f"   legacy rows still {counted(adopt_conn, 'signals')}  ledger: {ledger(adopt_conn)}")
+
+    print("RESULT: additive + reversible + pre-0003 data preserved + deterministic re-apply "
+          "+ adoption refused")
+    conn.close()
+    shutil.rmtree(work, ignore_errors=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+### SUMMARY
+targeted_exit=0 targeted_nodes=18 suite_exit=0 suite_tests=270 suite_failures=0 suite_errors=0 compileall_exit=0 mutation_exit=0 demo_exit=0
+s5_commit_unchanged=False

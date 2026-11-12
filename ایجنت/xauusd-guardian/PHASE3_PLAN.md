@@ -1,6 +1,6 @@
 # PHASE 3 — Analysis & strategy (definition, revision 1)
 
-Status: **ACTIVE — S1–S4 PASS; W1 timezone validation PASS; S5 implemented (252/252 suite green), awaiting independent sign-off; S6–S7 OPEN.** Phase 2 accepted via A-08. This plan is the approved execution baseline; no Phase 4 work is authorized.
+Status: **ACTIVE — S1–S5 PASS; S6 PASS (independently inspected); S7 review returned BLOCK on finding F1, fixed 2026-11-12, re-review pending.** Phase 2 accepted via A-08. This plan is the approved execution baseline; no Phase 4 work is authorized.
 
 ## 1. Scope
 
@@ -39,7 +39,7 @@ Migration `0003_signals.sql` adds:
 
 `signals.strength` is `TEXT`: the contract requires an exact finite `Decimal`, and a `REAL` column would round-trip through binary floating point and change the replay digest. `signal_runs.symbol` keeps a zero-signal run attributable.
 
-The migration is additive only (no `ALTER`/`DROP` of `0001`/`0002`). Its reverse lives in `migrations/rollback/0003_signals.down.sql` — `DROP TABLE signals;` then `DROP TABLE signal_runs;`, with no `IF EXISTS` so a drifted schema fails loudly — and is executed by `guardian.storage.db.revert_migration`, which validates it with `reversal_plan` first, runs it and the `schema_migrations` delete inside one explicit transaction, and refuses to act when the ledger and the files disagree (unapplied version, a later version still applied, or a forward file whose hash no longer matches the recorded one). A reverse may only drop objects its forward created, may not drop a table whose live shape drifted, and must leave none of those objects behind; otherwise the whole reversal rolls back. Down files carry a dotted name (`0003_signals.down.sql`) that cannot match the forward discovery pattern, so they are never applied as forward migrations. S6 makes that reversible in code.
+The migration is additive only (no `ALTER`/`DROP` of `0001`/`0002`). Its reverse lives in `migrations/rollback/0003_signals.down.sql` — `DROP TABLE signals;` then `DROP TABLE signal_runs;`, with no `IF EXISTS` so a drifted schema fails loudly — and is executed by `guardian.storage.db.revert_migration`, which validates it with `reversal_plan` first, runs it and the `schema_migrations` delete inside one explicit transaction, and refuses to act when the ledger and the files disagree (unapplied version, a later version still applied, or a forward file whose hash no longer matches the recorded one). A reverse may only drop objects its forward created, may not drop a table whose live shape drifted, and must leave none of those objects behind; otherwise the whole reversal rolls back. Down files carry a dotted name (`0003_signals.down.sql`) that cannot match the forward discovery pattern, so they are never applied as forward migrations. S6 makes that reversible in code. Adoption is refused at apply time: `apply_migrations` queries `sqlite_master` for every object a pending migration declares and raises `MigrationError` if any already exists, so the ledger only ever records migrations that created their own objects (S7 F1).
 
 Reads must exclude quarantined runs (reuse `_QUARANTINED_RUNS` / the identical predicate in the service).
 
@@ -47,7 +47,7 @@ Reads must exclude quarantined runs (reuse `_QUARANTINED_RUNS` / the identical p
 
 S1 look-ahead property test · S2 boundary/warmup tests · S3 replay determinism on stored bars (same digest twice) · S4 no MT5 import outside adapters · S5 suite green · S6 migration is additive and reversible · S7 independent Inspector PASS.
 
-Current gate state: S1–S5 PASS (252/252 suite green, `compileall` exit 0, S5 committed as `9a3b53a`). **S6 candidate** — reversibility implemented in code and exercised by tests; awaiting independent Inspector sign-off. S7 OPEN.
+Current gate state: S1–S5 PASS; **S6 PASS** (independently inspected; committed as `2e56ae7`, 267/267 at that point). **S7: independent review returned BLOCK on F1** — a pre-existing same-named table could be adopted by `CREATE TABLE IF NOT EXISTS` and then dropped by the reverse; fixed by refusing adoption at apply time, suite now 270/270, re-review pending.**
 
 ## 7. Deliverables
 

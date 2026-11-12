@@ -11,9 +11,10 @@ A DEMO-only, offline-first XAUUSD research system. Python 3.11, standard library
 ## State in one paragraph
 
 Phase 3 (analysis & strategy) is **in progress**. Stages S1–S5 are PASS. S6 (migration 0003
-additive + reversible) is **implemented, independently inspected: PASS, no must-fix**, committed as
-`2e56ae7`; this handoff pack is committed as `f3f6644`, and the branch is pushed to `origin`. Gate
-**S7** (independent Inspector sign-off of Phase 3) is **OPEN**. Phase 4 and everything after it is
+additive + reversible) is **PASS as of the S6 inspection**, committed as `2e56ae7`. The S7 independent
+review then returned **BLOCK on finding F1**: a pre-existing same-named table could be adopted by
+`CREATE TABLE IF NOT EXISTS` and later dropped by the reverse. **F1 is fixed** (adoption is refused at
+apply time; suite 270/270) and the fix is awaiting re-review. Phase 4 and everything after it is
 **NOT AUTHORIZED**.
 
 ## Hard rules — do not negotiate these
@@ -76,9 +77,9 @@ Never bulk-read `src/` or `tests/`. Use `rg` for the symbol you need.
 
 ## What to do next
 
-The next authorized gate is **S7**: an independent Inspector reviews Phase 3 as a whole and returns
-`PASS` or `BLOCK`. `02_ROADMAP.md` §S7 has the acceptance criteria; `04_PROMPT_TEMPLATES.md` §1 has a
-ready brief. Do not start Phase 4 before S7 closes and a human says so.
+The next authorized gate is **S7**. Its first review returned `BLOCK` on F1; the fix is committed and
+`02_ROADMAP.md` §S7 has the acceptance criteria for the re-review; `04_PROMPT_TEMPLATES.md` §1 has a
+ready brief. Do not start Phase 4 before S7 passes and a human says so.
 
 ## If something is ambiguous
 

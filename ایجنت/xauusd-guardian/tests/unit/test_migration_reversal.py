@@ -315,3 +315,82 @@ def test_revert_removes_the_0003_indexes(tmp_path, project_root):
     revert_migration(conn, project_root / "migrations", 3)
 
     assert not (OWNED_INDEXES & index_names(conn))
+
+
+# --------------------------------------------------------------------------- #
+# S7 finding F1: adoption of a pre-existing table must be refused at apply time
+# --------------------------------------------------------------------------- #
+
+
+def test_apply_refuses_to_adopt_a_preexisting_table(tmp_path, project_root):
+    """F1 regression: a same-named pre-0003 table must never be adopted, so it can never be dropped.
+
+    The pre-existing table has the same nine column names as 0003 declares but
+    different types and no primary key — the shape a pre-S5 prototype would have.
+    Before the fix, apply recorded 0003 anyway and the reverse deleted the rows.
+    """
+    conn = connect(tmp_path / "adopt.sqlite3")
+    assert apply_migrations(conn, legacy_dir(tmp_path, project_root)) == [1, 2]
+    conn.execute(
+        "CREATE TABLE signals (symbol TEXT, timeframe TEXT, bar_time_utc TEXT, strategy_id TEXT, "
+        "direction TEXT, strength REAL, reason_code TEXT, run_id INTEGER, created_utc TEXT)"
+    )
+    conn.execute(
+        "INSERT INTO signals (symbol, timeframe, bar_time_utc, strategy_id, direction, strength, "
+        "reason_code, run_id, created_utc) VALUES (?,?,?,?,?,?,?,?,?)",
+        ("XAUUSD.", "M5", START.isoformat(), "legacy", "LONG", 0.5, "LEGACY", 7, START.isoformat()),
+    )
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="would adopt"):
+        apply_migrations(conn, project_root / "migrations")
+
+    assert [m.version for m in migration_history(conn)] == [1, 2], "an adoption must not be recorded"
+    assert conn.execute("SELECT COUNT(*) AS c FROM signals").fetchone()["c"] == 1
+    assert "signal_runs" not in table_names(conn)
+
+    with pytest.raises(MigrationError, match="is not applied"):
+        revert_migration(conn, project_root / "migrations", 3)
+    assert conn.execute("SELECT COUNT(*) AS c FROM signals").fetchone()["c"] == 1
+
+
+def test_revert_refuses_a_table_replaced_after_apply(tmp_path, project_root):
+    """Type-only drift: same column names, different declared type, must be refused."""
+    conn = prepared_db(tmp_path, project_root, "replaced.sqlite3")
+    conn.execute("DROP TABLE signals")
+    conn.execute(
+        "CREATE TABLE signals (symbol TEXT, timeframe TEXT, bar_time_utc TEXT, strategy_id TEXT, "
+        "direction TEXT, strength REAL, reason_code TEXT, run_id INTEGER, created_utc TEXT)"
+    )
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="drifted"):
+        revert_migration(conn, project_root / "migrations", 3)
+
+    assert "signals" in table_names(conn)
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_comment_in_forward_cannot_widen_the_reverse_whitelist(tmp_path, project_root):
+    """A ``--`` comment must not turn a real table into a legal DROP target."""
+    migrations = tmp_path / "mig"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "-- a comment is not a drop licence: CREATE TABLE bars\n"
+        "CREATE TABLE probe (id INTEGER PRIMARY KEY);\n",
+        encoding="utf-8",
+    )
+    (migrations / "rollback" / "0004_probe.down.sql").write_text(
+        "DROP TABLE probe;\nDROP TABLE bars;\n", encoding="utf-8"
+    )
+
+    conn = connect(tmp_path / "comment.sqlite3")
+    assert apply_migrations(conn, migrations) == [1, 2, 3, 4]
+    seed_pre_0003(conn)
+
+    with pytest.raises(MigrationError, match="did not create"):
+        revert_migration(conn, migrations, 4)
+
+    assert "bars" in table_names(conn)
+    assert pre_0003_snapshot(conn) == (1, 1, 1.5)
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3, 4]

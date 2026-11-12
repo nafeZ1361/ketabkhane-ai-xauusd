@@ -10,7 +10,7 @@ Last updated: 2026-11-08 (Phase 3 / W1)
 | 0.5 Reconciliation | DONE | `PHASE_0_5_RESOLUTION.md` (workspace root), 4 blockers mapped |
 | 1 Foundation | **PASS** (provisional, awaiting human sign-off) | structure, config, contracts, logging, storage, migrations, tests, identity resolver; three independent audit passes, no must-fix open |
 | 2 Market data | **ACCEPTED** | Phase 2 accepted under A-08 (2026-11-05); see `reports/PHASE2-REMEDIATION-REPORT.md` and approval chain A-01→A-08 |
-| 3 Analysis/strategy | **IN PROGRESS** | S1–S4 PASS; W1 timezone validation PASS (independent Inspector; 220/220 tests on `fix/w1-timezone-validation`); S1–S5 PASS (252/252 tests, S5 committed as 9a3b53a); S6 implemented (migration reversal) pending independent sign-off; S7 open |
+| 3 Analysis/strategy | **IN PROGRESS** | S1–S5 PASS (252/252, S5 `9a3b53a`); S6 PASS (independently inspected, `2e56ae7`); S7 independent review returned BLOCK on F1 (adoption of a same-named table), fixed 2026-11-12 (270/270), re-review pending |
 | 4 Risk | NOT STARTED | |
 | 5 Firewall | NOT STARTED | |
 | 6 Backtest | NOT STARTED | |
