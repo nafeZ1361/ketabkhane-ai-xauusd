@@ -6,7 +6,12 @@ DEMO-only, offline-first XAUUSD research and execution system. Python 3.11, stan
 
 ## Status
 
-Phase 1 (Foundation) — see `PROJECT_STATE.md`. No market data, no strategy, no firewall yet.
+Phase 3 (analysis & strategy) is in progress: S1–S5 PASS, S6 (reversible migration 0003) implemented
+and independently inspected PASS. Gate S7 is open. Phase 4 and later are **not authorized**.
+
+**Any AI agent starting work here: read `HANDOFF/00_READ_ME_FIRST.md` first**, then
+`HANDOFF/01_STATE_SNAPSHOT.md`. The phase table lives in `PROJECT_STATE.md`; where a status line
+disagrees with `HANDOFF/01_STATE_SNAPSHOT.md`, the handoff snapshot and `evidence/` are authoritative.
 
 ## Layout
 
