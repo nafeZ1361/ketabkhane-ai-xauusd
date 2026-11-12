@@ -12,10 +12,11 @@ A DEMO-only, offline-first XAUUSD research system. Python 3.11, standard library
 
 Phase 3 (analysis & strategy) is **in progress**. Stages S1–S5 are PASS. S6 (migration 0003
 additive + reversible) is **PASS as of the S6 inspection**, committed as `2e56ae7`. The S7 independent
-review then returned **BLOCK on finding F1**: a pre-existing same-named table could be adopted by
-`CREATE TABLE IF NOT EXISTS` and later dropped by the reverse. **F1 is fixed** (adoption is refused at
-apply time; suite 270/270) and the fix is awaiting re-review. Phase 4 and everything after it is
-**NOT AUTHORIZED**.
+review then returned **BLOCK twice**: F1, a pre-existing same-named table could be adopted and later
+dropped by the reverse; F1b, identifiers were compared case-sensitively while SQLite is not. **Both
+are fixed** — adoption is refused at apply time, identifiers are compared case-insensitively, and a
+migration's DDL and ledger row commit together; suite 274/274, awaiting re-review. Phase 4 and
+everything after it is **NOT AUTHORIZED**.
 
 ## Hard rules — do not negotiate these
 
@@ -40,8 +41,8 @@ Run from `ایجنت/xauusd-guardian/`. The approved interpreter on this machine
 `C:\Python311\python.exe` (3.11.8, pytest 9.2.0). A `.venv` per approval A-02 is acceptable.
 
 ```powershell
-C:\Python311\python.exe -m pytest -q                     # expect 267 passed
-C:\Python311\python.exe -m pytest tests/unit/test_migration_reversal.py -q   # expect 15 passed
+C:\Python311\python.exe -m pytest -q                     # expect 274 passed
+C:\Python311\python.exe -m pytest tests/unit/test_migration_reversal.py -q   # expect 22 passed
 C:\Python311\python.exe -m compileall -q src scripts tests                   # expect exit 0
 git status --porcelain            # compare with 01_STATE_SNAPSHOT.md
 ```

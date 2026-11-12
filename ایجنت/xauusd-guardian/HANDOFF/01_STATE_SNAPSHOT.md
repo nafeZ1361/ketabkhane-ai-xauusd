@@ -1,106 +1,101 @@
 # 01 — STATE SNAPSHOT
 
-Snapshot written **2026-11-12**, after the S7 review returned `BLOCK` and finding F1 was fixed.
-If `git rev-parse HEAD` differs from the table, this file is history — re-derive before acting.
+Snapshot written **2026-11-12**, after two independent S7 reviews returned `BLOCK` and both findings
+were fixed. If `git rev-parse HEAD` differs from the table, this file is history — re-derive first.
 
 ## Git
 
 | Item | Value |
 |---|---|
 | Branch | `fix/w1-timezone-validation` |
-| HEAD when these hashes were taken | `b2057d2fe74c3dd4f89a6d3943b51065e6194e52` (handoff docs) |
-| Commit carrying this snapshot | the S7/F1 fix commit on top of `b2057d2`; find it with `git log --oneline -3` |
+| HEAD when these hashes were taken | `3deaf8c` plus the round-2 fix commit (see `git log --oneline -3`) |
+| Commits | `9a3b53a` S5 → `2e56ae7` S6 → `f3f6644`, `b2057d2` handoff docs → `3deaf8c` F1 fix → round-2 fix |
 | `main` | `1dad9588083f210fca868f49358aff44826e6f2f` (unchanged) |
 | Parallel branch `fix/xauusd-guardian-w1-timezone` | `76d468eda3e15e2c7d87a4fdcfe0f7b45c620b45` (unchanged, deliberately kept) |
-| `origin/fix/w1-timezone-validation` | `b2057d2` at push time; the F1 fix commit is one ahead until pushed |
 | S5 commit | `9a3b53a` — accepted baseline, never amended |
-| S6 commit | `2e56ae7` — `feat(s6): reversible migration 0003 with guarded reversal` |
-| Handoff commits | `f3f6644`, `b2057d2` |
 
-The S6 evidence records `S5_IS_HEAD: False`; that is correct — HEAD has moved past the S5 commit
-since `2e56ae7`. The baseline check is "is `9a3b53a` still an ancestor of HEAD", not "is it HEAD".
+The S6 evidence records `S5_IS_HEAD: False`; correct — HEAD has moved past S5. The baseline check is
+"is `9a3b53a` still an ancestor", not "is it HEAD".
 
-## S7 review outcome
+## S7 review history
 
-| Item | Value |
-|---|---|
-| Reviewer | independent Inspector, read-only, did not write the code |
-| Verdict | **BLOCK** — one must-fix (F1) |
-| F1 | A pre-existing table named `signals` with the same column names was **adopted** by `CREATE TABLE IF NOT EXISTS`; apply recorded 0003 anyway; `revert_migration` then dropped it and deleted the ledger row, destroying legacy rows with no error. |
-| Why it mattered | The S6 shape check compared column *names* only, while its docstring claimed this exact case was guarded. R1 had classified the risk as "regenerable 0003-era data", which was wrong: the adopted table can be arbitrary legacy data. |
-| Fix | `apply_migrations` now queries `sqlite_master` for every object a pending migration declares and raises `MigrationError` if any already exists — a migration is only recorded when it created its own objects. The shape check was widened from names to `(name, declared type)` for post-apply drift. `_created_objects` now strips comments so a `--` comment cannot widen the reverse whitelist. |
-| Tests | 3 new regression tests: adoption refused at apply; type-only drift refused at revert; a comment mentioning `CREATE TABLE bars` cannot legalise a `DROP`. |
-| Result | 18 targeted, **270** suite, `compileall` exit 0, **6/6 mutation probes killed** |
-| Status | **fix implemented, committed, awaiting S7 re-review** |
+| Round | Verdict | Finding | Fix |
+|---|---|---|---|
+| 1 | **BLOCK** | **F1**: a pre-existing table named `signals` with the same column names was adopted by `CREATE TABLE IF NOT EXISTS`; apply recorded 0003 anyway; the reverse dropped it and deleted the ledger row — legacy rows destroyed, no error. R1 had understated the risk as "regenerable 0003-era data". | `apply_migrations` refuses to record a migration whose declared objects already exist; shape check widened to `(column, declared type)`; comments stripped before the whitelist scan |
+| 2 | **BLOCK** | **F1b**: identifiers were compared case-sensitively while SQLite is case-insensitive — a table created as `SIGNALS` slipped past the guard and was adopted, then dropped by the reverse. The reviewer also flagged that DDL and the ledger row were not atomic, so an interrupted apply left objects unrecorded and the retry reported a misleading "adoption". | case-insensitive comparison in `_existing_objects`, `_check_declared_shapes`, `_verify_reversal`, `_checked_down_statements`; `apply_migrations` runs DDL + ledger insert in one `BEGIN IMMEDIATE ... COMMIT` |
+| 3 | pending | — | re-review requested |
 
-## The S6 + F1 delta — as committed
+## The delta — committed state (post round-2 fix)
 
 Paths relative to `ایجنت/xauusd-guardian/`. SHA-256 over raw file bytes as checked out.
 
 | Path | State | SHA-256 |
 |---|---|---|
-| `src/guardian/storage/db.py` | M (469 lines) | `0e8a77396752c6c11e7436ce135d3447f51199a1b85c2a710804e74913b3051d` |
-| `tests/unit/test_migration_reversal.py` | new (396 lines, 18 tests) | `772c255db3cb5444c1f1510accb3e491c3a4beae2c4db64dcc9127ea2cc5cef9` |
-| `migrations/rollback/0003_signals.down.sql` | new (unchanged by F1) | `8b5e42635e887387ec4dc44d2d7dcf10d59476ce12a243b41e1c08cc7437aa42` |
-| `DECISIONS_LOG.md` | M (D-016 §8) | `f4266db8ac76a570a3ae363768c847b72e8b370b6029f22c8fbe5bcae7cf66f9` |
-| `PHASE3_PLAN.md` | M (§5 + status/gate lines) | `36c3d23446ffe0c7d28df3d2b735716b1ce6a82e204a9b368fd8815acef5ab98` |
-| `PROJECT_STATE.md` | M (Phase 3 row) | `443c8a76f9e2b6c893ba3ebd1ea9fa364c2f2ad4b430e482122fbf0583e43484` |
-| `evidence/phase3-S6-20261112T182517Z.txt` | new (authoritative) | `3cff38ff185bf67882db229d0525657289b08dcf554782226b95b15cf727519f` |
-| `evidence/phase3-S6-20261112T182517Z.txt.sha256` | new | `2c24faab9d2d0fdda62d309d50c073e9d832f874dba3ad1537f29c5ffc7a789e` |
-| `evidence/phase3-S6-20261109T173019Z.txt` (+ sidecar) | committed historical snapshot (pre-F1) | `7a6a7f51…a85a` / `44c7dbd6…fb55` |
-| `evidence/phase3-S6-20261109T170723Z.txt` | **local-only**, abandoned attempt | — |
+| `src/guardian/storage/db.py` | M (486 lines) | `9241c6bd77afb364c059317df80857240254f716ceff623d02bec1733d23c248` |
+| `tests/unit/test_migration_reversal.py` | new (441 lines, 22 tests) | `7535759f0f9b0213affd231ac409f0fa90353481154a9cbc9b312ee0c5953de4` |
+| `migrations/rollback/0003_signals.down.sql` | new (unchanged since S6) | `8b5e42635e887387ec4dc44d2d7dcf10d59476ce12a243b41e1c08cc7437aa42` |
+| `DECISIONS_LOG.md` | M (D-016 §8) | `36a82fa89f2d3925f025ddcbcb4ed44593d8f2d9cf5a5b45c18ea7de10cd27d1` |
+| `PHASE3_PLAN.md` | M (§5 + status/gate lines) | `93f469500e61861a481f336b6e1418cc7f9a2238b3dcc75576ec3a47f52625b3` |
+| `PROJECT_STATE.md` | M (Phase 3 row) | `625af067112452c74093d2a051691a1cf057f80fa27da9ef14f2b6ab1afb3054` |
+| `evidence/phase3-S6-20261112T191535Z.txt` | new (authoritative) | `96a05de862b5db20eed3b5a6bbb005ce1e3c339b04e17560cbf8241f131a5a1d` |
+| `evidence/phase3-S6-20261112T191535Z.txt.sha256` | new | `00ff33b74f931fe550defdfbb58114fc8865879c00f705e353961a77b546f16f` |
+| `evidence/phase3-S6-20261112T182517Z.txt` | committed historical (pre-F1b) | `3cff38ff…519f` |
+| `evidence/phase3-S6-20261109T173019Z.txt` | committed historical (pre-F1) | `7a6a7f51…a85a` |
+| `evidence/phase3-S6-20261109T170723Z.txt` | **local-only**, abandoned | — |
 | `evidence/phase3-S5-20261108T202628Z.txt` | **local-only**, S5 evidence, not authorized for commit | — |
 
-## What the migrations code does (behaviour, not marketing)
+## What the migrations code guarantees (behaviour, not marketing)
 
-- `0003_signals.sql` is additive: `CREATE ... IF NOT EXISTS` only, no `ALTER`/`DROP` of `0001`/`0002`.
-  Never edited; its digest is pinned in `schema_migrations`.
-- `apply_migrations` refuses **adoption**: if any object a pending migration declares already exists,
-  it raises `MigrationError` and records nothing. The ledger therefore only names migrations that
-  created their own objects.
-- `migrations/rollback/0003_signals.down.sql`: `DROP TABLE signals;` then `DROP TABLE signal_runs;`,
-  plain `DROP` so a missing table fails loudly inside the transaction.
-- `reversal_plan(conn, migrations_dir, version)` validates before acting: version applied, no later
-  version applied, forward digest still matches, exactly one strict `NNNN_name.down.sql`, every
-  statement is a `DROP` of an object the forward created (comments ignored), each table's live
-  `(column, type)` still matches the declaration. Returns the plan including `down_sha256`.
-- `revert_migration(...)` runs the plan inside one `BEGIN IMMEDIATE ... COMMIT`, enforces the
-  post-condition (none of those objects may remain), then deletes the ledger row; any failure rolls
-  the whole reverse back.
-- Policy: reverses are DROP-only. A migration whose reverse needs `ALTER` requires a new decision.
+1. **Additive.** `0003_signals.sql` is `CREATE ... IF NOT EXISTS` only; nothing in `0001`/`0002` is
+   altered. Its digest is pinned in `schema_migrations`.
+2. **No adoption.** `apply_migrations` refuses to record a migration when any object it declares
+   already exists — compared **case-insensitively**, as SQLite does. The ledger therefore only names
+   migrations that created their own objects.
+3. **Atomic apply.** A migration's DDL and its ledger row commit in one `BEGIN IMMEDIATE ... COMMIT`;
+   a failure leaves neither. The realistic crash window that could create an unrecorded table is gone.
+4. **Reversible, narrowly.** `reversal_plan` validates before acting: version applied, no later
+   version applied, forward digest unchanged, exactly one strict `NNNN_name.down.sql`, every statement
+   a `DROP` of an object that forward created (comments ignored, case-insensitive), each table's live
+   `(column, type)` still matching the declaration. `revert_migration` then executes it in one
+   transaction, requires that none of those objects remain, deletes the ledger row, and rolls back on
+   any failure.
+5. **Policy.** Reverses are DROP-only; a reverse needing `ALTER` requires a new decision.
 
 ## Test and tool results
 
 | Command | Result |
 |---|---|
-| `pytest tests/unit/test_migration_reversal.py -v` | 18 passed, exit 0 |
-| `pytest -q` | 270 passed, 0 failed, 0 error, 0 skipped, exit 0 |
+| `pytest tests/unit/test_migration_reversal.py -v` | 22 passed, exit 0 |
+| `pytest -q` | 274 passed, 0 failed, 0 error, 0 skipped, exit 0 |
 | `python -m compileall -q src scripts tests` | exit 0 |
-| mutation probes | `probes=6 unkilled=0` |
-| live demo | 7 steps incl. adoption refusal, exit 0 |
+| mutation probes | `probes=8 unkilled=0` |
+| live demo | 8 steps incl. lowercase adoption, `SIGNALS` adoption, transaction demo, exit 0 |
 
-Suite history: 252 (S5) → 267 (S6) → **270** (F1 fix). No test deleted, skipped or weakened.
+Suite history: 252 (S5) → 267 (S6) → 270 (F1) → **274** (F1b). No test deleted, skipped or weakened.
 
 ## Evidence
 
 | File | Role |
 |---|---|
-| `evidence/phase3-S6-20261112T182517Z.txt` | **authoritative**: refs, hashes, 270 tests, 6 mutations, 7-step demo + demo source |
-| `…20261112T182517Z.txt.sha256` | sidecar digest of the above |
-| `evidence/phase3-S6-20261109T173019Z.txt` | historical: the pre-F1 state the S6 Inspector passed |
-| `evidence/phase3-S6-20261109T170723Z.txt` | abandoned attempt; superseded, hashes no longer match |
+| `evidence/phase3-S6-20261112T191535Z.txt` | **authoritative**: refs, hashes, 274 tests, 8 mutations, 8-step demo + demo source |
+| `…191535Z.txt.sha256` | sidecar digest |
+| `…20261112T182517Z.txt` | historical: pre-F1b fix (F1 fixed, case bug present) |
+| `…20261109T173019Z.txt` | historical: pre-F1 |
+| `…20261109T170723Z.txt` | abandoned attempt; local-only |
 
 ## Residuals
 
 | # | Residual | Status |
 |---|---|---|
-| R1 | adoption of a same-named table, then dropped by the reverse | **FIXED** (S7 F1) — refused at apply time, regression test + mutation probe |
-| R2 | `_check_declared_shapes` docstring overclaimed | **FIXED** — docstring now states it catches drift, and that adoption cannot reach it |
-| R3 | header of `0003_signals.sql` still says the reverse is "deliberately NOT implemented" | **OPEN, accepted** — the file is hash-pinned; editing it breaks every applied database. The down file header and D-016 §8 carry the correction. |
-| R4 | superseded evidence files carry no banner of their own | **OPEN, accepted** — never edit evidence; the current file's `NOTE` line names both superseded files |
-| R5 | status lines lagged reality | **FIXED** — `PHASE3_PLAN.md` line 3, its gate line and `PROJECT_STATE.md` now state S6 PASS / S7 BLOCK+F1 fixed |
+| R1 | adoption of a same-named table, then dropped by the reverse | **FIXED** — refused at apply time, case-insensitive; regression tests ×4 + mutation M5/M7 |
+| R1b | case-sensitive identifier comparison | **FIXED** — all four lookups normalise case; parametrised test over `SIGNALS`/`Signals`/`sIgNaLs`; mutation M7 |
+| R1c | non-atomic apply (DDL committed before ledger row) | **FIXED** — one transaction; test `test_failed_migration_leaves_no_partial_schema`; mutation M8 |
+| R2 | `_check_declared_shapes` docstring overclaimed | **FIXED** — docstring now states it catches drift, and why adoption cannot reach it |
+| R3 | header of `0003_signals.sql` still says the reverse is "deliberately NOT implemented" | **OPEN, accepted** — hash-pinned; editing breaks every applied database. Corrected in the down file header and D-016 §8 |
+| R4 | superseded evidence files carry no banner of their own | **OPEN, accepted** — evidence is never edited; each new file's `NOTE` names its predecessors |
+| R5 | status lines lagged reality | **FIXED** — `PHASE3_PLAN.md` and `PROJECT_STATE.md` now state S6 PASS / S7 BLOCK ×2 + fixes |
 | R6 | mutation-probe source not embedded in evidence | **OPEN, accepted** — path + digest recorded; the probe lives outside the repo |
-| R7 | D-016's trailing `**Rollback:**` line still shows the old manual `DROP TABLE IF EXISTS` | **OPEN** — points at a statement superseded by §8; fix in the commit that records the S7 verdict |
+| R7 | D-016's trailing `**Rollback:**` line still shows the old manual `DROP TABLE IF EXISTS` | **OPEN** — superseded by §8; fix when the S7 verdict is recorded |
 
 ## Open decisions that are NOT yours to close
 

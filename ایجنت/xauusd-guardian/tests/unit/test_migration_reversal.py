@@ -394,3 +394,48 @@ def test_comment_in_forward_cannot_widen_the_reverse_whitelist(tmp_path, project
     assert "bars" in table_names(conn)
     assert pre_0003_snapshot(conn) == (1, 1, 1.5)
     assert [m.version for m in migration_history(conn)] == [1, 2, 3, 4]
+
+
+# --------------------------------------------------------------------------- #
+# S7 round 2: SQLite identifiers are case-insensitive, and apply must be atomic
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("variant", ["SIGNALS", "Signals", "sIgNaLs"])
+def test_adoption_is_refused_regardless_of_identifier_case(tmp_path, project_root, variant):
+    """SQLite resolves ``SIGNALS`` to the same object as ``signals``, so the guard must too."""
+    conn = connect(tmp_path / f"case_{variant}.sqlite3")
+    assert apply_migrations(conn, legacy_dir(tmp_path, project_root)) == [1, 2]
+    conn.execute(
+        f"CREATE TABLE {variant} (symbol TEXT, timeframe TEXT, bar_time_utc TEXT, strategy_id TEXT, "
+        "direction TEXT, strength TEXT, reason_code TEXT, run_id TEXT, created_utc TEXT)"
+    )
+    conn.execute(
+        f"INSERT INTO {variant} VALUES ('XAUUSD.','M5','t','legacy','LONG','0.5','LEGACY','r','t')"
+    )
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="would adopt"):
+        apply_migrations(conn, project_root / "migrations")
+
+    assert [m.version for m in migration_history(conn)] == [1, 2]
+    assert conn.execute(f"SELECT COUNT(*) AS c FROM {variant}").fetchone()["c"] == 1
+
+
+def test_failed_migration_leaves_no_partial_schema(tmp_path, project_root):
+    """DDL and the ledger row are one transaction: a failure must leave neither."""
+    migrations = tmp_path / "mig"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TABLE probe (id INTEGER PRIMARY KEY, tag TEXT UNIQUE);\n"
+        "INSERT INTO probe (id, tag) VALUES (1, 'a');\n"
+        "INSERT INTO probe (id, tag) VALUES (2, 'a');\n",
+        encoding="utf-8",
+    )
+
+    conn = connect(tmp_path / "partial.sqlite3")
+    with pytest.raises(sqlite3.IntegrityError):
+        apply_migrations(conn, migrations)
+
+    assert "probe" not in table_names(conn), "a failed migration must not leave its objects behind"
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]

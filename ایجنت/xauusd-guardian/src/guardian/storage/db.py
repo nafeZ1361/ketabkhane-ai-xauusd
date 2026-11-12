@@ -139,16 +139,26 @@ def apply_migrations(conn: sqlite3.Connection, migrations_dir: str | Path) -> li
         if adopted:
             raise MigrationError(
                 f"migration {path.name} would adopt existing object(s) {adopted} instead of "
-                f"creating them; refusing to record a migration that creates nothing. "
-                f"Resolve the database manually, then re-run."
+                f"creating them; refusing to record a migration that creates nothing. If these "
+                f"objects came from an interrupted apply, resolve the database manually, then re-run."
             )
 
-        conn.executescript(sql)
-        conn.execute(
-            "INSERT INTO schema_migrations (version, filename, sha256, applied_at) VALUES (?, ?, ?, ?)",
-            (version, path.name, digest, datetime.now(timezone.utc).isoformat()),
-        )
-        conn.commit()
+        statements = _split_sql_statements(sql, path.name)
+        if conn.in_transaction:
+            conn.commit()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            for statement in statements:
+                conn.execute(statement)
+            conn.execute(
+                "INSERT INTO schema_migrations (version, filename, sha256, applied_at) VALUES (?, ?, ?, ?)",
+                (version, path.name, digest, datetime.now(timezone.utc).isoformat()),
+            )
+            conn.commit()
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
         applied.append(version)
 
     return applied
@@ -205,21 +215,27 @@ def _created_objects(forward_sql: str) -> dict[str, str]:
     """Map object name -> ``table``/``index`` for every CREATE in a migration.
 
     Comments are stripped first, so a ``--`` comment that happens to mention
-    ``CREATE TABLE bars`` cannot widen the reverse whitelist.
+    ``CREATE TABLE bars`` cannot widen the reverse whitelist. Names are
+    lower-cased because SQLite compares identifiers case-insensitively: a table
+    created as ``SIGNALS`` is the same object as ``signals``.
     """
     return {
-        match.group("name"): match.group("kind").lower()
+        match.group("name").lower(): match.group("kind").lower()
         for match in _CREATE_RE.finditer(_strip_comments(forward_sql))
     }
 
 
 def _existing_objects(conn: sqlite3.Connection, names: tuple[str, ...]) -> list[str]:
-    """Names from ``names`` that already exist in ``sqlite_master``, sorted."""
+    """Names from ``names`` that already exist in ``sqlite_master``, sorted.
+
+    Case-insensitive, for the same reason as :func:`_created_objects`.
+    """
     if not names:
         return []
-    placeholders = ",".join("?" for _ in names)
+    lowered = tuple(name.lower() for name in names)
+    placeholders = ",".join("?" for _ in lowered)
     rows = conn.execute(
-        f"SELECT name FROM sqlite_master WHERE name IN ({placeholders})", names
+        f"SELECT name FROM sqlite_master WHERE lower(name) IN ({placeholders})", lowered
     ).fetchall()
     return sorted(row["name"] for row in rows)
 
@@ -299,13 +315,13 @@ def _checked_down_statements(
             )
         kind = match.group("kind").lower()
         name = match.group("name")
-        if name not in owned:
+        if name.lower() not in owned:
             raise MigrationError(
                 f"{down_name} would drop {name!r}, which {forward_name} did not create"
             )
-        if owned[name] != kind:
+        if owned[name.lower()] != kind:
             raise MigrationError(
-                f"{down_name} would drop {name!r} as a {kind}, but {forward_name} created it as a {owned[name]}"
+                f"{down_name} would drop {name!r} as a {kind}, but {forward_name} created it as a {owned[name.lower()]}"
             )
     return statements
 
@@ -325,7 +341,7 @@ def _check_declared_shapes(
     """
     for table in tables:
         present = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND lower(name) = ?", (table.lower(),)
         ).fetchone()
         if present is None:
             # A missing table fails loudly at DROP time, inside the transaction.
@@ -354,9 +370,10 @@ def _verify_reversal(conn: sqlite3.Connection, plan: ReversalPlan) -> None:
     names = plan.tables + plan.indexes
     if not names:
         return
-    placeholders = ",".join("?" for _ in names)
+    lowered = tuple(name.lower() for name in names)
+    placeholders = ",".join("?" for _ in lowered)
     rows = conn.execute(
-        f"SELECT name FROM sqlite_master WHERE name IN ({placeholders})", names
+        f"SELECT name FROM sqlite_master WHERE lower(name) IN ({placeholders})", lowered
     ).fetchall()
     if rows:
         remaining = sorted(row["name"] for row in rows)
