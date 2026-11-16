@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-08 (Phase 3 / W1)
+Last updated: 2026-11-15 (Phase 3 / S7 round 4)
 
 ## Phase status
 
@@ -10,7 +10,7 @@ Last updated: 2026-11-08 (Phase 3 / W1)
 | 0.5 Reconciliation | DONE | `PHASE_0_5_RESOLUTION.md` (workspace root), 4 blockers mapped |
 | 1 Foundation | **PASS** (provisional, awaiting human sign-off) | structure, config, contracts, logging, storage, migrations, tests, identity resolver; three independent audit passes, no must-fix open |
 | 2 Market data | **ACCEPTED** | Phase 2 accepted under A-08 (2026-11-05); see `reports/PHASE2-REMEDIATION-REPORT.md` and approval chain A-01→A-08 |
-| 3 Analysis/strategy | **IN PROGRESS** | S1–S5 PASS (252/252, S5 `9a3b53a`); S6 PASS (independently inspected, `2e56ae7`); S7 independent review returned BLOCK three times: F1 (adoption of a same-named table), F1b (case-sensitive identifier comparison), F1c (no measured provenance / unqualified drops / quoted identifiers); all fixed 2026-11-12 (279/279), re-review pending |
+| 3 Analysis/strategy | **S1–S7 PASS; F1 closed by removal; Phase 3 awaiting inspection** | S1–S5 PASS; S6 PASS; S7 passed independent round-8 inspection (295 tests). F1's independent inspection returned BLOCK (no in-database proof of ownership). Per the owner's decision, the automated destructive reverse was **removed**: `revert_migration` now refuses, and `emit_reverse_sql` returns a reviewed script a human runs. Suite **297/297**. F2/F3 ADVISORY |
 | 4 Risk | NOT STARTED | |
 | 5 Firewall | NOT STARTED | |
 | 6 Backtest | NOT STARTED | |
@@ -133,3 +133,17 @@ Python 3.11.8 x64 (approved) · MT5 `C:\Program Files\Aron Markets MT5\terminal6
 | A2 window conversion | **PASS** — fixed after a live probe; request = `utc + offset`, first tick 0 s from the window start |
 
 Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
+
+## Phase 3 / S7 evidence (2026-11-15)
+
+| Item | Result |
+|---|---|
+| HEAD inspected | `e56b3a6` — tree `8ad3949e…`, worktree clean, **279 passed**, `compileall` exit 0 |
+| Round-4 verdict | round-3 must-fix M1/M2/M3 **closed by execution**; two new defects found (N1 evidence manifest, N2 identifier parsing) |
+| Fixes | `db.py` `_bare_identifier` + `_SCHEMA_PREFIX`; 3 regression tests; `MANIFEST.sha256` regenerated (11/11 verify) |
+| Post-fix suite | **282 passed**, exit 0; `compileall` exit 0 |
+| Adversarial probes | **15/15**, exit 0 — legacy DB, `TEMP`, `ATTACH`, hostile down-script, drift, quoted/bracketed/backticked identifiers |
+| Evidence | `evidence/phase3-S7-20261115T171715Z.txt`, `evidence/phase3-S7R5-20261115T174829Z.txt`, `evidence/phase3-S7R7-20261115T184319Z.txt` (each with `.sha256`) |
+| Reports | `HANDOFF/artifacts/REPORT-S7-ROUND4.md`, `REPORT-S7-ROUND5.md` (independent, BLOCK), `REPORT-S7-ROUND5-REMEDIATION.md` |
+| S7 status | S7 **PASS** (independent round 8). Phase 3 remains **OPEN** pending an independent inspection of the option-3 change (destructive reverse removed) |
+| Commit | none — changes are uncommitted, no push performed |

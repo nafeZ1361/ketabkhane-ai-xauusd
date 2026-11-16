@@ -1,0 +1,101 @@
+### PHASE 3 / S7 - EVIDENCE (residual F1: object-identity provenance)
+GENERATED_UTC : 20261115T192506Z
+SCOPE         : F1 only. F2/F3 untouched; no S1-S6 behaviour changed.
+STATUS        : developer-side record. NOT an approval. A fresh independent inspection is required.
+PYTHON        : Python 3.11.8 / pytest 9.2.0 / SQLite 3.43.1 / Windows 10 19045 x64
+
+### REPOSITORY STATE
+BRANCH        : fix/w1-timezone-validation
+COMMITTED_HEAD: e56b3a69b007e3c797a1a6952e6605d0e787935a
+UNCOMMITTED   : the whole S7 change set. NO COMMIT, NO PUSH.
+
+### [1] DESIGN
+New additive table schema_object_identity(version, kind, name, schema_rowid, rootpage,
+sql_sha256, schema_version). The token is measured at apply, inside the same transaction as
+the DDL and the ledger row, and verified in reversal_plan BEFORE any DROP. Identity is decided
+by (schema_rowid, rootpage, sql_sha256); schema_version is recorded for diagnostics only,
+because it is global and changes on any DDL (including CREATE TEMP TABLE) - using it as a
+refusal signal blocked legitimate reverts during development and was removed.
+Legacy databases (applied before the token) refuse to revert.
+
+### [2] MEASURED SQLITE BEHAVIOUR (design probe)
+DROP TABLE + CREATE TABLE with a byte-identical definition REUSES sqlite_master.rowid and
+rootpage (observed 1->1, 2->2). VACUUM did not change them in that probe. This is why the
+token is a triple and why the byte-identical, index-free case remains a documented limitation.
+
+### [3] ORIGINAL F1 REPRODUCTION (verbatim)
+PASS F1.attack-refused :: err="MigrationError: 'signals' is not the table that 0003_signals.sql created: its schema rowid, root page or definition changed after the migration was applied. Refusing to drop a replacement object." returned=None
+PASS F1.replacement-survives :: rows=1 cols=9
+PASS F1.ledger-unchanged :: hist=[1, 2, 3]
+PASS F1.unrelated-untouched :: signal_runs_rows=0/0 tables=['audit_events', 'bar_revisions', 'bars', 'data_gaps', 'feed_runs', 'quarantined_series', 'risk_decisions', 'schema_migrations', 'schema_object_identity', 'schema_objects', 'signal_runs', 'signals', 'symbol_snapshots', 'ticks', 'time_sync']
+PASS F1.normal-roundtrip :: revert=3 hist=[1, 2] all_gone=True
+PASS F1.reapply :: reapply=[3] revert=3 hist=[1, 2]
+PASS F1.repeat-safe :: err='MigrationError: migration 3 is not applied' hist=[1, 2]
+PASS F1.atomic :: failed=True schema_same=True rows=1 hist=[1, 2, 3]
+PASS F1.token-recorded :: rows=4 names=['idx_signal_runs_window', 'idx_signals_run', 'signal_runs', 'signals']
+
+TOTAL 9/9
+
+### [4] SUITE
+CMD  : python -m pytest -q   (copy C:\GS7\r8, byte-identical to the tree)
+EXIT : 0
+RESULT: tests=295 failures=0 errors=0 skipped=0
+CMD  : python -m compileall -q src scripts tests
+EXIT : 0
+RESULT: clean
+
+### [5] REGRESSION (verbatim tails)
+round-4 15 scenarios:
+PASS A-positive-roundtrip :: applied=[1, 2, 3] prov=4 revert=3 hist=[1, 2] reapply=[3] tables=['audit_events', 'bar_revisions', 'bars', 'data_gaps', 'feed_runs', 'quarantined_series', 'risk_decisions', 'schema_migrations', 'schema_object_identity', 'schema_objects', 'sqlite_sequence', 'symbol_snapshots', 'ticks', 'time_sync']
+PASS B1-legacy-empty-provenance :: err='MigrationError: no object provenance recorded for migration 3; this database was applied before provenance tracking existed, so a safe reverse cannot be derived. Audit or rebuild the database instead of reverting.' table_exists=1 rows=2 hist=[3]
+PASS B2-legacy-without-schema_objects :: err='OperationalError: no such table: schema_objects' table_exists=1 rows=2
+PASS C-temp-schema-collision :: err='OperationalError: no such table: main.signals' temp_exists=1 temp_rows=1 hist=[1, 2, 3]
+PASS D-attached-schema-collision :: err='OperationalError: no such table: main.signals' aux_rows=1 hist=[1, 2, 3]
+PASS E-quoted-adoption-double :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-bracket :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q2'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-backtick :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q3'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-qualified :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q4'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS F-hostile-down-schema-qualified :: err="MigrationError: 0003_signals.down.sql targets schema 'temp'; a reverse may only touch main" hist=[1, 2, 3]
+PASS G-main-vs-temp-precedence :: revert=None err="MigrationError: reversal of 3 left objects behind: ['temp:signals']" temp_exists=1 temp_rows=1 main_gone=False
+PASS H-drifted-table-refused :: err="MigrationError: table 'signals' does not match 0003_signals.sql (declared [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT')], actual [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT'), ('extra', 'TEXT')]); refusing to drop a drifted table" hist=[1, 2, 3]
+PASS I-quoted-schema-prefix :: err=None hist=[1, 2, 3, 4] created=1 prov=(('table', 'probe_z'),)
+PASS I2-quoted-schema-adoption :: err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_z'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS J-backtick-fresh-create :: err=None hist=[1, 2, 3, 4] probe_bt_created=1
+
+TOTAL 15/15 probes passed
+
+round-5 7 cases:
+PASS C1-block-comment-adoption :: err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_c'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS C1b-data-only-refused :: err='MigrationError: migration 0004_probe.sql created no objects in main; refusing to record a migration that changed nothing. Data-only and TEMP-only migrations are not supported: a migration must create what it declares.' hist=[1, 2, 3]
+PASS C1c-temp-only-refused :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE TEMP TABLE probe_tmp (id TEXT);'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS C2-cascade-refused :: err="MigrationError: reverting 0003_signals.sql would drop a table that ['operator_child -> signal_runs ON DELETE CASCADE'] references with ON DELETE CASCADE/SET NULL/SET DEFAULT; rows this migration did not create would be deleted. Drop or detach those tables first." child_rows=1 hist=[1, 2, 3]
+PASS C3-backtick-roundtrip :: applied=[4] shape=(('id', 'TEXT'),) revert=4 err=None gone=True
+PASS C6-declared-shapes :: plain:True backtick:True quoted-schema:True block-after-TABLE:True line-comment:True
+PASS W2-quoted-schema-refused :: err="MigrationError: 0003_signals.down.sql targets schema 'temp'; a reverse may only touch main" hist=[1, 2, 3]
+
+TOTAL 7/7
+
+round-7 7 items:
+PASS 1-single-quoted :: err='MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: "CREATE TABLE IF NOT EXISTS \'probe_sq\' (id TEXT NOT NULL);". S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded.' rows=1 hist=[1, 2, 3]
+PASS 2-set-default :: err="MigrationError: reverting 0003_signals.sql would drop a table that ['operator_child -> signal_runs ON DELETE SET DEFAULT'] references with ON DELETE CASCADE/SET NULL/SET DEFAULT; rows this migration did not create would be deleted. Drop or detach those tables first." child_run_ref=r1 hist=[1, 2, 3]
+PASS 3-view :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE VIEW probe_v AS SELECT symbol FROM bars;'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS 3-trigger :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE TRIGGER probe_tr AFTER INSERT ON bars BEGIN SELECT 1; END;'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS 3-temp :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE TEMP TABLE probe_tmp (id TEXT);'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS 3b-table-and-index-still-work :: applied=[4] err=None prov=(('index', 'idx_probe_ok'), ('table', 'probe_ok'))
+PASS 4-attach :: err="MigrationError: reversal of 3 left objects behind: ['side:signals']" side_rows=1 main_signals=1 hist=[1, 2, 3]
+
+TOTAL 7/7
+
+### [6] FILE DIGESTS
+d836da1be944c472851075983731b6a92d5303f1e1f59a21890c53c9c46118f6  (worktree)  src/guardian/storage/db.py
+3c5bd94b4a0cb92fa5a7d5934399e75feec776cac61fd5d73146db1e7815ccff  (worktree)  tests/unit/test_migration_reversal.py
+
+### [7] NOT COVERED
+- byte-identical re-creation of an index-free table: indistinguishable in SQLite (see [2]).
+- F2/F3 out of scope and unchanged.
+- no operator production database; all cases reconstructed from the repo migrations.
+- no MT5, DEMO account, order path or credential touched.
+
+### [8] STATUS
+F1 remediation implemented and self-verified. F1 and S7 remain UNAPPROVED until an independent
+inspection reproduces the attack and accepts the design.

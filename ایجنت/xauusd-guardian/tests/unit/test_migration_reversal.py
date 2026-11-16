@@ -1,4 +1,4 @@
-"""S6: migration 0003 is additive and reversible, by execution rather than by text."""
+﻿"""S6: migration 0003 is additive and reversible, by execution rather than by text."""
 
 from __future__ import annotations
 
@@ -16,9 +16,26 @@ from guardian.storage.db import (
     discover_down_migrations,
     discover_migrations,
     migration_history,
+    migration_provenance,
+    emit_reverse_sql,
     reversal_plan,
-    revert_migration,
 )
+
+
+def revert_migration(conn, migrations_dir, version, **kwargs):
+    """Operator stand-in.
+
+    The library no longer executes destructive DDL, so the test suite does what a human
+    would do: emit the reviewed script and run it by hand.
+    """
+    script = emit_reverse_sql(conn, migrations_dir, version, **kwargs)
+    try:
+        conn.executescript(script)
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
+    return version
 
 START = datetime(2026, 11, 5, 8, 0, tzinfo=timezone.utc)
 BAR_COLUMNS = (
@@ -269,7 +286,7 @@ def test_incomplete_down_script_is_refused_and_rolled_back(tmp_path, project_roo
 
     (migrations / "rollback" / "0003_signals.down.sql").write_text("DROP TABLE signals;\n", encoding="utf-8")
 
-    with pytest.raises(MigrationError, match="left objects behind"):
+    with pytest.raises(MigrationError, match="leaves objects behind"):
         revert_migration(conn, migrations, 3)
 
     assert {"signals", "signal_runs"} <= table_names(conn), "the partial reversal must be rolled back"
@@ -553,9 +570,310 @@ def test_revert_refuses_an_index_left_behind(tmp_path, project_root):
     conn = connect(tmp_path / "index.sqlite3")
     assert apply_migrations(conn, migrations) == [1, 2, 3, 4]
 
-    with pytest.raises(MigrationError, match="left objects behind"):
+    with pytest.raises(MigrationError, match="leaves objects behind"):
         revert_migration(conn, migrations, 4)
 
     assert "idx_probe" in index_names(conn)
     assert "probe" in table_names(conn)
     assert [m.version for m in migration_history(conn)] == [1, 2, 3, 4]
+
+
+def test_apply_accepts_a_backticked_declaration(tmp_path, project_root):
+    """SQLite accepts `name`; the parser must normalise it like "name"."""
+    migrations = tmp_path / "mig_bt"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TABLE `probe_bt` (id TEXT NOT NULL);\n", encoding="utf-8"
+    )
+    conn = connect(tmp_path / "backtick.sqlite3")
+
+    assert apply_migrations(conn, migrations) == [1, 2, 3, 4]
+    assert migration_provenance(conn, 4) == (("table", "probe_bt"),)
+
+
+def test_backticked_declaration_still_refuses_adoption(tmp_path, project_root):
+    migrations = tmp_path / "mig_bt_adopt"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TABLE IF NOT EXISTS `probe_bt` (id TEXT NOT NULL);\n", encoding="utf-8"
+    )
+    conn = connect(tmp_path / "backtick_adopt.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    conn.execute("CREATE TABLE probe_bt (other TEXT)")
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="would adopt"):
+        apply_migrations(conn, migrations)
+
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_quoted_schema_prefix_creates_the_named_object(tmp_path, project_root):
+    migrations = tmp_path / "mig_qs"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        'CREATE TABLE "main".probe_qs (id TEXT NOT NULL);\n', encoding="utf-8"
+    )
+    conn = connect(tmp_path / "quoted_schema.sqlite3")
+
+    assert apply_migrations(conn, migrations) == [1, 2, 3, 4]
+    assert migration_provenance(conn, 4) == (("table", "probe_qs"),)
+
+
+def test_apply_refuses_a_migration_that_creates_nothing(tmp_path, project_root):
+    migrations = tmp_path / "mig_noop"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text("SELECT 1;\n", encoding="utf-8")
+    conn = connect(tmp_path / "noop.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+
+    with pytest.raises(MigrationError, match="changed nothing"):
+        apply_migrations(conn, migrations)
+
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_block_comment_cannot_hide_an_adoption(tmp_path, project_root):
+    migrations = tmp_path / "mig_block"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TABLE /*c*/ IF NOT EXISTS probe_c (id TEXT NOT NULL);\n", encoding="utf-8"
+    )
+    conn = connect(tmp_path / "block.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    conn.execute("CREATE TABLE probe_c (other TEXT)")
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="would adopt"):
+        apply_migrations(conn, migrations)
+
+
+def test_backticked_declaration_round_trips(tmp_path, project_root):
+    migrations = tmp_path / "mig_bt_round"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TABLE `probe_bt` (id TEXT NOT NULL);\n", encoding="utf-8"
+    )
+    (migrations / "rollback" / "0004_probe.down.sql").write_text(
+        "DROP TABLE probe_bt;\n", encoding="utf-8"
+    )
+    conn = connect(tmp_path / "bt_round.sqlite3")
+    assert apply_migrations(conn, migrations) == [1, 2, 3, 4]
+
+    assert revert_migration(conn, migrations, 4) == 4
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+    assert table_names(conn).isdisjoint({"probe_bt"})
+
+
+def test_revert_refuses_a_cascading_child_table(tmp_path, project_root):
+    conn = connect(tmp_path / "cascade.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    conn.execute(
+        "CREATE TABLE operator_child ("
+        "child_id TEXT PRIMARY KEY, "
+        "run_ref TEXT NOT NULL REFERENCES signal_runs(run_id) ON DELETE CASCADE)"
+    )
+    conn.execute("INSERT INTO signal_runs "
+                 "(run_id, symbol, strategy_id, timeframe, from_utc, to_utc, bars_seen, "
+                 "signals, written, identical, status, created_utc) "
+                 "VALUES ('r1','XAUUSD.','ema_cross_v1','M5','a','b',1,1,1,1,'OK','c')")
+    conn.execute("INSERT INTO operator_child (child_id, run_ref) VALUES ('c1','r1')")
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="ON DELETE CASCADE"):
+        revert_migration(conn, project_root / "migrations", 3)
+
+    assert conn.execute("SELECT COUNT(*) FROM operator_child").fetchone()[0] == 1
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_down_script_rejects_a_quoted_non_main_schema(tmp_path, project_root):
+    migrations = tmp_path / "mig_quoted_schema"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "rollback" / "0003_signals.down.sql").write_text(
+        'DROP TABLE "temp"."signals";\nDROP TABLE signal_runs;\n', encoding="utf-8"
+    )
+    conn = connect(tmp_path / "quoted_schema.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+
+    with pytest.raises(MigrationError, match="may only touch main"):
+        revert_migration(conn, migrations, 3)
+
+
+def test_single_quoted_identifier_is_refused_by_name(tmp_path, project_root):
+    """The refusal must name the statement, not a phantom object `if`."""
+    migrations = tmp_path / "mig_sq"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TABLE IF NOT EXISTS 'probe_sq' (id TEXT NOT NULL);\n", encoding="utf-8"
+    )
+    conn = connect(tmp_path / "single_quote.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    conn.execute("CREATE TABLE probe_sq (operator_col TEXT)")
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="does not support") as caught:
+        apply_migrations(conn, migrations)
+
+    assert "'if'" not in str(caught.value)
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_create_view_is_refused(tmp_path, project_root):
+    migrations = tmp_path / "mig_view"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE VIEW probe_v AS SELECT symbol FROM bars;\n", encoding="utf-8"
+    )
+    conn = connect(tmp_path / "view.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+
+    with pytest.raises(MigrationError, match="does not support"):
+        apply_migrations(conn, migrations)
+
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_create_trigger_is_refused(tmp_path, project_root):
+    migrations = tmp_path / "mig_trigger"
+    shutil.copytree(project_root / "migrations", migrations)
+    (migrations / "0004_probe.sql").write_text(
+        "CREATE TRIGGER probe_tr AFTER INSERT ON bars BEGIN SELECT 1; END;\n",
+        encoding="utf-8",
+    )
+    conn = connect(tmp_path / "trigger.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+
+    with pytest.raises(MigrationError, match="does not support"):
+        apply_migrations(conn, migrations)
+
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_revert_refuses_a_set_default_child_table(tmp_path, project_root):
+    conn = connect(tmp_path / "set_default.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    conn.execute(
+        "CREATE TABLE operator_child ("
+        "child_id TEXT PRIMARY KEY, "
+        "run_ref TEXT NOT NULL DEFAULT 'none' "
+        "REFERENCES signal_runs(run_id) ON DELETE SET DEFAULT)"
+    )
+    conn.execute("INSERT INTO signal_runs "
+                 "(run_id, symbol, strategy_id, timeframe, from_utc, to_utc, bars_seen, "
+                 "signals, written, identical, status, created_utc) "
+                 "VALUES ('r1','XAUUSD.','ema_cross_v1','M5','a','b',1,1,1,1,'OK','c')")
+    conn.execute("INSERT INTO operator_child (child_id, run_ref) VALUES ('c1','r1')")
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="SET DEFAULT"):
+        revert_migration(conn, project_root / "migrations", 3)
+
+    assert conn.execute("SELECT run_ref FROM operator_child").fetchone()[0] == "r1"
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_revert_never_touches_an_attached_schema(tmp_path, project_root):
+    side = tmp_path / "attached.db"
+    other = sqlite3.connect(str(side))
+    other.execute("CREATE TABLE signals (keep TEXT)")
+    other.execute("INSERT INTO signals VALUES ('keep')")
+    other.commit()
+    other.close()
+
+    conn = connect(tmp_path / "attach.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    conn.execute("ATTACH DATABASE '%s' AS side" % str(side).replace("\\", "/"))
+
+    script = emit_reverse_sql(conn, project_root / "migrations", 3)
+
+    assert "side" not in script, "the emitted script must never name another schema"
+    conn.executescript(script)
+
+    assert conn.execute("SELECT COUNT(*) FROM side.signals").fetchone()[0] == 1
+    assert "signals" not in table_names(conn)
+
+
+def test_revert_refuses_a_same_shape_replacement(tmp_path, project_root):
+    """F1: drop the owned table, rebuild it with the same nine columns, keep a row."""
+    conn = connect(tmp_path / "f1.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    conn.execute("DROP TABLE main.signals")
+    conn.execute(
+        "CREATE TABLE signals (symbol TEXT, timeframe TEXT, bar_time_utc TEXT, "
+        "strategy_id TEXT, direction TEXT, strength TEXT, reason_code TEXT, run_id TEXT, "
+        "created_utc TEXT)"
+    )
+    conn.execute("INSERT INTO signals VALUES ('XAUUSD.','M5','t','s','LONG','1','r','run','c')")
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="Refusing to drop a replacement object"):
+        revert_migration(conn, project_root / "migrations", 3)
+
+    assert conn.execute("SELECT COUNT(*) FROM main.signals").fetchone()[0] == 1
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_revert_refuses_a_byte_identical_replacement(tmp_path, project_root):
+    """Same DDL, same page, same rowid: only schema_version can distinguish it."""
+    conn = connect(tmp_path / "f1b.sqlite3")
+    apply_migrations(conn, project_root / "migrations")
+    ddl = (project_root / "migrations" / "0003_signals.sql").read_text(encoding="utf-8")
+    conn.execute("DROP TABLE main.signals")
+    conn.execute("DROP TABLE main.signal_runs")
+    conn.executescript(ddl)
+    conn.execute("INSERT INTO signals VALUES ('XAUUSD.','M5','t','s','LONG','1','r','run','c')")
+    conn.commit()
+
+    with pytest.raises(MigrationError, match="Refusing to drop a replacement object"):
+        revert_migration(conn, project_root / "migrations", 3)
+
+    assert conn.execute("SELECT COUNT(*) FROM main.signals").fetchone()[0] == 1
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_reapply_records_a_fresh_identity(tmp_path, project_root):
+    """apply -> revert -> reapply -> revert must keep working."""
+    conn = connect(tmp_path / "reapply.sqlite3")
+    assert apply_migrations(conn, project_root / "migrations") == [1, 2, 3]
+
+    assert revert_migration(conn, project_root / "migrations", 3) == 3
+    assert apply_migrations(conn, project_root / "migrations") == [3]
+    assert revert_migration(conn, project_root / "migrations", 3) == 3
+
+    assert [m.version for m in migration_history(conn)] == [1, 2]
+
+
+def test_the_library_never_executes_destructive_ddl(tmp_path, project_root):
+    """revert_migration is gone: calling it must refuse and change nothing."""
+    import guardian.storage.db as db_module
+
+    conn = prepared_db(tmp_path, project_root, "noexec.sqlite3")
+    before = pre_0003_snapshot(conn)
+
+    with pytest.raises(MigrationError, match="automated reversal has been removed"):
+        db_module.revert_migration(conn, project_root / "migrations", 3)
+
+    assert pre_0003_snapshot(conn) == before
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_emitted_script_is_self_contained_and_inert(tmp_path, project_root):
+    conn = prepared_db(tmp_path, project_root, "emit.sqlite3")
+    before = pre_0003_snapshot(conn)
+
+    script = emit_reverse_sql(conn, project_root / "migrations", 3)
+
+    assert 'DROP TABLE main."signals";' in script
+    assert 'DROP TABLE main."signal_runs";' in script
+    # indexes disappear with their table, so the script need not name them
+    assert 'idx_signals_run' not in script
+    assert "DELETE FROM schema_migrations WHERE version = 3;" in script
+    assert "DELETE FROM schema_objects WHERE version = 3;" in script
+    assert "DELETE FROM schema_object_identity WHERE version = 3;" in script
+    assert script.lstrip().startswith("--")
+    assert script.rstrip().endswith("COMMIT;")
+
+    # emitting must not touch the database
+    assert pre_0003_snapshot(conn) == before
+    assert [m.version for m in migration_history(conn)] == [1, 2, 3]

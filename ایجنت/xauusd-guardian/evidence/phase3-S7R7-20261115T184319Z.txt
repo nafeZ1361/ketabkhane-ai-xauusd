@@ -1,0 +1,90 @@
+### PHASE 3 / S7 - EVIDENCE (gate S7, round 7: the four open items)
+GENERATED_UTC : 20261115T184319Z
+SCOPE         : items 1-4 only (single-quoted identifiers, ON DELETE SET DEFAULT, CREATE VIEW/TRIGGER
+                scope, ATTACH coverage). No S1-S6 behaviour changed.
+STATUS        : NOT PASS. Developer-side record; an independent inspection is required.
+PYTHON        : Python 3.11.8  /  pytest 9.2.0  /  SQLite 3.43.1  /  Windows 10 19045 x64
+
+### REPOSITORY STATE
+BRANCH        : fix/w1-timezone-validation
+COMMITTED_HEAD: e56b3a69b007e3c797a1a6952e6605d0e787935a
+UNCOMMITTED   : the whole S7 change set. NO COMMIT, NO PUSH.
+
+### [1] CHANGES
+item1  _CREATE_RE gains (?!IF\b) so the parser cannot attribute the keyword IF; new
+       _unattributed_create() refuses the first CREATE it cannot attribute, naming the statement.
+item2  the FK pre-flight refused set is now {CASCADE, SET NULL, SET DEFAULT}.
+item3  scope decision: only CREATE TABLE and CREATE INDEX are supported. CREATE VIEW / TRIGGER /
+       TEMP objects are refused before execution (no apply-record-no-revert asymmetry); the
+       contract is stated in the module docstring safety model item 5.
+item4  in-repo test test_revert_never_touches_an_attached_schema.
+tests  5 added -> 292 total.
+
+### [2] SUITE
+CMD  : python -m pytest -q --junitxml=C:\GS7\out\junit-r7.xml   (cwd C:\GS7\r7, byte copy)
+EXIT : 0
+RESULT: tests=292 failures=0 errors=0 skipped=0 time=43.753
+CMD  : python -m pytest tests/unit/test_migration_reversal.py -k "<the five>" -v
+EXIT : 0
+RESULT: 5 passed, 35 deselected
+CMD  : python -m compileall -q src scripts tests
+EXIT : 0
+RESULT: clean
+
+### [3] ITEM PROBES (verbatim)
+PASS 1-single-quoted :: err='MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: "CREATE TABLE IF NOT EXISTS \'probe_sq\' (id TEXT NOT NULL);". S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded.' rows=1 hist=[1, 2, 3]
+PASS 2-set-default :: err="MigrationError: reverting 0003_signals.sql would drop a table that ['operator_child -> signal_runs ON DELETE SET DEFAULT'] references with ON DELETE CASCADE/SET NULL/SET DEFAULT; rows this migration did not create would be deleted. Drop or detach those tables first." child_run_ref=r1 hist=[1, 2, 3]
+PASS 3-view :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE VIEW probe_v AS SELECT symbol FROM bars;'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS 3-trigger :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE TRIGGER probe_tr AFTER INSERT ON bars BEGIN SELECT 1; END;'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS 3-temp :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE TEMP TABLE probe_tmp (id TEXT);'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS 3b-table-and-index-still-work :: applied=[4] err=None prov=(('index', 'idx_probe_ok'), ('table', 'probe_ok'))
+PASS 4-attach :: err="MigrationError: reversal of 3 left objects behind: ['side:signals']" side_rows=1 main_signals=1 hist=[1, 2, 3]
+
+TOTAL 7/7
+
+### [4] ROUND-4 REGRESSION, 15 SCENARIOS (verbatim)
+PASS A-positive-roundtrip :: applied=[1, 2, 3] prov=4 revert=3 hist=[1, 2] reapply=[3] tables=['audit_events', 'bar_revisions', 'bars', 'data_gaps', 'feed_runs', 'quarantined_series', 'risk_decisions', 'schema_migrations', 'schema_objects', 'sqlite_sequence', 'symbol_snapshots', 'ticks', 'time_sync']
+PASS B1-legacy-empty-provenance :: err='MigrationError: no object provenance recorded for migration 3; this database was applied before provenance tracking existed, so a safe reverse cannot be derived. Audit or rebuild the database instead of reverting.' table_exists=1 rows=2 hist=[3]
+PASS B2-legacy-without-schema_objects :: err='OperationalError: no such table: schema_objects' table_exists=1 rows=2
+PASS C-temp-schema-collision :: err='OperationalError: no such table: main.signals' temp_exists=1 temp_rows=1 hist=[1, 2, 3]
+PASS D-attached-schema-collision :: err='OperationalError: no such table: main.signals' aux_rows=1 hist=[1, 2, 3]
+PASS E-quoted-adoption-double :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-bracket :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q2'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-backtick :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q3'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-qualified :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q4'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS F-hostile-down-schema-qualified :: err="MigrationError: 0003_signals.down.sql targets schema 'temp'; a reverse may only touch main" hist=[1, 2, 3]
+PASS G-main-vs-temp-precedence :: revert=None err="MigrationError: reversal of 3 left objects behind: ['temp:signals']" temp_exists=1 temp_rows=1 main_gone=False
+PASS H-drifted-table-refused :: err="MigrationError: table 'signals' does not match 0003_signals.sql (declared [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT')], actual [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT'), ('extra', 'TEXT')]); refusing to drop a drifted table" hist=[1, 2, 3]
+PASS I-quoted-schema-prefix :: err=None hist=[1, 2, 3, 4] created=1 prov=(('table', 'probe_z'),)
+PASS I2-quoted-schema-adoption :: err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_z'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS J-backtick-fresh-create :: err=None hist=[1, 2, 3, 4] probe_bt_created=1
+
+TOTAL 15/15 probes passed
+
+### [5] ROUND-5 REGRESSION, 7 CASES (verbatim)
+PASS C1-block-comment-adoption :: err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_c'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS C1b-data-only-refused :: err='MigrationError: migration 0004_probe.sql created no objects in main; refusing to record a migration that changed nothing. Data-only and TEMP-only migrations are not supported: a migration must create what it declares.' hist=[1, 2, 3]
+PASS C1c-temp-only-refused :: err="MigrationError: migration 0004_probe.sql contains a CREATE this project does not support: 'CREATE TEMP TABLE probe_tmp (id TEXT);'. S7 scope is CREATE TABLE and CREATE INDEX only; views, triggers, TEMP objects and identifier spellings the parser cannot attribute are refused rather than recorded." hist=[1, 2, 3]
+PASS C2-cascade-refused :: err="MigrationError: reverting 0003_signals.sql would drop a table that ['operator_child -> signal_runs ON DELETE CASCADE'] references with ON DELETE CASCADE/SET NULL/SET DEFAULT; rows this migration did not create would be deleted. Drop or detach those tables first." child_rows=1 hist=[1, 2, 3]
+PASS C3-backtick-roundtrip :: applied=[4] shape=(('id', 'TEXT'),) revert=4 err=None gone=True
+PASS C6-declared-shapes :: plain:True backtick:True quoted-schema:True block-after-TABLE:True line-comment:True
+PASS W2-quoted-schema-refused :: err="MigrationError: 0003_signals.down.sql targets schema 'temp'; a reverse may only touch main" hist=[1, 2, 3]
+
+TOTAL 7/7
+
+### [6] FILE DIGESTS
+2a4ad1889dbeefe6e0115476be42c0ff8618181653f6c93881ed8e47e03193ab  (worktree)  src/guardian/storage/db.py
+86e04933170614eba901a57817dc2c305c8da9125d0881782704cc32a9ad834a  (LF)   src/guardian/storage/db.py
+43473b360068d453d1cd11d99de30264091a286341fda258d51a4264c9111c81  (worktree)  tests/unit/test_migration_reversal.py
+5a15066066d82613d71891cd58170f3b7245e12d510d1475536b20e9be97e8ad  (LF)  tests/unit/test_migration_reversal.py
+
+### [7] NOT COVERED
+- an operator production database does not exist in the repo; every case is a reconstruction.
+- round-4 residual R4 (shape equality treated as provenance; a same-shape replacement table would
+  be dropped) is NOT fixed; it needs a recorded identity token and is out of scope here.
+- R1/R2/R3 remain: fail-closed, poor messages, over-strict post-condition.
+- no MT5 terminal, DEMO account, order path or credential was touched.
+
+### [8] S7 STATUS
+Not PASS. Round 7 closed the four open items; an independent round-8 inspection must re-execute
+them and must not rely on this file.

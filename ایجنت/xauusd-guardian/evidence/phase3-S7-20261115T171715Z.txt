@@ -1,0 +1,134 @@
+### PHASE 3 / S7 - EVIDENCE (gate S7, round 4: independent inspection + remediation)
+GENERATED_UTC : 20261115T171715Z
+NOTE          : round 4 of the S7 gate. Rounds 1-3 returned BLOCK (F1, F1b, F1c). This round
+                confirms F1c closed by execution, reports two new defects (N1, N2), fixes both,
+                and does NOT claim PASS: the fixes are the inspector's own (rule: developer != approver).
+PYTHON        : Python 3.11.8
+PYTEST        : pytest 9.2.0
+SQLITE        : 3.43.1
+OS            : Windows 10 Pro 19045 x64
+
+### REPOSITORY STATE (unchanged by the inspection runs)
+REMOTE        : https://github.com/nafeZ1361/ketabkhane-ai-xauusd.git
+BRANCH        : fix/w1-timezone-validation
+HEAD          : e56b3a69b007e3c797a1a6952e6605d0e787935a
+HEAD_SUBJECT  : fix(s6): measured object provenance, main-qualified reverse (S7 F1c)
+TREE          : 8ad3949e8d331ab70981dc30ce86580785a52907
+WORKTREE_AT_START : clean
+WORKTREE_AT_END   : 4 modified/added paths (db.py, test_migration_reversal.py, PROJECT_STATE.md,
+                    01_STATE_SNAPSHOT.md, MANIFEST.sha256, REPORT-S7-ROUND4.md) - NO COMMIT, NO PUSH
+
+METHOD        : every suite and probe ran on byte-identical copies of the subtree
+                (pre-fix C:\GS7\r4, post-fix C:\GS7\r5). db.py digest of the copy equals the
+                clone's digest, so the probes exercised HEAD bytes and the repo was never written
+                to during measurement.
+
+### [1] BASELINE AT HEAD (copy C:\GS7\r4)
+CMD  : python -m pytest -q --junitxml=out\junit.xml
+EXIT : 0
+RESULT: tests=279 failures=0 errors=0 skipped=0 time=51.639
+CMD  : python -m compileall -q src scripts tests
+EXIT : 0
+RESULT: clean
+CMD  : probe_s7r4.py (14 adversarial scenarios)
+EXIT : 1
+RESULT: 12/15 - I, I2 and J failed (quoted schema prefix + backticked CREATE) => defect N2
+
+### [2] ADVERSARIAL PROBES AT HEAD (verbatim)
+PASS A-positive-roundtrip :: applied=[1, 2, 3] prov=4 revert=3 hist=[1, 2] reapply=[3] tables=['audit_events', 'bar_revisions', 'bars', 'data_gaps', 'feed_runs', 'quarantined_series', 'risk_decisions', 'schema_migrations', 'schema_objects', 'sqlite_sequence', 'symbol_snapshots', 'ticks', 'time_sync']
+PASS B1-legacy-empty-provenance :: err='MigrationError: no object provenance recorded for migration 3; this database was applied before provenance tracking existed, so a safe reverse cannot be derived. Audit or rebuild the database instead of reverting.' table_exists=1 rows=2 hist=[3]
+PASS B2-legacy-without-schema_objects :: err='OperationalError: no such table: schema_objects' table_exists=1 rows=2
+PASS C-temp-schema-collision :: err='OperationalError: no such table: main.signals' temp_exists=1 temp_rows=1 hist=[1, 2, 3]
+PASS D-attached-schema-collision :: err='OperationalError: no such table: main.signals' aux_rows=1 hist=[1, 2, 3]
+PASS E-quoted-adoption-double :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-bracket :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q2'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-backtick :: adoption_message=False err="MigrationError: migration 0004_probe.sql did not create declared object(s) ['`probe_q3`']; refusing to record it" hist=[1, 2, 3]
+PASS E-quoted-adoption-qualified :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q4'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS F-hostile-down-schema-qualified :: err="MigrationError: 0003_signals.down.sql targets schema 'temp'; a reverse may only touch main" hist=[1, 2, 3]
+PASS G-main-vs-temp-precedence :: revert=None err="MigrationError: reversal of 3 left objects behind: ['temp:signals']" temp_exists=1 temp_rows=1 main_gone=False
+PASS H-drifted-table-refused :: err="MigrationError: table 'signals' does not match 0003_signals.sql (declared [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT')], actual [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT'), ('extra', 'TEXT')]); refusing to drop a drifted table" hist=[1, 2, 3]
+FAIL I-quoted-schema-prefix :: err="MigrationError: migration 0004_probe.sql did not create declared object(s) ['main']; refusing to record it" hist=[1, 2, 3] created=0 prov=()
+FAIL I2-quoted-schema-adoption :: err="MigrationError: migration 0004_probe.sql did not create declared object(s) ['main']; refusing to record it" hist=[1, 2, 3]
+FAIL J-backtick-fresh-create :: err="MigrationError: migration 0004_probe.sql did not create declared object(s) ['`probe_bt`']; refusing to record it" hist=[1, 2, 3] probe_bt_created=0
+
+TOTAL 12/15 probes passed
+
+### [3] MUTATION OF THE M2 DEFENCE
+CHANGE: db.py revert_migration  DROP {kind} main."{name}"  ->  DROP {kind} "{name}"
+CMD   : python -m pytest -q   (copy C:\GS7\mut1)
+EXIT  : 1
+RESULT: KILLED by tests/unit/test_migration_reversal.py::test_revert_never_targets_a_temp_table
+        ("DID NOT RAISE OperationalError", line 491)
+NOTE  : two unrelated failures in that mutant (tests/security/test_boundaries.py) were caused by
+        the BOM the mutation script wrote into db.py, not by the mutation. The pristine copy is green.
+
+### [4] DEFECTS FIXED THIS ROUND
+N1  HANDOFF/MANIFEST.sha256 did not verify for artifacts/REPORT-S7.md, REPORT-S7-ROUND2.md and
+    REPORT-S7-ROUND3.md, all last touched in the same commit e56b3a6 as the manifest. No CRLF/BOM
+    variant of those three matched. Fixed by regenerating the manifest over LF content; now 11/11.
+N2  _bare_identifier never stripped backticks (its docstring claimed it did) and _SCHEMA_PREFIX
+    accepted only a bare schema name, so `CREATE TABLE `x`` was refused and `CREATE TABLE "main".x`
+    parsed as object "main". Both fail-closed. Fixed in _bare_identifier / _SCHEMA_PREFIX; three
+    regression tests added:
+      test_apply_accepts_a_backticked_declaration
+      test_backticked_declaration_still_refuses_adoption
+      test_quoted_schema_prefix_creates_the_named_object
+
+### [5] POST-FIX VERIFICATION (copy C:\GS7\r5, byte-identical to the patched tree)
+CMD  : python -m pytest -q --junitxml=out\junit-r5.xml
+EXIT : 0
+RESULT: tests=282 failures=0 errors=0 skipped=0 time=45.031
+CMD  : python -m compileall -q src scripts tests
+EXIT : 0
+RESULT: clean
+CMD  : probe_s7r4.py (15 scenarios)
+EXIT : 0
+RESULT: 15/15
+
+### [6] ADVERSARIAL PROBES AFTER THE FIXES (verbatim)
+PASS A-positive-roundtrip :: applied=[1, 2, 3] prov=4 revert=3 hist=[1, 2] reapply=[3] tables=['audit_events', 'bar_revisions', 'bars', 'data_gaps', 'feed_runs', 'quarantined_series', 'risk_decisions', 'schema_migrations', 'schema_objects', 'sqlite_sequence', 'symbol_snapshots', 'ticks', 'time_sync']
+PASS B1-legacy-empty-provenance :: err='MigrationError: no object provenance recorded for migration 3; this database was applied before provenance tracking existed, so a safe reverse cannot be derived. Audit or rebuild the database instead of reverting.' table_exists=1 rows=2 hist=[3]
+PASS B2-legacy-without-schema_objects :: err='OperationalError: no such table: schema_objects' table_exists=1 rows=2
+PASS C-temp-schema-collision :: err='OperationalError: no such table: main.signals' temp_exists=1 temp_rows=1 hist=[1, 2, 3]
+PASS D-attached-schema-collision :: err='OperationalError: no such table: main.signals' aux_rows=1 hist=[1, 2, 3]
+PASS E-quoted-adoption-double :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-bracket :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q2'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-backtick :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q3'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS E-quoted-adoption-qualified :: adoption_message=True err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_q4'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS F-hostile-down-schema-qualified :: err="MigrationError: 0003_signals.down.sql targets schema 'temp'; a reverse may only touch main" hist=[1, 2, 3]
+PASS G-main-vs-temp-precedence :: revert=None err="MigrationError: reversal of 3 left objects behind: ['temp:signals']" temp_exists=1 temp_rows=1 main_gone=False
+PASS H-drifted-table-refused :: err="MigrationError: table 'signals' does not match 0003_signals.sql (declared [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT')], actual [('symbol', 'TEXT'), ('timeframe', 'TEXT'), ('bar_time_utc', 'TEXT'), ('strategy_id', 'TEXT'), ('direction', 'TEXT'), ('strength', 'TEXT'), ('reason_code', 'TEXT'), ('run_id', 'TEXT'), ('created_utc', 'TEXT'), ('extra', 'TEXT')]); refusing to drop a drifted table" hist=[1, 2, 3]
+PASS I-quoted-schema-prefix :: err=None hist=[1, 2, 3, 4] created=1 prov=(('table', 'probe_z'),)
+PASS I2-quoted-schema-adoption :: err="MigrationError: migration 0004_probe.sql would adopt existing object(s) ['probe_z'] instead of creating them; refusing to record a migration that creates nothing. If these objects came from an interrupted apply, resolve the database manually, then re-run." hist=[1, 2, 3]
+PASS J-backtick-fresh-create :: err=None hist=[1, 2, 3, 4] probe_bt_created=1
+
+TOTAL 15/15 probes passed
+
+### [7] ROUND-3 MUST-FIX CLOSURE
+M1  legacy DB (0003 recorded, no provenance)   -> B1 refused, rows=2 intact; B2 refused (raw
+    OperationalError), rows=2 intact
+M2  TEMP / ATTACH same-named table             -> C, D, G refused, foreign rows intact;
+    hostile down-script rejected (F)
+M3  quoted / main.-qualified CREATE            -> E double/bracket/backtick/qualified all refuse
+    adoption with "would adopt"; I/I2 now parse correctly
+
+### [8] FILE DIGESTS (post-fix, after the edits in [4])
+c3e5133b17ee6cad3915a693f8691bab2bdbfaa7655de32b270081061c86bf5f  (worktree)  src/guardian/storage/db.py
+93d6de1b5cfcdb8b73a2beafcdf4f7be6959ceff0f7a70de1458d12a7ad32276  (LF)   src/guardian/storage/db.py
+ab8f56a0d674889ef5b126ae76ecc46ad46783c49e8e7916fcdeb1afb1f36905  (worktree)  tests/unit/test_migration_reversal.py
+e7a2d5efb9f5267e3abb93c20a13f583c52e2cfc57e50d6241f44dd879c34483  (LF)  tests/unit/test_migration_reversal.py
+
+### [9] MANIFEST
+BEFORE : 7 verify (LF-normalised), 3 BAD (REPORT-S7.md, -ROUND2, -ROUND3)
+AFTER  : 11/11 verify (LF content), including artifacts/REPORT-S7-ROUND4.md
+
+### [10] NOT COVERED
+- the author's four round-3 mutation probes were not re-run; only the M2 `main` mutant here
+- no operator database exists in the repo (data/*.sqlite3 is gitignored); M1/M2 remain
+  reconstructions from the pre-fix code shape
+- nothing touched a live MT5 terminal, a DEMO account, or an order path
+- ATTACH has no in-repo test (probe D covers it)
+
+### [11] S7 STATUS
+NOT PASS. Round 3 closed. Round 4 closed F1c and fixed N1/N2. An independent round-5 review of
+these fixes is required before S7 can be recorded as PASS.

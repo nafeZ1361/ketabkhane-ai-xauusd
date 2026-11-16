@@ -1,0 +1,49 @@
+### PHASE 3 / F1 - EVIDENCE (option 3: automated destructive reverse removed)
+GENERATED_UTC : 20261115T201338Z
+DECISION      : the owner selected option 3 after the independent F1 inspection returned BLOCK
+                (no in-database evidence can prove object ownership).
+STATUS        : developer-side record. NOT an approval. Independent inspection required.
+PYTHON        : Python 3.11.8 / pytest 9.2.0 / SQLite 3.43.1 / Windows 10 19045
+
+### REPOSITORY STATE
+BRANCH        : fix/w1-timezone-validation
+COMMITTED_HEAD: e56b3a69b007e3c797a1a6952e6605d0e787935a
+UNCOMMITTED   : whole S7 change set. NO COMMIT, NO PUSH.
+
+### [1] CHANGE
+- revert_migration(...) now raises MigrationError and contains no DDL.
+- emit_reverse_sql(...) validates via reversal_plan and returns a self-contained script:
+  BEGIN IMMEDIATE; main-qualified DROPs; DELETE from schema_migrations / schema_objects /
+  schema_object_identity; COMMIT.
+- _verify_reversal removed (nothing executes). Completeness is checked at emit time;
+  an index counts as covered when its table is dropped or it no longer exists.
+
+### [2] SUITE
+CMD  : python -m pytest -q   (copy C:\GS7\opt3, byte-identical)
+EXIT : 0
+RESULT: tests=297 failures=0 errors=0 skipped=0
+CMD  : python -m compileall -q src scripts tests
+EXIT : 0
+RESULT: clean
+
+### [3] BEHAVIOUR PROBE (verbatim)
+PASS R1-library-refuses :: MigrationError: automated reversal has been removed: this tool does not execute destructiv
+PASS R2-emit-inert :: len=533
+PASS R3-script-qualified :: DROP TABLE main."signals";
+PASS R4-script-works-when-run :: hist=[1, 2] gone=True
+PASS R5-reapply :: reapply=[3]
+
+TOTAL 5/5
+
+### [4] DIGESTS
+51aa633de9d777b762c62c53349821077d1c0f81c63956afbbec4bb1ec1c792d  (worktree)  src/guardian/storage/db.py
+b77d59d6de247127174c0ac3e38058e255a69f6b7923f39362a1f3fd576f8874  (worktree)  tests/unit/test_migration_reversal.py
+
+### [5] NOT COVERED
+- the emitted script is destructive when a human runs it; that is the intended control.
+- ownership is no longer asserted by the tool; CASE A2 emits a script rather than refusing.
+- F2/F3 unchanged (ADVISORY).
+
+### [6] STATUS
+F1 as a tool-side destructive path is closed by removal. Independent inspection of this change
+is required before Phase 3 can be reconsidered.

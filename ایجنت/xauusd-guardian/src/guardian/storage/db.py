@@ -3,7 +3,8 @@
 One connection per caller; no global connection object (no hidden global state).
 
 Forward migrations live in ``migrations/``. Their reverses live in
-``migrations/rollback/`` and are executed only by :func:`revert_migration`.
+``migrations/rollback/`` and are **never executed here**: :func:`emit_reverse_sql`
+validates a reverse and returns the SQL a human must review and run.
 
 Safety model, in layers:
 
@@ -12,11 +13,24 @@ Safety model, in layers:
 2. Every apply records the objects it *actually created*, observed from
    ``sqlite_master`` before and after, in ``schema_objects``. Provenance is measured,
    not parsed.
-3. A reverse may only drop objects recorded as created by that migration, targets
-   ``main`` explicitly, and runs inside one transaction.
-4. After the reverse, every schema is re-inspected: an object that existed before and
-   was not created by this migration must still exist, and every created object must be
-   gone. Otherwise the whole reverse rolls back.
+3. This module performs no destructive DDL. :func:`revert_migration` exists only to
+   refuse; the reverse of a migration is a script, not an action.
+4. The emitted script may only drop objects recorded as created by that migration, targets
+   ``main`` explicitly, and is wrapped in one ``BEGIN IMMEDIATE ... COMMIT`` together with
+   the ledger deletes.
+5. The script must account for every object the migration created: a down script that
+   leaves an owned object behind is refused before a script is produced. An index counts
+   as covered when its table is dropped or when it no longer exists.
+6. An apply also records an identity token per object (``sqlite_master`` rowid, root
+   page, normalised-DDL digest, ``schema_version``). A script is emitted only while the
+   first three match, so drift is caught. The token proves *drift*, not *ownership*: a
+   dropped object can be re-created with the same rowid, root page and DDL, and every
+   signal lives in the same database the operator controls. That is precisely why the
+   destructive step is not automated, and why a human runs the script.
+7. Scope is ``CREATE TABLE`` and ``CREATE INDEX`` only. A migration containing any other
+   ``CREATE`` (view, trigger, TEMP object) or an identifier spelling this parser cannot
+   attribute is refused before it runs; it is never recorded and never left
+   apply-only.
 """
 
 from __future__ import annotations
@@ -34,11 +48,11 @@ DOWN_MIGRATION_PATTERN = r"^(?P<version>[0-9]{4})_[a-z0-9_]+\.down\.sql$"
 
 #: SQLite accepts four identifier spellings, optionally schema-qualified.
 _IDENT = r'(?:"[^"]+"|\[[^\]]+\]|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)'
-_SCHEMA_PREFIX = r"(?:[A-Za-z_][A-Za-z0-9_]*\s*\.\s*)?"
+_SCHEMA_PREFIX = r'(?:(?:"[^"]+"|\[[^\]]+\]|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\s*\.\s*)?'
 
 _CREATE_RE = re.compile(
     r"CREATE\s+(?:UNIQUE\s+)?(?P<kind>TABLE|INDEX)\s+(?:IF\s+NOT\s+EXISTS\s+)?"
-    r"(?P<name>" + _SCHEMA_PREFIX + _IDENT + r")",
+    r"(?!IF\b)(?P<name>" + _SCHEMA_PREFIX + _IDENT + r")",
     re.IGNORECASE,
 )
 _DROP_RE = re.compile(
@@ -59,7 +73,7 @@ class AppliedMigration:
 
 @dataclass(frozen=True, slots=True)
 class ReversalPlan:
-    """Everything :func:`revert_migration` is about to do, checked beforehand."""
+    """Everything :func:`emit_reverse_sql` has validated before writing a script."""
 
     version: int
     forward_filename: str
@@ -115,8 +129,9 @@ def discover_down_migrations(rollback_dir: str | Path) -> list[Path]:
 
 
 def _strip_comments(statement: str) -> str:
-    """Drop ``--`` comments so a keyword check cannot be hidden behind one."""
-    return "\n".join(line.split("--", 1)[0] for line in statement.splitlines()).strip()
+    """Drop ``/* ... */`` and ``--`` comments so a keyword check cannot hide behind one."""
+    without_blocks = re.sub(r"/\*.*?\*/", " ", statement, flags=re.DOTALL)
+    return "\n".join(line.split("--", 1)[0] for line in without_blocks.splitlines()).strip()
 
 
 def _split_sql_statements(sql: str, source: str) -> list[str]:
@@ -144,10 +159,12 @@ def _split_sql_statements(sql: str, source: str) -> list[str]:
 def _bare_identifier(raw: str) -> str:
     """Normalise ``[schema.]name`` / ``"name"`` / ``[name]`` / ```name``` to a lower bare name."""
     value = raw.strip()
-    if not value.startswith('"') and not value.startswith("[") and not value.startswith("`"):
-        if "." in value:
-            value = value.split(".", 1)[1].strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+    # Split off a schema prefix before unquoting, so main.signals, "main".signals
+    # and `main`.`signals` all resolve to the bare object name.
+    prefix = re.match(r'(?:"[^"]*"|\[[^\]]*\]|`[^`]*`|[A-Za-z_][A-Za-z0-9_]*)\s*\.', value)
+    if prefix:
+        value = value[prefix.end():].strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'`":
         value = value[1:-1]
     elif len(value) >= 2 and value[0] == "[" and value[-1] == "]":
         value = value[1:-1]
@@ -211,6 +228,113 @@ def _existing_objects(conn: sqlite3.Connection, names: tuple[str, ...]) -> list[
 # --------------------------------------------------------------------------- #
 
 
+def _object_identity(conn: sqlite3.Connection) -> dict[tuple[str, str], tuple[int, int, str, int]]:
+    """Physical identity of every table/index in ``main``, as SQLite can expose it.
+
+    ``(schema rowid, root page, sha256 of the normalised DDL, schema_version)``.
+    SQLite has no stable object id: a dropped-and-recreated object can reuse both its
+    ``sqlite_master.rowid`` and its root page (measured), so the token is a set of
+    independent signals rather than a single key. Ownership is decided by the first
+    three; ``schema_version`` is recorded for diagnostics only, because it is global
+    and changes on any DDL anywhere, including ``CREATE TEMP TABLE``.
+    """
+    version = conn.execute("PRAGMA main.schema_version").fetchone()[0]
+    found: dict[tuple[str, str], tuple[int, int, str, int]] = {}
+    rows = conn.execute(
+        "SELECT rowid, type, name, rootpage, sql FROM main.sqlite_master"
+    ).fetchall()
+    for row in rows:
+        kind = row["type"].lower()
+        name = row["name"].lower()
+        if kind not in {"table", "index"} or name.startswith("sqlite_"):
+            continue
+        found[(kind, name)] = (
+            row["rowid"],
+            row["rootpage"],
+            _sha256(" ".join((row["sql"] or "").split())),
+            version,
+        )
+    return found
+
+
+def _recorded_identity(
+    conn: sqlite3.Connection, version: int
+) -> dict[tuple[str, str], tuple[int, int, str, int]]:
+    rows = conn.execute(
+        "SELECT kind, name, schema_rowid, rootpage, sql_sha256, schema_version "
+        "FROM schema_object_identity WHERE version = ?", (version,)
+    ).fetchall()
+    return {
+        (row["kind"], row["name"]): (
+            row["schema_rowid"], row["rootpage"], row["sql_sha256"], row["schema_version"],
+        )
+        for row in rows
+    }
+
+
+def _check_object_identity(
+    conn: sqlite3.Connection,
+    version: int,
+    owned: dict[str, str],
+    forward_name: str,
+) -> None:
+    """Refuse to drop an object that is not provably the one the migration created.
+
+    A name and a column shape are not ownership: an operator can drop the owned table
+    and re-create an identical-shaped one, and SQLite cannot tell the difference by
+    name, root page or DDL alone. The apply step therefore records a token, and a script is
+    emitted only while every signal still matches. That proves the object has not *drifted*;
+    it does not prove ownership, which is why this module drops nothing and a human runs the
+    script.
+    """
+    recorded = _recorded_identity(conn, version)
+    if not recorded:
+        raise MigrationError(
+            f"no object identity recorded for migration {version}; this database was applied "
+            f"before identity tracking existed, so ownership of its objects cannot be proven. "
+            f"Audit or rebuild the database instead of reverting."
+        )
+
+    current = _object_identity(conn)
+    for name in sorted(owned):
+        kind = owned[name]
+        want = recorded.get((kind, name))
+        if want is None:
+            raise MigrationError(
+                f"{forward_name} is recorded as having created {name!r} but no identity token "
+                f"was stored for it; refusing to drop an unverifiable object"
+            )
+        got = current.get((kind, name))
+        if got is None:
+            # Missing object: leave it to the DROP, inside the transaction (R1).
+            continue
+        if got[:3] != want[:3]:
+            raise MigrationError(
+                f"{name!r} is not the {kind} that {forward_name} created: its schema rowid, "
+                f"root page or definition changed after the migration was applied. "
+                f"Refusing to drop a replacement object."
+            )
+
+
+def _unattributed_create(forward_sql: str, source: str) -> str | None:
+    """Return the first ``CREATE`` statement this parser cannot attribute, if any.
+
+    Only ``CREATE TABLE`` and ``CREATE INDEX`` are in scope for S7. A ``CREATE VIEW``,
+    ``CREATE TRIGGER``, ``CREATE TEMP`` object, or an identifier spelling the parser
+    does not recognise (a single-quoted identifier, for example) must fail closed and
+    name the statement. Otherwise it would produce an empty declared set, make the
+    adoption and ``missing`` guards vacuous, and be recorded as if it had done work.
+    """
+    for statement in _split_sql_statements(_strip_comments(forward_sql), source):
+        body = statement.strip()
+        if not re.match(r"(?is)^CREATE\b", body):
+            continue
+        if _CREATE_RE.match(body):
+            continue
+        return " ".join(body.split())[:120]
+    return None
+
+
 def _ensure_bookkeeping(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -228,6 +352,20 @@ def _ensure_bookkeeping(conn: sqlite3.Connection) -> None:
             version INTEGER NOT NULL,
             kind    TEXT NOT NULL,
             name    TEXT NOT NULL,
+            PRIMARY KEY (version, kind, name)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_object_identity (
+            version        INTEGER NOT NULL,
+            kind           TEXT NOT NULL,
+            name           TEXT NOT NULL,
+            schema_rowid   INTEGER NOT NULL,
+            rootpage       INTEGER NOT NULL,
+            sql_sha256     TEXT NOT NULL,
+            schema_version INTEGER NOT NULL,
             PRIMARY KEY (version, kind, name)
         )
         """
@@ -265,6 +403,14 @@ def apply_migrations(conn: sqlite3.Connection, migrations_dir: str | Path) -> li
             continue
 
         declared = _created_objects(sql)
+        unattributed = _unattributed_create(sql, path.name)
+        if unattributed is not None:
+            raise MigrationError(
+                f"migration {path.name} contains a CREATE this project does not support: "
+                f"{unattributed!r}. S7 scope is CREATE TABLE and CREATE INDEX only; views, "
+                f"triggers, TEMP objects and identifier spellings the parser cannot attribute "
+                f"are refused rather than recorded."
+            )
         adopted = _existing_objects(conn, tuple(declared))
         if adopted:
             raise MigrationError(
@@ -282,6 +428,12 @@ def apply_migrations(conn: sqlite3.Connection, migrations_dir: str | Path) -> li
             for statement in statements:
                 conn.execute(statement)
             created = _object_inventory(conn, "main") - before
+            if not created:
+                raise MigrationError(
+                    f"migration {path.name} created no objects in main; refusing to record a "
+                    f"migration that changed nothing. Data-only and TEMP-only migrations are "
+                    f"not supported: a migration must create what it declares."
+                )
             missing = sorted(set(declared) - {name for _, name in created})
             if missing:
                 raise MigrationError(
@@ -295,6 +447,15 @@ def apply_migrations(conn: sqlite3.Connection, migrations_dir: str | Path) -> li
             conn.executemany(
                 "INSERT INTO schema_objects (version, kind, name) VALUES (?, ?, ?)",
                 [(version, kind, name) for kind, name in sorted(created)],
+            )
+            identity = _object_identity(conn)
+            conn.executemany(
+                "INSERT INTO schema_object_identity (version, kind, name, schema_rowid, "
+                "rootpage, sql_sha256, schema_version) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [
+                    (version, kind, name) + identity[(kind, name)]
+                    for kind, name in sorted(created)
+                ],
             )
             conn.commit()
         except Exception:
@@ -336,10 +497,12 @@ def migration_provenance(conn: sqlite3.Connection, version: int) -> tuple[tuple[
 
 def _declared_shape(forward_sql: str, table: str) -> tuple[tuple[str, str], ...]:
     """``(column, declared type)`` pairs for ``CREATE TABLE <table> (...)``, in order."""
+    cleaned = _strip_comments(forward_sql)
+    name = re.escape(table)
+    declared_name = r'(?:"' + name + r'"|\[?' + name + r'\]?|`' + name + r'`)'
     match = re.search(
-        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\s*\.\s*)?"
-        + r'(?:"' + re.escape(table) + r'"|\[?' + re.escape(table) + r'\]?)' + r"\s*\(",
-        forward_sql,
+        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?" + _SCHEMA_PREFIX + declared_name + r"\s*\(",
+        cleaned,
         re.IGNORECASE,
     )
     if match is None:
@@ -347,7 +510,7 @@ def _declared_shape(forward_sql: str, table: str) -> tuple[tuple[str, str], ...]
 
     body: list[str] = []
     depth = 1
-    for char in forward_sql[match.end():]:
+    for char in cleaned[match.end():]:
         if char == "(":
             depth += 1
         elif char == ")":
@@ -447,8 +610,11 @@ def _checked_down_statements(
                 f"{down_name} contains a statement that is not a plain DROP TABLE/INDEX: {text!r}"
             )
         raw_name = match.group("name").strip()
-        if "." in raw_name and not raw_name.startswith('"'):
-            schema = raw_name.split(".", 1)[0].strip().strip('"[]`').lower()
+        schema_prefix = re.match(
+            r'(?:"[^"]+"|\[[^\]]+\]|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\s*\.', raw_name
+        )
+        if schema_prefix:
+            schema = _bare_identifier(schema_prefix.group(0).rstrip(". "))
             if schema != "main":
                 raise MigrationError(
                     f"{down_name} targets schema {schema!r}; a reverse may only touch main"
@@ -470,27 +636,48 @@ def _checked_down_statements(
     return drops
 
 
-def _verify_reversal(
-    plan: ReversalPlan,
-    before: dict[str, set[tuple[str, str]]],
-    after: dict[str, set[tuple[str, str]]],
+def _check_foreign_key_dependents(
+    conn: sqlite3.Connection,
+    tables: tuple[str, ...],
+    forward_name: str,
 ) -> None:
-    """Post-condition across every schema.
+    """Refuse a reverse whose DROP would cascade into rows this migration never created.
 
-    Two ways to fail: an owned object survived, or a foreign object vanished.
+    With ``PRAGMA foreign_keys = ON`` a ``DROP TABLE`` performs an implicit
+    ``DELETE FROM`` first, so every ``ON DELETE CASCADE`` / ``SET NULL`` / ``SET DEFAULT``
+    child loses its rows. Nothing re-checks row loss once a human runs the script, so a
+    reverse that could cascade is refused before the script is produced.
     """
-    owned = {("table", name) for name in plan.tables} | {("index", name) for name in plan.indexes}
-    for schema, objects in before.items():
-        lost = objects - owned - after.get(schema, set())
-        if lost:
-            raise MigrationError(
-                f"reversal of {plan.version} removed objects it did not own in {schema}: {sorted(lost)}"
-            )
-    remaining = sorted(
-        f"{schema}:{name}" for schema, objects in after.items() for kind, name in objects & owned
-    )
-    if remaining:
-        raise MigrationError(f"reversal of {plan.version} left objects behind: {remaining}")
+    owned = {table.lower() for table in tables}
+    if not owned:
+        return
+
+    offenders: list[str] = []
+    rows = conn.execute(
+        "SELECT name FROM main.sqlite_master WHERE type='table' "
+        "AND name NOT LIKE 'sqlite_%'"
+    ).fetchall()
+    for row in rows:
+        child = row["name"]
+        if child.lower() in owned:
+            continue
+        quoted = child.replace('"', '""')
+        try:
+            keys = conn.execute(f'PRAGMA main.foreign_key_list("{quoted}")').fetchall()
+        except sqlite3.DatabaseError:
+            continue
+        for key in keys:
+            parent = (key["table"] or "").lower()
+            action = (key["on_delete"] or "NO ACTION").upper()
+            if parent in owned and action in {"CASCADE", "SET NULL", "SET DEFAULT"}:
+                offenders.append(f"{child} -> {parent} ON DELETE {action}")
+
+    if offenders:
+        raise MigrationError(
+            f"reverting {forward_name} would drop a table that {sorted(offenders)} "
+            f"references with ON DELETE CASCADE/SET NULL/SET DEFAULT; rows this migration did not "
+            f"create would be deleted. Drop or detach those tables first."
+        )
 
 
 def reversal_plan(
@@ -550,7 +737,9 @@ def reversal_plan(
     drops = _checked_down_statements(down_sql, down.name, owned, recorded.filename)
     tables = tuple(sorted(name for name, kind in owned.items() if kind == "table"))
     indexes = tuple(sorted(name for name, kind in owned.items() if kind == "index"))
+    _check_foreign_key_dependents(conn, tables, recorded.filename)
     _check_declared_shapes(conn, forward_sql, recorded.filename, tables)
+    _check_object_identity(conn, version, owned, recorded.filename)
 
     return ReversalPlan(
         version=version,
@@ -564,35 +753,78 @@ def reversal_plan(
     )
 
 
-def revert_migration(
+def emit_reverse_sql(
     conn: sqlite3.Connection,
     migrations_dir: str | Path,
     version: int,
     *,
     rollback_dir: str | Path | None = None,
-) -> int:
-    """Reverse exactly one applied migration and drop its bookkeeping rows.
+) -> str:
+    """Validate a reverse and return the SQL a human must review and run.
 
-    Every DROP is qualified with ``main``, so an unqualified statement can never reach a
-    ``TEMP`` or attached schema. The drops, the post-condition and both bookkeeping
-    deletes run in one explicit ``BEGIN IMMEDIATE ... COMMIT``.
+    This module performs **no destructive DDL**. :func:`reversal_plan` still applies every
+    precondition (provenance, identity token, declared shape, foreign-key dependents, down
+    script whitelist), so a script is emitted only for a state the library is willing to
+    describe. Whether to run it is a human decision, taken outside this program.
+
+    Every DROP is qualified with ``main``, and the bookkeeping deletes are part of the
+    same transaction, so the script is self-contained and all-or-nothing.
     """
     plan = reversal_plan(conn, migrations_dir, version, rollback_dir=rollback_dir)
-    before = _all_inventories(conn)
 
-    if conn.in_transaction:
-        conn.commit()
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        for kind, name in plan.drops:
-            quoted = name.replace('"', '""')
-            conn.execute(f'DROP {kind.upper()} main."{quoted}"')
-        _verify_reversal(plan, before, _all_inventories(conn))
-        conn.execute("DELETE FROM schema_migrations WHERE version = ?", (plan.version,))
-        conn.execute("DELETE FROM schema_objects WHERE version = ?", (plan.version,))
-        conn.commit()
-    except Exception:
-        if conn.in_transaction:
-            conn.rollback()
-        raise
-    return plan.version
+    dropped = {name for _kind, name in plan.drops}
+    dropped_tables = {name for kind, name in plan.drops if kind == "table"}
+    # An index disappears with its table, so it need not be named in the down script.
+    live_index_tables = {
+        row["name"].lower(): (row["tbl_name"] or "").lower()
+        for row in conn.execute(
+            "SELECT name, tbl_name FROM main.sqlite_master WHERE type = 'index'"
+        ).fetchall()
+    }
+    owned = set(plan.tables) | set(plan.indexes)
+    missing = []
+    for name in sorted(owned - set(dropped)):
+        if name in plan.indexes:
+            table_of_index = live_index_tables.get(name)
+            # an index already gone, or one that vanishes with a dropped table,
+            # cannot be "left behind"
+            if table_of_index is None or table_of_index in dropped_tables:
+                continue
+        missing.append(name)
+    if missing:
+        raise MigrationError(
+            f"{plan.down_filename} leaves objects behind: {missing}; a reverse script must "
+            f"drop every object the migration created, or it is not a reverse."
+        )
+
+    lines = [
+        f"-- XAUUSD Guardian reverse of {plan.forward_filename} (version {plan.version}).",
+        f"-- forward sha256: {plan.forward_sha256}",
+        f"-- down    sha256: {plan.down_sha256}",
+        "-- REVIEW EVERY STATEMENT. This program will not run them.",
+        "BEGIN IMMEDIATE;",
+    ]
+    for kind, name in plan.drops:
+        quoted = name.replace('"', '""')
+        lines.append(f'DROP {kind.upper()} main."{quoted}";')
+    for table in ("schema_migrations", "schema_objects", "schema_object_identity"):
+        lines.append(f"DELETE FROM {table} WHERE version = {plan.version};")
+    lines.append("COMMIT;")
+    return "\n".join(lines) + "\n"
+
+
+def revert_migration(*args: object, **kwargs: object) -> int:
+    """Removed: this project no longer reverses migrations automatically.
+
+    The automated path executed destructive DDL after validating ownership from inside the
+    same database, and no in-database evidence can prove ownership (a dropped object can be
+    re-created with the same schema rowid, root page and DDL). Keeping that path meant a
+    reverse could delete a table the migration did not create.
+
+    Use :func:`emit_reverse_sql`, review the script, and run it yourself.
+    """
+    raise MigrationError(
+        "automated reversal has been removed: this tool does not execute destructive DDL. "
+        "Call emit_reverse_sql(conn, migrations_dir, version) and review the script before "
+        "running it yourself."
+    )

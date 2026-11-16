@@ -1,0 +1,35 @@
+### PHASE 3 / F1 - EVIDENCE (documentation findings closed)
+GENERATED_UTC : 20261116T171500Z
+CONTEXT       : the final independent inspection returned BLOCK on two DOCUMENTATION items only
+                (stale "reverse proceeds" wording at db.py:76/:286, and a stale db.py digest in
+                REPORT-F1-OPTION3.md). It confirmed the change was doc-only (AST with docstrings
+                stripped byte-identical), suite 297, and answered YES to DoD item 4.
+STATUS        : developer-side record. NOT an approval. A confirmation inspection is required.
+
+### [1] CHANGES (documentation only)
+- db.py:76  ReversalPlan docstring now names emit_reverse_sql, not "what revert_migration is about to do".
+- db.py:286 _check_object_identity docstring now says a script is emitted while signals match, and
+            states explicitly that this proves drift, not ownership.
+- REPORT-F1-OPTION3.md §6 digest updated to the current db.py, with the previous value explained.
+No executable line was touched in this pass.
+
+### [2] VERIFICATION
+CMD  : python -m pytest -q   (copy C:\GS7\opt3c, byte-identical to the worktree)
+EXIT : 0
+RESULT: tests=297 failures=0 errors=0 skipped=0
+CMD  : python -m compileall -q src scripts tests
+EXIT : 0
+RESULT: clean
+NOTE : compileall in the deep repository path fails writing a .pyc (path/AV artefact, reproduced
+       before this change); it is clean in the short copy, which is byte-identical.
+
+### [3] RESIDUAL SCAN
+No occurrence of "about to do", "reverse proceeds", "_verify_reversal", "executed only by" or
+"After the reverse" remains in src/guardian/storage/db.py.
+
+### [4] DIGESTS
+efac447834c1538c16e42c86c1464c0d24e8f4c1fca394c91282ed7f78c39746  (worktree)  src/guardian/storage/db.py
+b77d59d6de247127174c0ac3e38058e255a69f6b7923f39362a1f3fd576f8874  (worktree)  tests/unit/test_migration_reversal.py
+
+### [5] NOTE ON OLDER EVIDENCE
+Earlier evidence files keep the digests of their own timestamp; they are never edited.

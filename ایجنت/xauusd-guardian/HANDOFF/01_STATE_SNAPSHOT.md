@@ -1,7 +1,10 @@
 # 01 — STATE SNAPSHOT
 
-Snapshot written **2026-11-12**, after **three** independent S7 reviews returned `BLOCK` and every
-finding was fixed. If `git rev-parse HEAD` does not contain this file's commit, re-derive first.
+Snapshot written **2026-11-15**, after **seven** S7 rounds. Rounds 1–6 produced BLOCK verdicts and
+their findings were fixed round by round; round 7 closed the last four open items (single-quoted
+identifiers, `ON DELETE SET DEFAULT`, VIEW/TRIGGER scope, ATTACH coverage). **S7 PASS is still not
+claimed**: the round-7 changes need an independent round-8 inspection.
+If `git rev-parse HEAD` does not contain this file's commit, re-derive first.
 
 ## Git
 
@@ -16,14 +19,18 @@ finding was fixed. If `git rev-parse HEAD` does not contain this file's commit, 
 `S5_IS_HEAD: False` in the evidence is correct: HEAD has moved past S5. The baseline check is
 "is `9a3b53a` an ancestor", not "is it HEAD".
 
-## S7 review history (three rounds, all findings fixed)
+## S7 review history (four rounds)
 
 | Round | Verdict | Finding | Fix |
 |---|---|---|---|
 | 1 | BLOCK | **F1** — a pre-existing same-named table was adopted by `CREATE TABLE IF NOT EXISTS`, recorded as applied, then dropped by the reverse | adoption refused at apply time; shape check widened; comments stripped before the whitelist scan |
 | 2 | BLOCK | **F1b** — identifiers were compared case-sensitively while SQLite is not, so `SIGNALS` slipped through; apply was not atomic | case-insensitive comparison everywhere; DDL + ledger in one transaction |
 | 3 | BLOCK | **F1c** — (i) databases written by the pre-fix build have no provenance and still lose adopted rows; (ii) an unqualified `DROP` can hit `TEMP` or an `ATTACH`ed schema; (iii) quoted / `main.`-qualified `CREATE` was not parsed, so adoption was recorded | **measured provenance** (`schema_objects`), reverse requires it, every DROP qualified with `main.`, post-condition checks every schema, SQLite's four identifier spellings parsed |
-| 4 | pending | — | re-review requested |
+| 4 | BLOCK | **N1** `HANDOFF/MANIFEST.sha256` did not verify for `REPORT-S7.md`, `-ROUND2`, `-ROUND3` (same commit; no line-ending or BOM variant matched); **N2** backticked identifiers and quoted schema prefixes were misparsed, so a backticked `CREATE` could not be applied at all | manifest regenerated (11/11 verify); `_bare_identifier` splits the schema prefix before unquoting and accepts backticks; `_SCHEMA_PREFIX` accepts all four spellings; +3 tests; round-3 M1/M2/M3 confirmed closed |
+| 5 | BLOCK | **MF1** a migration that created nothing was recorded; **MF2** `_declared_shape` left on the old dialect, so backticked declarations applied but never reverted; **MF3** `ON DELETE CASCADE` deleted operator rows on revert | comments incl. `/* */` stripped; empty `created` refused; one identifier dialect; FK pre-flight; suite 287 |
+| 6 | BLOCK | one *inferred* must-fix: single-quoted identifiers | executed by the implementer: it does not reproduce (refused both ways, operator row intact); reduced to a diagnostics defect |
+| 7 | — | closed all four open items | statement-named refusal + `(?!IF\b)`; `SET DEFAULT` added; VIEW/TRIGGER/TEMP out of scope and refused; ATTACH test; suite 292 |
+| 8 | pending | — | independent inspection of the round-7 changes |
 
 ## What the migrations code guarantees now
 
@@ -65,18 +72,19 @@ Paths relative to `ایجنت/xauusd-guardian/`. SHA-256 over raw file bytes as 
 | Command | Result |
 |---|---|
 | `pytest tests/unit/test_migration_reversal.py -v` | 27 passed, exit 0 |
-| `pytest -q` | 279 passed, 0 failed, 0 error, 0 skipped, exit 0 |
+| `pytest -q` | 295 passed, 0 failed, 0 error, 0 skipped, exit 0 (F1 remediation; 279 at `e56b3a6`) |
 | `python -m compileall -q src scripts tests` | exit 0 |
 | mutation probes | 11 probes, all killed (`unkilled=0`) |
 | live demo | 9 steps: apply, revert, re-apply, hostile down, lowercase adoption, `SIGNALS` adoption, legacy DB refusal |
 
-Suite history: 252 (S5) → 267 (S6) → 270 (F1) → 274 (F1b) → **279** (F1c).
+Suite history: 252 (S5) → 267 (S6) → 270 (F1) → 274 (F1b) → 279 (F1c) → 282 (round 4) → 287 (round 5) → 292 (round 7) → **295** (F1 remediation).
 
 ## Evidence
 
 | File | Role |
 |---|---|
-| `evidence/phase3-S6-20261112T203848Z.txt` | **authoritative**: refs, hashes, 279 tests, 11 mutations, 9-step demo + demo source |
+| `evidence/phase3-S6-20261112T203848Z.txt` | **authoritative for S6**: refs, hashes, 279 tests, 11 mutations, 9-step demo + demo source |
+| `evidence/phase3-S7-20261115T171715Z.txt` | **authoritative for S7 round 4**: HEAD/tree, 279 → 282, 15/15 probes, manifest 11/11 |
 | `…203848Z.txt.sha256` | sidecar digest |
 | `…191535Z`, `…182517Z`, `…173019Z` | historical: pre-F1c, pre-F1b, pre-F1 |
 
@@ -93,6 +101,10 @@ Suite history: 252 (S5) → 267 (S6) → 270 (F1) → 274 (F1b) → **279** (F1c
 | R4 | historical evidence files carry no banner of their own | **OPEN, accepted** — evidence is never edited; each current file's `NOTE` names its predecessors |
 | R5 | status lines lagged reality | **FIXED** — plan and state now say S6 PASS / S7 BLOCK ×3 + fixes |
 | R6 | mutation-probe source not embedded in evidence | **OPEN, accepted** — path + digest recorded; the probe lives outside the repo |
+| R7 | backticked identifiers / quoted schema prefixes | **FIXED** (round 4, N2) — parsed like every other spelling |
+| R8 | `HANDOFF/MANIFEST.sha256` did not verify for three reports | **FIXED** (round 4, N1) — regenerated, 11/11 |
+| R9 | a same-named object in `temp`/attached schemas makes a reverse refuse | **OPEN, accepted** — over-strict, never destructive (probe G) |
+| R10 | a missing `main` table or `schema_objects` surfaces as a raw `OperationalError` | **OPEN, accepted** — fail-closed, poor message (probes B2, C, D) |
 | R7 | D-016's trailing `**Rollback:**` line still shows the old manual statement | **OPEN** — superseded by §8; fix when the S7 verdict is recorded |
 
 ## Open decisions that are NOT yours to close
