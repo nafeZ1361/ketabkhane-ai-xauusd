@@ -1,0 +1,32 @@
+name: guardian-ci
+
+on:
+  push:
+    paths:
+      - "ایجنت/xauusd-guardian/**"
+      - ".github/workflows/guardian-ci.yml"
+  pull_request:
+    paths:
+      - "ایجنت/xauusd-guardian/**"
+
+jobs:
+  test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: "ایجنت/xauusd-guardian"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.lock
+
+      - name: Tests
+        run: python -m pytest -q
+
+      - name: Compile
+        run: python -m compileall -q src scripts tests
