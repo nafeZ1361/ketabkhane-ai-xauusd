@@ -134,3 +134,14 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 **Reason:** S5 of `PHASE3_PLAN.md`; independent Inspector review of the plan returned four must-fix defects (forming bar, silent `INSERT OR IGNORE`, unfiltered replay read, missing decision record), all incorporated before implementation.
 **Effect:** 252/252 tests passed at the time of S5, up from 220; suite exit 0; `compileall` exit 0. Five existing assertions that pinned the migration inventory were updated to include `0003_signals.sql`; no assertion was weakened or removed.
 **Rollback:** `DROP TABLE IF EXISTS signals; DROP TABLE IF EXISTS signal_runs;` and delete `0003_signals.sql` from any database that never applied it.
+## D-017 - 2026-11-16 - Keep idx_bars_tf_time; defer the composite index
+
+- **Decision:** keep `idx_bars_tf_time (timeframe, time_utc)`; do not add a
+  `(symbol, timeframe, time_utc)` index in this phase.
+- **Reason:** the project is single-symbol (XAUUSD.), so `symbol` is constant and the
+  existing index is effectively equivalent. Adding migration 0004 would change the applied
+  version in every database and invalidate 30 exact-version assertions, for a marginal gain
+  measured at noise level.
+- **Revisit:** if the project becomes multi-symbol, add `0004_bars_symbol_index.sql` with
+  `DROP INDEX idx_bars_tf_time; CREATE INDEX idx_bars_symbol_tf_time ON bars (symbol,
+  timeframe, time_utc);` and update the version assertions.

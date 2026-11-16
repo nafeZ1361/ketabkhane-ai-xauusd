@@ -106,47 +106,77 @@ class MarketStore:
     def upsert_bars(self, run_id: str, bars: Sequence[MarketBar]) -> UpsertResult:
         inserted = revised = unchanged = 0
         now = _iso(datetime.now(timezone.utc))
+        if not bars:
+            self._conn.commit()
+            return UpsertResult(inserted=0, revised=0, unchanged=0)
+
+        # Stage 3: one range read per (symbol, timeframe) replaces one SELECT per bar.
+        known: dict[tuple[str, str, str], str] = {}
+        windows: dict[tuple[str, str], list[datetime]] = {}
         for bar in bars:
-            row = self._conn.execute(
-                "SELECT content_sha256 FROM bars WHERE symbol = ? AND timeframe = ? AND time_utc = ?",
-                (bar.symbol, bar.timeframe.value, _iso(bar.time_utc)),
-            ).fetchone()
+            windows.setdefault((bar.symbol, bar.timeframe.value), []).append(bar.time_utc)
+        for (symbol, timeframe), times in windows.items():
+            rows = self._conn.execute(
+                "SELECT time_utc, content_sha256 FROM bars "
+                "WHERE symbol = ? AND timeframe = ? AND time_utc BETWEEN ? AND ?",
+                (symbol, timeframe, _iso(min(times)), _iso(max(times))),
+            ).fetchall()
+            for row in rows:
+                known[(symbol, timeframe, row["time_utc"])] = row["content_sha256"]
+
+        new_rows: list[tuple] = []
+        revisions: list[tuple] = []
+        revised_rows: list[tuple] = []
+        touched: list[tuple] = []
+        for bar in bars:
+            stamp = _iso(bar.time_utc)
+            key = (bar.symbol, bar.timeframe.value, stamp)
             digest = bar.content_sha256
-            if row is None:
-                self._conn.execute(
-                    "INSERT INTO bars (symbol, timeframe, time_utc, open, high, low, close, tick_volume, "
-                    "spread_points, real_volume, content_sha256, first_seen_utc, last_seen_utc, run_id) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (bar.symbol, bar.timeframe.value, _iso(bar.time_utc), bar.open, bar.high, bar.low,
-                     bar.close, bar.tick_volume, bar.spread_points, bar.real_volume, digest, now, now, run_id),
+            revision = (bar.symbol, bar.timeframe.value, stamp, now, bar.open, bar.high, bar.low,
+                        bar.close, bar.tick_volume, digest, run_id)
+            seen = known.get(key)
+            if seen is None:
+                new_rows.append(
+                    (bar.symbol, bar.timeframe.value, stamp, bar.open, bar.high, bar.low, bar.close,
+                     bar.tick_volume, bar.spread_points, bar.real_volume, digest, now, now, run_id)
                 )
-                self._conn.execute(
-                    "INSERT OR IGNORE INTO bar_revisions (symbol, timeframe, time_utc, seen_utc, open, high, low, "
-                    "close, tick_volume, content_sha256, run_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    (bar.symbol, bar.timeframe.value, _iso(bar.time_utc), now, bar.open, bar.high, bar.low,
-                     bar.close, bar.tick_volume, digest, run_id),
-                )
+                revisions.append(revision)
                 inserted += 1
-            elif row["content_sha256"] == digest:
-                self._conn.execute(
-                    "UPDATE bars SET last_seen_utc = ? WHERE symbol = ? AND timeframe = ? AND time_utc = ?",
-                    (now, bar.symbol, bar.timeframe.value, _iso(bar.time_utc)),
-                )
+            elif seen == digest:
+                touched.append((now, bar.symbol, bar.timeframe.value, stamp))
                 unchanged += 1
             else:
-                self._conn.execute(
-                    "INSERT OR IGNORE INTO bar_revisions (symbol, timeframe, time_utc, seen_utc, open, high, low, "
-                    "close, tick_volume, content_sha256, run_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    (bar.symbol, bar.timeframe.value, _iso(bar.time_utc), now, bar.open, bar.high, bar.low,
-                     bar.close, bar.tick_volume, digest, run_id),
-                )
-                self._conn.execute(
-                    "UPDATE bars SET open=?, high=?, low=?, close=?, tick_volume=?, content_sha256=?, "
-                    "last_seen_utc=?, run_id=? WHERE symbol=? AND timeframe=? AND time_utc=?",
+                revisions.append(revision)
+                revised_rows.append(
                     (bar.open, bar.high, bar.low, bar.close, bar.tick_volume, digest, now, run_id,
-                     bar.symbol, bar.timeframe.value, _iso(bar.time_utc)),
+                     bar.symbol, bar.timeframe.value, stamp)
                 )
                 revised += 1
+
+        if new_rows:
+            self._conn.executemany(
+                "INSERT INTO bars (symbol, timeframe, time_utc, open, high, low, close, tick_volume, "
+                "spread_points, real_volume, content_sha256, first_seen_utc, last_seen_utc, run_id) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                new_rows,
+            )
+        if revisions:
+            self._conn.executemany(
+                "INSERT OR IGNORE INTO bar_revisions (symbol, timeframe, time_utc, seen_utc, open, high, "
+                "low, close, tick_volume, content_sha256, run_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                revisions,
+            )
+        if revised_rows:
+            self._conn.executemany(
+                "UPDATE bars SET open=?, high=?, low=?, close=?, tick_volume=?, content_sha256=?, "
+                "last_seen_utc=?, run_id=? WHERE symbol=? AND timeframe=? AND time_utc=?",
+                revised_rows,
+            )
+        if touched:
+            self._conn.executemany(
+                "UPDATE bars SET last_seen_utc = ? WHERE symbol = ? AND timeframe = ? AND time_utc = ?",
+                touched,
+            )
         self._conn.commit()
         return UpsertResult(inserted=inserted, revised=revised, unchanged=unchanged)
 
