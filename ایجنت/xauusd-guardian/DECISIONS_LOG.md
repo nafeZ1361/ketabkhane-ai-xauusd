@@ -145,3 +145,16 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Revisit:** if the project becomes multi-symbol, add `0004_bars_symbol_index.sql` with
   `DROP INDEX idx_bars_tf_time; CREATE INDEX idx_bars_symbol_tf_time ON bars (symbol,
   timeframe, time_utc);` and update the version assertions.
+## D-018 - 2026-11-17 - ML edge test on XAUUSD M1: no exploitable edge found
+
+- **Test:** walk-forward (70/30 chronological), features from past bars only, labels
+  = sign of forward return, cost 2 bps round trip; 300k M1 bars ending 2026-10.
+- **Models:** logistic (AUC .508/.511), decision tree depth 4 (.510/.507),
+  HistGradientBoosting (.509/.522) for horizons 15 and 60 minutes.
+- **Result:** AUC ~0.51, i.e. barely above chance. Best net per trade: tree +0.0022%
+  (h=15, n=2174) and +0.0101% (h=60, n=4366) - inside sampling noise and not
+  consistent across horizons or models. Always-long is negative after cost.
+- **Conclusion:** these features and this labelling do not produce a tradeable edge on
+  this data. Recorded as a negative result; do not present the backtest as profitable.
+- **Revisit only with:** different label (triple-barrier), microstructure features, or a
+  strictly out-of-sample period that was never inspected.
