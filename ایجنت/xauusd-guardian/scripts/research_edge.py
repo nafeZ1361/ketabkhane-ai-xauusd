@@ -1,4 +1,4 @@
-"""Walk-forward edge test for XAUUSD M1 bars.
+"""Single-holdout edge test for XAUUSD M1 bars (70/30 chronological split).
 
 Deliberately unglamorous: features at bar t use only bars <= t, the split is
 chronological, and the headline number is the *net* forward return of the model's
@@ -63,18 +63,81 @@ def features(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def forward_label(df: pd.DataFrame, horizon_minutes: int) -> tuple[pd.Series, pd.Series]:
+    """Forward return to the first bar at or after ``signal_time + horizon``.
+
+    The horizon is a duration, not a row count. On M1 data the two differ across
+    weekends, holidays and missing bars, so ``shift(-n)`` is wrong by construction.
+    A row whose target lies beyond the data gets NaN and is excluded downstream.
+    """
+    stamps = df.index.values
+    target = stamps + np.timedelta64(int(horizon_minutes), "m")
+    pos = np.searchsorted(stamps, target, side="left")
+    valid = pos < len(stamps)
+    clipped = np.clip(pos, 0, len(stamps) - 1)
+    close = df["close"].to_numpy(dtype=float)
+    forward = np.where(valid, close[clipped] / close - 1.0, np.nan)
+    label_time = pd.Series(pd.NaT, index=df.index, dtype="datetime64[ns]")
+    label_time.loc[valid] = df.index[clipped[valid]]
+    return pd.Series(forward, index=df.index), label_time
+
+
+def purged_split(
+    df: pd.DataFrame,
+    label_time: pd.Series,
+    horizon_minutes: int,
+    test_fraction: float = 0.7,
+) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Chronological split with a purge and a one-horizon embargo.
+
+    A training row is kept only if its label is complete *and* its label window ends
+    before ``test_start - horizon``. Purging only the rows whose label crosses the
+    boundary is not enough: labels sampled every bar overlap, so the embargo keeps
+    the last horizon of training away from the test period.
+    """
+    n = len(df)
+    split = int(n * test_fraction)
+    test_start = df.index[split]
+    embargo = pd.Timedelta(minutes=int(horizon_minutes))
+
+    position = np.arange(n)
+    in_train = position < split
+    invalid = label_time.isna().to_numpy()
+    stamps = label_time.to_numpy()
+
+    boundary = in_train & ~invalid & (stamps >= np.datetime64(test_start))
+    kept_before_embargo = in_train & ~invalid & ~boundary
+    embargoed = kept_before_embargo & (stamps >= np.datetime64(test_start - embargo))
+    train_mask = kept_before_embargo & ~embargoed
+    test_mask = ~in_train
+
+    stats = {
+        "raw": n,
+        "invalid": int((invalid & in_train).sum()),
+        "train_dropped_boundary": int(boundary.sum()),
+        "train_dropped_embargo": int(embargoed.sum()),
+        "final_train": int(train_mask.sum()),
+        "test": int(test_mask.sum()),
+        "embargo": "1x horizon",
+        "test_start_server": str(test_start),  # MT5 server time (UTC+2/+3), not UTC
+    }
+    return train_mask, test_mask, stats
+
+
 def run(csv: str, bars: int, horizon: int, cost: float) -> int:
     df = load(csv, bars)
     x = features(df)
-    fwd = df["close"].shift(-horizon) / df["close"] - 1.0
+    fwd, label_time = forward_label(df, horizon)
     y = (fwd > 0).astype(int)
-    data = x.assign(fwd=fwd, y=y).dropna()
+    data = x.assign(fwd=fwd, y=y, label_time=label_time).dropna()
     if len(data) < 20_000:
         print("not enough rows after warmup:", len(data))
         return 1
 
-    split = int(len(data) * 0.7)
-    train, test = data.iloc[:split], data.iloc[split:]
+    train_mask, test_mask, split_stats = purged_split(data, data["label_time"], horizon)
+    train, test = data[train_mask], data[test_mask]
+    print("split accounting:", {k: v for k, v in split_stats.items() if k != "embargo"},
+          "(embargo = 1x horizon; timestamps are MT5 server time, UTC+2/+3, not UTC)")
     print(f"rows={len(data)} train={len(train)} test={len(test)} horizon={horizon}m cost={cost}")
     print(f"base rate (test) = {test['y'].mean():.3f}")
 
@@ -93,7 +156,7 @@ def run(csv: str, bars: int, horizon: int, cost: float) -> int:
         net = gross - cost
         print(f"{name:10s} AUC={auc:.4f} signals={n:6d} ({n / len(test):.1%}) "
               f"gross/trade={gross:+.5%} net/trade={net:+.5%}")
-    print("\nreference: predicting always-long")
+    print("\nreference: mean forward return of every test bar (overlapping, not buy-and-hold)")
     print(f"  gross/trade={test['fwd'].mean():+.5%} net/trade={test['fwd'].mean() - cost:+.5%}")
     return 0
 

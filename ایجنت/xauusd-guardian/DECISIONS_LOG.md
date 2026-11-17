@@ -156,5 +156,10 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
   consistent across horizons or models. Always-long is negative after cost.
 - **Conclusion:** these features and this labelling do not produce a tradeable edge on
   this data. Recorded as a negative result; do not present the backtest as profitable.
+- **Correction (2026-11-17):** the sentence "Always-long is negative after cost" is
+  misleading and is withdrawn: the reference line is the mean of overlapping forward
+  returns over every test bar, which is neither buy-and-hold nor a tradeable strategy.
+  Also "walk-forward" is inaccurate: this was a single 70/30 holdout, not sequential
+  folds. See STAGE-A-AUDIT.md D9/D10.
 - **Revisit only with:** different label (triple-barrier), microstructure features, or a
   strictly out-of-sample period that was never inspected.
