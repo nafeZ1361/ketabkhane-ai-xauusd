@@ -1,12 +1,14 @@
-# Pinned runtime + test dependencies for xauusd-guardian (approach A: declared deps only)
+# Pinned runtime + test dependencies for xauusd-guardian (approach A, completed)
 # Python: 3.11.8 x64 (C:\Python311\python.exe) - Windows
 #
 # Direct: MetaTrader5 (runtime), pytest (tests).
-# Transitive closure of pytest is pinned too, so the test environment is reproducible.
-# Versions read from the approved base interpreter on 2026-11-16.
-# No hashes: the package index is unreachable from this host (DNS), so they cannot be
-# fetched and verified here. Add --require-hashes before Phase 5.
+# Transitive closure pinned: pytest -> pluggy, iniconfig, packaging, colorama;
+# MetaTrader5 -> numpy. Verified by installing into a fresh venv with
+#   pip install --index-url https://pypi.org/simple -r requirements.lock
+# (the configured mirror mirror.runflare.com has no DNS on this host; PyPI itself works).
+# Hashes intentionally omitted: add --require-hashes before Phase 5.
 MetaTrader5==5.0.6231
+numpy==2.4.6
 pytest==9.2.0
 pluggy==1.7.0
 iniconfig==2.3.1
