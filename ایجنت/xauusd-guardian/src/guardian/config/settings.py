@@ -390,6 +390,8 @@ def parse_settings(data: Mapping[str, Any], *, source: str = "<memory>") -> Sett
     if level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         raise ConfigError(f"unknown logging level: {level!r}")
 
+    _require_true(log, "redact", "[logging]")
+
     return Settings(
         schema_version=schema_version,
         symbol_expectations=_parse_expectations(data, symbol_policy),
@@ -412,7 +414,7 @@ def parse_settings(data: Mapping[str, Any], *, source: str = "<memory>") -> Sett
             max_spread_points=max_spread,
             require_stop_loss=bool(_get(risk, "require_stop_loss", bool, "[risk]")),
         ),
-        logging=LoggingSettings(level=level, redact=bool(_get(log, "redact", bool, "[logging]"))),
+        logging=LoggingSettings(level=level, redact=True),
         market_data=_parse_market_data(data),
         source_path=source,
     )
