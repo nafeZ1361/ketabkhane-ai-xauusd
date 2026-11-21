@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/second-brain/schema-proposal-v0.1.json",
+  "title": "Second Brain Schema Proposal v0.1",
+  "description": "Design-only schema. Not locked and not an implementation contract until owner approval.",
+  "oneOf": [
+    { "$ref": "#/$defs/SourceArtifact" },
+    { "$ref": "#/$defs/Observation" },
+    { "$ref": "#/$defs/Finding" },
+    { "$ref": "#/$defs/Hypothesis" },
+    { "$ref": "#/$defs/Experiment" },
+    { "$ref": "#/$defs/Decision" },
+    { "$ref": "#/$defs/Remediation" },
+    { "$ref": "#/$defs/Verification" },
+    { "$ref": "#/$defs/Lesson" },
+    { "$ref": "#/$defs/Skill" },
+    { "$ref": "#/$defs/SkillRun" },
+    { "$ref": "#/$defs/Link" }
+  ],
+  "$defs": {
+    "utcDateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "base": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": "0.1" },
+        "id": { "$ref": "#/$defs/id" },
+        "created_at_utc": { "$ref": "#/$defs/utcDateTime" },
+        "updated_at_utc": { "$ref": "#/$defs/utcDateTime" },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "source_artifact_ids": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/id" },
+              "uniqueItems": true
+            },
+            "source_revision": { "type": "string", "minLength": 1 },
+            "content_sha256": { "$ref": "#/$defs/sha256" }
+          },
+          "required": ["source_artifact_ids"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["schema_version", "id", "created_at_utc", "updated_at_utc", "provenance"]
+    },
+    "SourceArtifact": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "SourceArtifact" },
+            "source_type": { "enum": ["git_file", "commit", "test_log", "report", "external_skill", "decision"] },
+            "uri_or_repo_path": { "type": "string", "minLength": 1 },
+            "revision": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "captured_at_utc": { "$ref": "#/$defs/utcDateTime" },
+            "license": { "type": "string" }
+          },
+          "required": ["entity_type", "source_type", "uri_or_repo_path", "revision", "sha256", "captured_at_utc"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Observation": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Observation" },
+            "source_artifact_id": { "$ref": "#/$defs/id" },
+            "observed_at_utc": { "$ref": "#/$defs/utcDateTime" },
+            "component": { "type": "string", "minLength": 1 },
+            "symptom": { "type": "string", "minLength": 1 },
+            "raw_evidence_ref": { "type": "string", "minLength": 1 }
+          },
+          "required": ["entity_type", "source_artifact_id", "observed_at_utc", "component", "symptom", "raw_evidence_ref"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Finding": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Finding" },
+            "observation_ids": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1, "uniqueItems": true },
+            "claim": { "type": "string", "minLength": 1 },
+            "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+            "status": { "enum": ["OPEN", "CONFIRMED", "DISPUTED", "FIXED", "DEFERRED", "REJECTED"] },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "reviewer_id": { "$ref": "#/$defs/id" }
+          },
+          "required": ["entity_type", "observation_ids", "claim", "severity", "status", "confidence"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Hypothesis": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Hypothesis" },
+            "finding_id": { "$ref": "#/$defs/id" },
+            "explanation": { "type": "string", "minLength": 1 },
+            "predictions": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "status": { "enum": ["PROPOSED", "TESTING", "SUPPORTED", "REFUTED"] }
+          },
+          "required": ["entity_type", "finding_id", "explanation", "predictions", "status"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Experiment": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Experiment" },
+            "hypothesis_id": { "$ref": "#/$defs/id" },
+            "method": { "type": "string", "minLength": 1 },
+            "inputs_hash": { "$ref": "#/$defs/sha256" },
+            "environment": { "type": "object" },
+            "expected": {},
+            "actual": {},
+            "result": { "enum": ["PLANNED", "RUNNING", "PASS", "FAIL", "INVALID"] },
+            "command": { "type": "string" },
+            "exit_code": { "type": "integer" }
+          },
+          "required": ["entity_type", "hypothesis_id", "method", "inputs_hash", "environment", "result"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Decision": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Decision" },
+            "finding_id": { "$ref": "#/$defs/id" },
+            "choice": { "type": "string", "minLength": 1 },
+            "rationale": { "type": "string", "minLength": 1 },
+            "owner_approval_ref": { "type": "string" },
+            "decided_at_utc": { "$ref": "#/$defs/utcDateTime" }
+          },
+          "required": ["entity_type", "finding_id", "choice", "rationale", "decided_at_utc"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Remediation": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Remediation" },
+            "finding_id": { "$ref": "#/$defs/id" },
+            "code_revision": { "type": "string", "minLength": 1 },
+            "changed_paths": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "tests": { "type": "array", "items": { "type": "string" } },
+            "rollback_ref": { "type": "string" }
+          },
+          "required": ["entity_type", "finding_id", "code_revision", "changed_paths", "tests"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Verification": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Verification" },
+            "remediation_id": { "$ref": "#/$defs/id" },
+            "inspector_identity": { "type": "string", "minLength": 1 },
+            "independence_proof": { "type": "string", "minLength": 1 },
+            "snapshot_hash": { "$ref": "#/$defs/sha256" },
+            "verdict": { "enum": ["PENDING", "PASS", "BLOCK", "INDEPENDENCE_NOT_ESTABLISHED"] },
+            "evidence_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          },
+          "required": ["entity_type", "remediation_id", "inspector_identity", "independence_proof", "snapshot_hash", "verdict", "evidence_refs"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Lesson": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Lesson" },
+            "source_finding_id": { "$ref": "#/$defs/id" },
+            "rule": { "type": "string", "minLength": 1 },
+            "applicability": { "type": "array", "items": { "type": "string" } },
+            "contraindications": { "type": "array", "items": { "type": "string" } },
+            "status": { "enum": ["CANDIDATE", "ACTIVE", "SUPERSEDED", "REJECTED"] },
+            "verification_id": { "$ref": "#/$defs/id" },
+            "owner_approval_ref": { "type": "string" }
+          },
+          "required": ["entity_type", "source_finding_id", "rule", "applicability", "contraindications", "status"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Skill": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Skill" },
+            "name": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "source_repo": { "type": "string", "minLength": 1 },
+            "source_commit": { "type": "string", "minLength": 1 },
+            "content_hash": { "$ref": "#/$defs/sha256" },
+            "permission_scope": { "enum": ["READ_ONLY", "PROPOSAL_ONLY"] },
+            "status": { "enum": ["DISCOVERED", "REVIEWED", "APPROVED", "DEPRECATED"] },
+            "license": { "type": "string", "minLength": 1 }
+          },
+          "required": ["entity_type", "name", "version", "source_repo", "source_commit", "content_hash", "permission_scope", "status", "license"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "SkillRun": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "SkillRun" },
+            "skill_id": { "$ref": "#/$defs/id" },
+            "task_ref": { "type": "string", "minLength": 1 },
+            "inputs_hash": { "$ref": "#/$defs/sha256" },
+            "outputs_hash": { "$ref": "#/$defs/sha256" },
+            "outcome": { "enum": ["SUCCESS", "FAILURE", "BLOCKED", "NOT_RUN"] },
+            "reviewer_verdict": { "enum": ["PENDING", "PASS", "BLOCK", "INDEPENDENCE_NOT_ESTABLISHED"] }
+          },
+          "required": ["entity_type", "skill_id", "task_ref", "inputs_hash", "outputs_hash", "outcome", "reviewer_verdict"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "Link": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "entity_type": { "const": "Link" },
+            "from_type": { "type": "string", "minLength": 1 },
+            "from_id": { "$ref": "#/$defs/id" },
+            "relation": { "enum": ["SUPPORTS", "REFUTES", "DERIVED_FROM", "FIXES", "VERIFIES", "SUPERSEDES", "USES"] },
+            "to_type": { "type": "string", "minLength": 1 },
+            "to_id": { "$ref": "#/$defs/id" }
+          },
+          "required": ["entity_type", "from_type", "from_id", "relation", "to_type", "to_id"],
+          "unevaluatedProperties": false
+        }
+      ]
+    }
+  }
+}
