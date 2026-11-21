@@ -372,4 +372,44 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
   21:00Z halt. Full Guardian closure is **not** claimed while this ticket is open.
 - **Not changed.** No code, migration or accepted evidence edited; no dependency installed;
   no MT5 order path touched (read-only DEMO collect); the only DB writes landed in
+
+## D-026 — Monte Carlo risk engine: PRE-REGISTERED scope and acceptance criteria (2026-11-21)
+
+- **Authorisation.** Owner mission "FINAL EXECUTION PROMPT" §2 (2026-11-21). Scope is fixed here
+  **before** code.
+- **In scope.** `guardian/domain/risk/montecarlo.py` + `scripts/montecarlo.py`: IID and moving-block
+  bootstrap resampling, seeded reproducibility, drawdown distribution and threshold-exceedance
+  probabilities, explicit configurable ruin definition with measured frequency, cost stress
+  multipliers (1×/1.5×/2×/3×), dynamic equity-based sizing (risk fraction of *current* equity,
+  `Decimal`), win-rate / risk-reward sensitivity, multi-strategy comparison, and a reproducible
+  JSON+Markdown report (inputs, seed, data digest, assumptions, software revision, hashes).
+- **Out of scope.** Market data fetching, MT5, orders, account access, parameter optimisation,
+  new dependencies, Phase 5, changes to accepted Phases 1–4, migrations `0001`–`0003`.
+- **PRE-REGISTERED acceptance criteria (frozen before code):**
+  1. determinism: identical `(trades, seed, spec)` ⇒ identical result and identical report digest;
+     a different seed changes the sample;
+  2. IID and moving-block modes are distinct; `block_size >= n` reproduces the original sequence
+     order (block contiguity proof);
+  3. drawdown exceedance probabilities are monotone non-increasing in the threshold;
+  4. ruin frequency is 0 for a strictly positive series at small risk and 1 for a guaranteed-loss
+     series at high risk (the configured ruin definition is stated and measured);
+  5. cost stress: increasing the multiplier never decreases mean max-drawdown or ruin frequency;
+  6. sizing uses the *current* equity (equity compounds), all arithmetic `Decimal`, floats refused;
+  7. fail-closed validation of every spec field (counts, ranges, finite values, block size);
+  8. sensitivity grid returns one cell per (win-rate delta, RR multiplier) pair, deterministically;
+  9. no trading surface: no `MetaTrader5`, no order/account calls (AST/source scan);
+  10. full suite green, `compileall` clean, report includes data SHA-256 and software revision;
+  11. independent PASS on the frozen snapshot (S11) — required for acceptance, never self-issued.
+- **Status at registration:** criteria frozen; no Monte Carlo code exists in the repository
+  (verified by search). Results appended after implementation; criteria are not edited afterwards.
+- **Results (2026-11-21).** Implemented `src/guardian/domain/risk/montecarlo.py`,
+  `scripts/montecarlo.py` and 30 tests in `tests/unit/test_montecarlo.py`; documented in
+  `MONTE_CARLO.md`. Full suite: **361 passed**, exit 0; `compileall` exit 0. CLI smoke on a
+  **synthetic demonstration input** (explicitly not market data): 2000 paths, seed 7, block 5,
+  risk 1 %, ruin 50 %, cost ×1/1.5/2/3 → `content_sha256 = 01bc10455123f4bd0b5f7ebe54b8ed58…`;
+  identical on a second run. Pinned hashes: `montecarlo.py = a901fca6…25c4`,
+  `scripts/montecarlo.py = ed19b021…5be3`, `test_montecarlo.py = 8f7e2b14…a571`.
+  **S11 not obtained** — no read-only inspector credential is available; the engine is
+  implemented and tested, not accepted. One pre-existing test (`test_risk_sizing`
+  allow-list) was corrected to admit the new stdlib imports; its `MetaTrader5` ban is intact.
   `data/guardian.sqlite3` (gitignored, never committed).

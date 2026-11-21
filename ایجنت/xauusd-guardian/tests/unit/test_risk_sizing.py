@@ -153,7 +153,7 @@ def test_module_has_no_trading_surface() -> None:
         "symbol_info_tick",
         "initialize",
     }
-    allowed_imports = {"__future__", "dataclasses", "decimal"}
+    allowed_imports = {"__future__", "dataclasses", "decimal", "hashlib", "json", "random", "typing"}
     sources = sorted(MODULE_DIR.glob("*.py"))
     assert sources, "risk package not found"
     for path in sources:
