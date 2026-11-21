@@ -11,7 +11,7 @@ Last updated: 2026-11-20 (Phase 3 closure — ACCEPTED, D-022)
 | 1 Foundation | **PASS** (provisional, awaiting human sign-off) | structure, config, contracts, logging, storage, migrations, tests, identity resolver; three independent audit passes, no must-fix open |
 | 2 Market data | **ACCEPTED** | Phase 2 accepted under A-08 (2026-11-05); see `reports/PHASE2-REMEDIATION-REPORT.md` and approval chain A-01→A-08 |
 | 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
-| 4 Risk | NOT STARTED | |
+| 4 Risk | **IMPLEMENTED — acceptance pending independent PASS (S7)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests; suite 331; D-023 criteria pre-registered before code |
 | 5 Firewall | NOT STARTED | |
 | 6 Backtest | NOT STARTED | |
 | 7 Monitoring | NOT STARTED | |
@@ -187,6 +187,17 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 | Verdict | **PASS** — fresh ticks existed and the measured broker offset equals the model; `clock_unverified:no_fresh_ticks` did not recur |
 | Safety | No balance/equity/margin/profit read; no order API; adapter detached |
 | Evidence | `evidence/phase2-clock-recheck-20261120T133632Z.txt` (`920cfef6…2588`) |
+
+## Phase 4 — risk sizing (2026-11-21)
+
+| Item | Result |
+|---|---|
+| Authorisation | owner mission "FINISH & PUBLISH"; scope frozen in D-023 **before** code |
+| Module | `src/guardian/domain/risk/sizing.py` — `RiskError`, `RiskSpec`, `position_size` |
+| Tests | `tests/unit/test_risk_sizing.py` — 29 cases (risk-bound grid, step/cap, monotonicity, fail-closed matrix, AST safety scan) |
+| Suite | **331 passed**, exit 0; `compileall` exit 0 |
+| Safety | no MT5/account/order surface; migrations `0001`–`0003` untouched; DEMO-only unchanged |
+| Acceptance | **OPEN** — S7 independent PASS not obtained; Phase 4 is implemented, not accepted |
 
 ## Phase 3 closure (2026-11-20, D-022)
 

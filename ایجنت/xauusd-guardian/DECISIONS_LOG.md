@@ -270,6 +270,37 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Phase 2 clock item split out.** `DEGRADED: clock_unverified:no_fresh_ticks` is recorded as a
   separate ticket `PHASE2-CLOCK-RECHECK-1` (re-run the smoke between 23:00Z and 21:00Z); it is not
   a Phase 3 acceptance condition and was never treated as one.
+
+## D-023 — Phase 4 risk sizing: authorised scope and PRE-REGISTERED acceptance criteria (2026-11-21)
+
+- **Authorisation.** Owner mission "FINISH & PUBLISH" (2026-11-21) authorises "the entire Phase 4
+  scope from the proposal" (`artifacts/phase4-proposal-minimal.md`). That scope is deliberately
+  narrow and is fixed here **before** implementation.
+- **In scope.** A pure `Decimal` position-size function: caller-supplied equity number, risk
+  fraction, stop distance in points, value per point per lot, lot step, min/max clamps; fail closed
+  on any inconsistent/non-finite input. Module: `src/guardian/domain/risk/sizing.py`; no new
+  dependency (stdlib `decimal` only).
+- **Out of scope (unchanged).** Account access (`A-04` not requested), order construction (`A-05`),
+  `MetaTrader5`, portfolio/correlation limits, kill switches, Phase 5, the existing strategy/risk
+  rules, migrations `0001`–`0003`.
+- **PRE-REGISTERED acceptance criteria (frozen before code):**
+  1. `position_size` never risks more than `equity × risk_fraction` (checked over a numeric grid);
+  2. result is always a non-negative multiple of `lot_step` and never above `max_lot`;
+  3. monotonic: non-decreasing in `risk_fraction`, non-increasing in stop distance;
+  4. fail-closed: zero/negative/non-finite equity or stop, float inputs, `risk_fraction` outside
+     `(0, 1)`, non-positive `lot_step`/`min_lot`, `max_lot < min_lot`, `min_lot` not a multiple of
+     `lot_step`, and a size below one lot step all raise `RiskError`;
+  5. no trading surface: the new module imports no `MetaTrader5` and contains no
+     `order_send`/`order_check`/`account_info`/`positions_get` reference (AST/source scan test);
+  6. full suite green and `compileall` clean;
+  7. independent PASS on the snapshot — **required for acceptance**, cannot be self-issued.
+- **Status at registration:** criteria frozen; implementation not yet written. Results are appended
+  after the tests run; the criteria above are not edited afterwards.
+- **Results (2026-11-21).** Implemented `src/guardian/domain/risk/sizing.py` (`RiskError`,
+  `RiskSpec`, `position_size`) and `tests/unit/test_risk_sizing.py` (29 tests). Full suite:
+  **331 passed**, exit 0; `compileall` exit 0. S1–S5 hold by test; S6 green. **S7 is not
+  obtained** — no read-only inspector is currently available, so Phase 4 stays *implemented but
+  unaccepted*. No migration `0001`–`0003` was touched; no MT5, account or order surface added.
 - **Disclosed residual (recorded, accepted with the mission).** The verification harness scripts
   were prepared by sessions sharing the assistant identity with earlier implementer/reviewer
   sessions. Mitigations: harness files pinned by SHA-256; the W3 protection was mutation-proven
