@@ -1,8 +1,4 @@
-"""Structured logging with mandatory redaction.
-
-Every sink goes through :class:`JsonFormatter`, so a redaction bypass is not
-possible by switching handlers.
-"""
+"""Structured logging with mandatory, non-configurable redaction."""
 
 from __future__ import annotations
 
@@ -12,7 +8,6 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-#: (pattern, replacement) — applied to the fully formatted record.
 REDACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b(login|account|acct|account_number)\b\s*[=:]\s*[-\w]+"), r"\1=<redacted>"),
     (re.compile(r"(?i)\b(password|passwd|pwd|token|secret|api[_-]?key|apikey)\b\s*[=:]\s*\S+"), r"\1=<redacted>"),
@@ -27,24 +22,22 @@ SENSITIVE_ACCOUNT_FIELDS = frozenset(
 
 
 def redact(text: str) -> str:
-    """Return ``text`` with credentials and account identifiers masked."""
+    """Return text with credentials and account identifiers masked."""
     for pattern, replacement in REDACTION_PATTERNS:
         text = pattern.sub(replacement, text)
     return text
 
 
 class RedactingJsonFormatter(logging.Formatter):
-    def __init__(self, *, redaction: bool = True, service: str = "guardian") -> None:
+    def __init__(self, *, service: str = "guardian") -> None:
         super().__init__()
-        self._redaction = redaction
         self._service = service
 
     def format(self, record: logging.LogRecord) -> str:
         message = record.getMessage()
         if record.exc_info:
             message = f"{message} | {self.formatException(record.exc_info)}"
-        if self._redaction:
-            message = redact(message)
+        message = redact(message)
         payload: dict[str, Any] = {
             "ts_utc": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
             "level": record.levelname,
@@ -57,18 +50,31 @@ class RedactingJsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
 
-def setup_logging(level: str = "INFO", *, redact_output: bool = True, stream: Any = None) -> logging.Logger:
-    """Configure the ``guardian`` logger once and return it."""
+def setup_logging(level: str = "INFO", *, stream: Any = None) -> logging.Logger:
+    """Configure the guardian logger; redaction cannot be disabled."""
     logger = logging.getLogger("guardian")
     logger.setLevel(level.upper())
     logger.handlers.clear()
     logger.propagate = False
     handler = logging.StreamHandler(stream)
-    handler.setFormatter(RedactingJsonFormatter(redaction=redact_output))
+    handler.setFormatter(RedactingJsonFormatter())
     logger.addHandler(handler)
     return logger
 
 
 def scrub_mapping(data: dict[str, Any]) -> dict[str, Any]:
-    """Drop sensitive account fields before persistence or logging."""
-    return {k: v for k, v in data.items() if k.lower() not in SENSITIVE_ACCOUNT_FIELDS}
+    """Recursively drop sensitive account fields from mappings and sequences."""
+    cleaned: dict[str, Any] = {}
+    for key, value in data.items():
+        if key.lower() in SENSITIVE_ACCOUNT_FIELDS:
+            continue
+        if isinstance(value, dict):
+            cleaned[key] = scrub_mapping(value)
+        elif isinstance(value, list):
+            cleaned[key] = [
+                scrub_mapping(item) if isinstance(item, dict) else item
+                for item in value
+            ]
+        else:
+            cleaned[key] = value
+    return cleaned
