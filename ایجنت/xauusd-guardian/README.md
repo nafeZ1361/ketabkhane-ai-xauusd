@@ -6,12 +6,9 @@ DEMO-only, offline-first XAUUSD research and execution system. Python 3.11, stan
 
 ## Status
 
-Phase 3 (analysis & strategy) is in progress: S1–S5 PASS, S6 (reversible migration 0003) implemented
-and independently inspected PASS. Gate S7 is open. Phase 4 and later are **not authorized**.
+As of 2026-11-21: Phase 3 ACCEPTED (D-022), Phase 4 Risk ACCEPTED (D-024), and Phase 4b Monte Carlo ACCEPTED (D-027). Phase 5 Firewall is PRE-REGISTERED under D-028 but BLOCKED on the D-008 hermetic-environment entry gate; no F1–F8 implementation gate has started. Phases 6–11 remain NOT STARTED and require their own approved plans. DEMO execution remains disabled; A-05 is absent. LIVE trading is unsupported and prohibited.
 
-**Any AI agent starting work here: read `HANDOFF/00_READ_ME_FIRST.md` first**, then
-`HANDOFF/01_STATE_SNAPSHOT.md`. The phase table lives in `PROJECT_STATE.md`; where a status line
-disagrees with `HANDOFF/01_STATE_SNAPSHOT.md`, the handoff snapshot and `evidence/` are authoritative.
+**Any AI agent starting work here: read `AGENTS.md`, `HANDOFF/00_READ_ME_FIRST.md`, `PROJECT_STATE.md`, `DECISIONS_LOG.md`, and `PHASE5_PLAN.md`.** `PROJECT_STATE.md` and the append-only `DECISIONS_LOG.md` are the status authorities; older handoff snapshots are historical context only.
 
 ## Layout
 
