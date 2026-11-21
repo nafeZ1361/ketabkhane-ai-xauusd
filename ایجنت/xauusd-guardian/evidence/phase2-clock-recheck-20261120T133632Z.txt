@@ -1,0 +1,12 @@
+﻿# PHASE2-CLOCK-RECHECK-1 evidence (20261120T133632Z)
+command: .venv/Scripts/python.exe (Mt5MarketAdapter.estimate_server_offset, read-only)
+exit: 0
+system_utc_before 2026-11-20T13:36:32.925753+00:00
+attach_ok ['build', 'connected', 'terminal_path', 'trade_allowed']
+model_offset_s 7200
+estimate_offset_mad_n (7200, 0, 10)
+system_utc_after 2026-11-20T13:36:34.284489+00:00
+
+interpretation: measured broker offset == model offset (7200 s = UTC+2, post-DST).
+MAD=0 over 10 samples => fresh ticks existed; the Phase 2 'clock_unverified:no_fresh_ticks' condition did not recur.
+no balance/equity/margin/profit read; no order API touched; adapter detached.

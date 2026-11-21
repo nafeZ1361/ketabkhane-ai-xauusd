@@ -1,14 +1,17 @@
-> **UPDATE 2026-11-16 — supersedes section 0 below.**
+> **STATUS UPDATE 2026-11-20 — the 2026-11-16 closure block below is WITHDRAWN.**
 >
-> **`PHASE 3 CLOSED — INDEPENDENT PASS`**
+> **Phase 3 is NOT closed.**
 >
 > F1 was closed by the owner's option 3: the automated destructive reverse was **removed**
-> (evert_migration refuses; emit_reverse_sql returns reviewed SQL that a human runs).
+> (revert_migration refuses; emit_reverse_sql returns reviewed SQL that a human runs).
 > The option-3 change passed an independent inspection; its two documentation findings were fixed
-> in a docstring-only pass (AST unchanged) and confirmed by a further independent check
-> (REPORT-CONFIRMATION-2.md): both digests efac4478…c39746, suite 297, compileall exit 0.
-> The independent inspector answered **YES** to Definition-of-Done item 4. All twelve conditions
-> are recorded below with their evidence. No commit, no push.
+> in a docstring-only pass (AST unchanged). The cited `REPORT-CONFIRMATION-2.md` is **not present in
+> this repository** (it exists only outside the project, at `C:\GS7\review-final\`), so that
+> confirmation cannot be reproduced from the record and is not claimed here.
+> The last confirmed independent PASS covers `db.py` `efac4478…c39746`; the current file is
+> `177c3330…5c20` after the W3 fix and the F-1 revert (D-020); `eab4ad1a…1d31b` was the
+> pre-revert file (hash corrected 2026-11-20 by inspector re-computation, phase3-docfix evidence). A fresh independent inspection of the
+> current snapshot is required. No commit, no push.
 # PHASE 3 — FINAL HANDOFF (status: BLOCKED)
 
 Author: Developer session (did not approve its own work)

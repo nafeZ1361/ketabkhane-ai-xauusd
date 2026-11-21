@@ -131,6 +131,7 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 6. Every signal read excludes quarantined feed runs (`run_id NOT IN (SELECT run_id FROM feed_runs WHERE status = 'QUARANTINED')`), including `scripts/replay_signals.py`, which previously read bars unfiltered.
 7. A stored signal that disagrees with a recomputation (`direction`, `strength` or `reason_code`) raises `SignalError` and rolls the transaction back. The service never overwrites a published signal; resolving a revised bar is a human decision.
 8. S6 reversibility is implemented in `db.py` as four layers. (a) `apply_migrations` refuses to record a migration whose declared objects already exist, comparing names case-insensitively and accepting every identifier spelling SQLite accepts (bare, double-quoted, bracketed, backticked, schema-qualified). (b) Each apply measures what it actually created — the difference in `main.sqlite_master` before and after — and records it in `schema_objects`, so the ledger stores provenance rather than intent. (c) `reversal_plan` refuses when provenance is missing, a later version is still applied, or the forward file changed; it requires exactly one strict `NNNN_name.down.sql`, and allows only `DROP TABLE`/`DROP INDEX` of objects recorded as created by that migration, targeting `main`. (d) `revert_migration` runs those drops, each qualified with `main.`, inside one `BEGIN IMMEDIATE ... COMMIT`, then requires that no recorded object survives in any schema (main, temp, attached) and that no object the migration did not create disappeared from any schema; otherwise the whole reverse rolls back. A database applied before provenance tracking existed (commits `2e56ae7`, `3deaf8c`) has no provenance and is refused a reverse: audit or rebuild it instead. Reverses are DROP-only by policy; a reverse whose logic needs `ALTER` requires a new decision.
+- **Correction (2026-11-19):** layer (d) is **withdrawn**. The automated reverse was removed (owner option 3, 2026-11-16): `revert_migration` raises `MigrationError`, and `emit_reverse_sql` validates a reverse and returns the script a human runs. The in-database ownership claim was refuted by CASE A2 (`REPORT-F1-INSPECTION.md`). See D-019.
 **Reason:** S5 of `PHASE3_PLAN.md`; independent Inspector review of the plan returned four must-fix defects (forming bar, silent `INSERT OR IGNORE`, unfiltered replay read, missing decision record), all incorporated before implementation.
 **Effect:** 252/252 tests passed at the time of S5, up from 220; suite exit 0; `compileall` exit 0. Five existing assertions that pinned the migration inventory were updated to include `0003_signals.sql`; no assertion was weakened or removed.
 **Rollback:** `DROP TABLE IF EXISTS signals; DROP TABLE IF EXISTS signal_runs;` and delete `0003_signals.sql` from any database that never applied it.
@@ -163,3 +164,122 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
   folds. See STAGE-A-AUDIT.md D9/D10.
 - **Revisit only with:** different label (triple-barrier), microstructure features, or a
   strictly out-of-sample period that was never inspected.
+
+## D-019 — Test collection scoped to this project; stale reverse documentation corrected (2026-11-19)
+
+- **Problem 1 (blocking).** `python -m pytest` aborted at collection (exit 2):
+  `tests/unit/test_stageB_leakage.py` and `tests/unit/test_research_features.py`, added by the
+  research commits `c192c16`/`1d489dd`, import `pandas`/`sklearn` (banned here by AGENTS rule 7)
+  and execute `scripts/research_edge.py` at import time. The Guardian suite could not run at all.
+- **Fix.** `tests/conftest.py` now declares `collect_ignore` for those two paths. The two files
+  are byte-identical to HEAD; only collection is scoped. No test was deleted or weakened and
+  Guardian's own 300 tests still run. **Owner decision still required:** relocate them to the
+  research project.
+- **Problem 2 (documentation, W2 from `REPORT-OPT3-INSPECTION.md`).** Five places still described
+  the removed executed-reverse model. Corrected to emit-terms: `PHASE3_PLAN.md` §5,
+  `migrations/0003_signals.sql` header, `migrations/rollback/0003_signals.down.sql` header,
+  `tests/unit/test_migration_reversal.py` docstring, and the correction note on the S6 entry above.
+  No behaviour change; no DDL touched.
+- **W3 (fixed 2026-11-19).** The three `DELETE FROM schema_*` lines in the emitted script are now
+  `DELETE FROM main.schema_*`; regression test `test_emitted_script_targets_main_despite_a_temp_homonym`
+  proves both directions. Verified as advisory only (`evidence/phase3-w3-20261119T203654Z.txt`).
+- **Verification.** `.venv\Scripts\python.exe -m pytest` → 300 passed, exit 0;
+  `-m compileall -q src scripts tests` → exit 0. Raw output:
+  `evidence/gate-verify-20261119T194038Z.txt` (+ `.sha256`).
+- **Correction after inspection (2026-11-19).** The first evidence file printed its hash table as
+  `System.Object[]` (PowerShell array stringification) and quoted a manifest digest `c9630697…`
+  that does not reproduce; both are **withdrawn**. Superseded by
+  `evidence/gate-verify-20261119T195437Z.txt`, which lists the file hashes and the exact manifest
+  command. Canonical manifest: 120 files, lines `<sha256>  <relpath>`, globally sorted by relpath,
+  joined with `\n` (no trailing newline), sha256 of that text. The docstring edit also dropped the
+  UTF-8 BOM at the head of `tests/unit/test_migration_reversal.py`; it is **not** restored in the
+  current worktree (bytes `22 22 22`) — this sentence is superseded by D-020.
+
+## D-020 — F-1: SQLite durability returned to its default; BOM claim withdrawn (2026-11-20)
+
+- **Finding F-1** (inspection `artifacts/phase3-independent-inspection-20261120.md` §5.2): `connect()`
+  carried `PRAGMA synchronous = NORMAL`. It arrived in commit `7613f69`, which recorded D-017 for an
+  *index* decision only; no entry covered the pragma, and AGENTS rule 10 requires one for a contract
+  change. With WAL, NORMAL keeps the file consistent but can lose the **last committed transaction**
+  on power/OS failure.
+- **Decision: revert.** The pragma is removed; every connection now uses SQLite's default
+  (`synchronous = FULL`, value 2). WAL is retained. Rationale: the migration ledger and published
+  signals are durability contracts, and no throughput measurement or accepted loss window was ever
+  approved.
+- **Reintroduction rule.** A future NORMAL opt-in needs measured throughput evidence, a written loss
+  window accepted by the owner, a decision id, and inspection of the change. Never silently.
+- **Tests.** `tests/unit/test_sqlite_pragmas.py` asserts `synchronous == 2` on a fresh connection
+  and on three further connections (regression fence).
+- **BOM correction.** D-019 stated the UTF-8 BOM at `tests/unit/test_migration_reversal.py` "has been
+  restored". It has not: the worktree file starts `22 22 22` (`"""`), the HEAD blob starts
+  `EF BB BF`. The claim is withdrawn; bytes are reported as observed, not adjusted to fit the note.
+- **W3 correction.** D-019 recorded W3 as "not fixed"; it was fixed on 2026-11-19
+  (`evidence/phase3-w3-20261119T203654Z.txt`) and is verified as advisory only.
+- **Not changed.** No dependency installed, no research test executed, no MT5 call, no commit.
+
+## D-021 — Phase 3 scope decisions: research tests out of scope; correction record and inspection package prepared (2026-11-20)
+
+- **Research modules (`tests/unit/test_stageB_leakage.py`, `test_research_features.py`): `out_of_scope`.**
+  Source: `PHASE3_PLAN.md` §1 (in-scope list is indicator primitives, strategy contract, one
+  reference strategy, signal persistence, replay determinism; the same section states "No orders, no
+  account access, no ML frameworks") and §8 (non-goals: no profitability claim, no optimisation).
+  Both modules test `scripts/research_edge.py`, which imports `pandas`, `numpy` and `sklearn`
+  (HistGradientBoosting/LogisticRegression). They are research-harness files added by commits
+  `c192c16`/`1d489dd`, not Phase 3 deliverables.
+- **Effect.** Their status remains `NOT_RUN` and they are **not** acceptance requirements for Phase 3.
+  `tests/conftest.py` `collect_ignore` is a collection-scope measure only and is not PASS evidence.
+  Executing them needs a separate external venv with `pandas` + `scikit-learn` (owner-approved) or
+  the D-019 relocation; neither is done here. Scope was not changed unilaterally: the plan already
+  excluded them.
+- **BOM correction record.** `evidence/phase3-bom-correction-20261119T212414Z.txt`
+  (`99762d78…5388`) explicitly supersedes the false "BOM restored" statements in D-019 and in
+  `evidence/gate-verify-20261119T195437Z.txt`. Originals are preserved unmodified.
+- **Inspection package prepared** (not executed): `artifacts/phase3-inspection-package.md` at the
+  workspace root, outside the project snapshot. It lists requirements, files, commands, expected
+  evidence, snapshot identity and the independence prerequisite.
+- **No production code change** in this pass; the only project edits are this entry and
+  `PROJECT_STATE.md`.
+
+## D-022 — Phase 3 accepted (S7 PASS by isolated inspector run); D-019 formally deferred; Phase 2 clock split out (2026-11-20)
+
+- **Phase 3 ACCEPTED.** Basis: an inspector execution run entirely under the `GuardianInspector`
+  token (standard local account, non-admin, member of `Users` only, explicit deny of every
+  write-class right on the frozen snapshot, verified by the inspector's own access-mask probes;
+  ACL inheritance check 146 objects / 0 problems) against revision
+  `1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files;
+  manifest reproduced independently by the inspector before/after and by the preparer on the live
+  tree). Results: junit **302 tests / 0 failures / 0 errors** (exit 0), **46**
+  `test_migration_reversal` cases, **2** `test_sqlite_pragmas` cases, `journal_mode=wal` +
+  `synchronous=2` (FULL — the D-020 fence holds), in-memory syntax gate green, storage probes all
+  green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.` qualification; malformed
+  TEMP homonym fails closed; missing provenance refuses). Evidence:
+  `artifacts/inspector-run-20261120T124202/` (raw logs with hashes) and
+  `artifacts/phase3-closure-20261120T1255Z.md` (verdict `PASS`, machine-readable RESULT_JSON).
+- **Authorization.** Owner mission "FINAL PHASE 3 CLOSURE" (2026-11-20): create/configure
+  `GuardianInspector`, fix the four recorded documentation defects, and run the closure. The four
+  docfixes are recorded in `evidence/phase3-docfix-20261120T1045Z.txt` (`2eb2a3a0…9093` + sidecar):
+  stale `db.py` hash in `PHASE3-FINAL-HANDOFF.md` (now `177c3330…5c20`; `eab4ad1a…1d31b` was the
+  pre-revert file), worktree-count scopes made explicit, missing probe sidecar added, FileStream
+  preamble corrected (the two overloads exist; CreateFileW retained deliberately). No prior
+  evidence file was modified.
+- **D-019 formally DEFERRED.** Relocating the two research test modules
+  (`tests/unit/test_stageB_leakage.py`, `tests/unit/test_research_features.py`) is postponed by
+  owner decision (2026-11-20). They remain `out_of_scope` / `NOT_RUN` (D-021), are not Phase 3
+  acceptance criteria, and are excluded from collection. Revisit when the owner approves the
+  relocation or an owner-approved external research venv.
+- **Phase 2 clock item split out.** `DEGRADED: clock_unverified:no_fresh_ticks` is recorded as a
+  separate ticket `PHASE2-CLOCK-RECHECK-1` (re-run the smoke between 23:00Z and 21:00Z); it is not
+  a Phase 3 acceptance condition and was never treated as one.
+- **Disclosed residual (recorded, accepted with the mission).** The verification harness scripts
+  were prepared by sessions sharing the assistant identity with earlier implementer/reviewer
+  sessions. Mitigations: harness files pinned by SHA-256; the W3 protection was mutation-proven
+  the same day (breaking the line fails both the suite test and the probe); all raw outputs
+  archived with hashes; the executed checks derive verbatim from the official documents; the
+  inspector token could not modify anything it judged (six/six write-class probes DENIED).
+- **Consequences.** Phase 4 (risk) remains NOT STARTED and requires explicit human authorization
+  before planning (`HANDOFF/04_PROMPT_TEMPLATES.md` §4). No commit/push was performed; the
+  accepted revision is pinned by the manifest hash above, not by a commit id. The
+  `GuardianInspector` password is never stored; a future inspector run needs an administrator
+  password reset first.
+- **Not changed.** No dependency installed, no research test executed, no MT5 call, no commit,
+  no evidence file rewritten.

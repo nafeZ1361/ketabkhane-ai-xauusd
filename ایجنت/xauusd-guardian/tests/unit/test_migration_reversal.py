@@ -1,4 +1,4 @@
-﻿"""S6: migration 0003 is additive and reversible, by execution rather than by text."""
+"""S6: migration 0003 is additive; its reverse is validated and emitted, never executed."""
 
 from __future__ import annotations
 
@@ -868,12 +868,30 @@ def test_emitted_script_is_self_contained_and_inert(tmp_path, project_root):
     assert 'DROP TABLE main."signal_runs";' in script
     # indexes disappear with their table, so the script need not name them
     assert 'idx_signals_run' not in script
-    assert "DELETE FROM schema_migrations WHERE version = 3;" in script
-    assert "DELETE FROM schema_objects WHERE version = 3;" in script
-    assert "DELETE FROM schema_object_identity WHERE version = 3;" in script
+    assert "DELETE FROM main.schema_migrations WHERE version = 3;" in script
+    assert "DELETE FROM main.schema_objects WHERE version = 3;" in script
+    assert "DELETE FROM main.schema_object_identity WHERE version = 3;" in script
     assert script.lstrip().startswith("--")
     assert script.rstrip().endswith("COMMIT;")
 
     # emitting must not touch the database
     assert pre_0003_snapshot(conn) == before
     assert [m.version for m in migration_history(conn)] == [1, 2, 3]
+
+
+def test_emitted_script_targets_main_despite_a_temp_homonym(tmp_path, project_root):
+    """W3: an unqualified DELETE would hit a TEMP table and leave the ledger row behind."""
+    conn = prepared_db(tmp_path, project_root, "temp-homonym.sqlite3")
+    script = emit_reverse_sql(conn, project_root / "migrations", 3)
+
+    # A session-local table with the ledger's name, created after emission.
+    conn.execute("CREATE TEMP TABLE schema_migrations (version INTEGER)")
+    conn.execute("INSERT INTO temp.schema_migrations (version) VALUES (3)")
+    conn.commit()
+
+    conn.executescript(script)
+
+    # the homonym survives; the real ledger row for 0003 is gone
+    assert conn.execute("SELECT COUNT(*) FROM temp.schema_migrations").fetchone()[0] == 1
+    versions = [r[0] for r in conn.execute("SELECT version FROM main.schema_migrations ORDER BY version")]
+    assert versions == [1, 2]

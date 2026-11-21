@@ -1,4 +1,6 @@
--- Reverse of 0003_signals.sql, executed only by guardian.storage.db.revert_migration.
+-- Reverse of 0003_signals.sql. Since option 3 (F1) no code executes this file:
+-- guardian.storage.db.emit_reverse_sql validates it and returns the SQL for a human
+-- to review and run; revert_migration refuses.
 --
 -- Plain DROP, not DROP TABLE IF EXISTS: a missing table means the live schema
 -- drifted from the ledger, and a loud failure is safer than recording a

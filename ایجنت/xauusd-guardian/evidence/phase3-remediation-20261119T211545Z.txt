@@ -1,0 +1,19 @@
+﻿# Phase 3 blocker remediation 20261119T211545Z
+HEAD: 1d489dde71f5c6759a38a2f69ca56877408ba79e
+command: .venv/Scripts/python.exe -m pytest -p no:cacheprovider
+exit: 0
+302 passed in 42.86s
+command: .venv/Scripts/python.exe -m compileall -q src scripts tests -> exit 0
+
+changed this pass (sha256):
+177c333007b8b94bfcd38f4fc4e4149e2661d4306942765b115dd376313f5c20  src/guardian/storage/db.py
+fed2426cbe54e9c804f26742b11da932877bea72ce2eae3d714be5b19afbc099  tests/unit/test_sqlite_pragmas.py
+d336fe6cb92e93975c977f2e0a70770a84c1d5eb50a0384eab7f6ce819d54cec  DECISIONS_LOG.md
+989aa595599716fbed76fcdaca2b9eb70e77c2f07d5ab0e92d763416b762e30d  PROJECT_STATE.md
+8ce82c9a8488dd73989fc7c53e7fe7fe9a415f7b7de1c7acf6fcce7412128a3f  HANDOFF/artifacts/PHASE3-FINAL-HANDOFF.md
+
+observed facts:
+  PRAGMA synchronous on new connections: 2 (FULL, SQLite default) - asserted by tests/unit/test_sqlite_pragmas.py
+  tests/unit/test_migration_reversal.py first bytes: 22 22 22 (no BOM); HEAD blob: EF BB BF
+  REPORT-CONFIRMATION-2.md present in repository: False (reference withdrawn in the handoff)
+  research modules tests/unit/test_stageB_leakage.py, test_research_features.py: NOT_RUN (no scikit-learn; no install, no stub)

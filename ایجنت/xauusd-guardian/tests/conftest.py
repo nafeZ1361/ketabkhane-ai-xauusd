@@ -133,3 +133,15 @@ def real_symbol_table() -> list[SymbolSpec]:
             visible=False,
         ),
     ]
+
+
+# Research-harness tests that were written into this project's tree by the research
+# commits (c192c16, 1d489dd). They import pandas/sklearn, which AGENTS.md rule 7 bans
+# here, and they cannot be collected in Guardian's venv: at HEAD they abort the whole
+# suite with a collection error. They are not Guardian deliverables (PHASE3_PLAN s.1).
+# The two files are left byte-identical; only collection is scoped, so `pytest` stays
+# usable. Owner decision required: relocate them to the research project (D-019).
+collect_ignore = [
+    "unit/test_stageB_leakage.py",
+    "unit/test_research_features.py",
+]

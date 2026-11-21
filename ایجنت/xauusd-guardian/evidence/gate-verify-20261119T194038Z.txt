@@ -1,0 +1,19 @@
+﻿# gate verification (post doc-fix) 2026-11-19T19:40:38Z
+HEAD: 1d489dde71f5c6759a38a2f69ca56877408ba79e
+command: .venv/Scripts/python.exe -m pytest
+exit: 0
+........................................................................ [ 24%]
+........................................................................ [ 48%]
+........................................................................ [ 72%]
+........................................................................ [ 96%]
+............                                                             [100%]
+300 passed in 39.96s
+
+command: .venv/Scripts/python.exe -m compileall -q src scripts tests
+exit: 0
+
+
+changed files (sha256):
+System.Object[]
+
+note: tests/unit/test_stageB_leakage.py and tests/unit/test_research_features.py are excluded from collection (conftest collect_ignore, D-019); their bytes were not modified.

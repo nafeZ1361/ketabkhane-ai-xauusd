@@ -1,0 +1,14 @@
+﻿# Phase 3 remaining-blockers pass 20261119T212810Z
+HEAD: 1d489dde71f5c6759a38a2f69ca56877408ba79e
+command: .venv/Scripts/python.exe -m pytest -p no:cacheprovider
+exit: 0
+302 passed in 45.46s
+command: .venv/Scripts/python.exe -m compileall -q src scripts tests -> exit 0
+worktree entries (project): 30
+snapshot (after this pass): 7b3ebb3d7f60f77116dc7d3b340d0aee4e24aa44701466afb3b3dd26a2ea9311 (120 files)
+
+changed in this pass (sha256):
+0b761c3113ca978acd548f6f30ff2185bab02f0627cf3c7188fc82e752ff98f3  DECISIONS_LOG.md
+727f06d30523862208ca461c0d7da1a9aade472c38cbd2bbc228a21c688b1dea  PROJECT_STATE.md
+99762d78de8e9bf9932d37175d52bb9f8aaf1614fc6f2b0ed1197b13c0fc5388  evidence/phase3-bom-correction-20261119T212414Z.txt
+c9d2bfb58af9ba623f3521400084dc676a155c25ae52078ceeecd2dd57dce9f4  evidence/gate-verify-20261119T195437Z.txt

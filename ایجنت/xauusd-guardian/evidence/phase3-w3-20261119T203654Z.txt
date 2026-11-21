@@ -1,0 +1,15 @@
+﻿# W3 fix evidence 20261119T203654Z
+HEAD: 1d489dde71f5c6759a38a2f69ca56877408ba79e
+command: .venv/Scripts/python.exe -m pytest -p no:cacheprovider
+exit: 0
+301 passed in 41.07s
+new regression test: tests/unit/test_migration_reversal.py::test_emitted_script_targets_main_despite_a_temp_homonym
+command: .venv/Scripts/python.exe -m compileall -q src scripts tests -> exit 0
+
+negative reproduction (scratch DB in %TEMP%, no user data):
+  unqualified DELETE -> main rows left: 1 (bug reproduced)
+  main-qualified DELETE -> main rows left: 0 | temp rows left: 1
+
+changed this step (sha256):
+eab4ad1ac8cd603f682c8d6797b33c380ed252c6cdab5a60602568d3c0b1d31b  src/guardian/storage/db.py
+b615c8a0fbbe02a6a8be16121e086e6598acf51cbe366dc60d2b5b6c1c85d848  tests/unit/test_migration_reversal.py

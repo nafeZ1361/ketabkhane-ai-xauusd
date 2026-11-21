@@ -1,0 +1,33 @@
+﻿# Correction record — the "BOM restored" claim (Phase 3, 20261119T212414Z)
+
+
+Status: SUPERSEDES the statements below. Original artifacts are preserved unmodified.
+
+
+## Statements that are withdrawn
+
+1. DECISIONS_LOG.md, D-019: "... it has been restored." (UTF-8 BOM at tests/unit/test_migration_reversal.py)
+2. evidence/gate-verify-20261119T195437Z.txt: "- UTF-8 BOM restored at tests/unit/test_migration_reversal.py (inspection H2)"
+
+
+## Observed bytes (measured, not inferred)
+
+- Method A: open the file in binary mode and read its first three bytes.
+  tests/unit/test_migration_reversal.py -> 22 22 22  (no BOM; the file starts with three double quotes)
+- Method B: git show HEAD:<path> and read the first three bytes of the blob.
+  HEAD blob -> EF BB BF  (BOM present in HEAD)
+
+
+## Consequence
+
+- The claim "BOM restored" is FALSE for the current worktree. D-020 records the correction; this
+  file is the standalone correction record required by the remediation brief.
+- The file bytes were NOT altered to match the claim, and no evidence file was rewritten.
+- The difference from HEAD (BOM removed by an earlier docstring edit) remains a known cosmetic delta.
+
+
+## Preserved originals (hashes)
+
+c9d2bfb58af9ba623f3521400084dc676a155c25ae52078ceeecd2dd57dce9f4  evidence/gate-verify-20261119T195437Z.txt
+sidecar:  c9d2bfb58af9ba623f3521400084dc676a155c25ae52078ceeecd2dd57dce9f4  gate-verify-20261119T195437Z.txt
+sidecar matches content: True

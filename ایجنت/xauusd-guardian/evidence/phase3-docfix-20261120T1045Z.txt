@@ -1,0 +1,65 @@
+# Phase 3 docfix evidence — owner-authorized documentation fixes (2026-11-20)
+
+GENERATED_UTC: 2026-11-20T10:45Z (local 15:45, UTC+03:30)
+BRANCH: fix/w1-timezone-validation
+HEAD: 1d489dde71f5c6759a38a2f69ca56877408ba79e (unchanged by this pass)
+AUTHORIZATION: owner mission "XAUUSD GUARDIAN - FINAL PHASE 3 CLOSURE" (2026-11-20), section 3.
+No previous evidence file was modified; this is a new record per the project convention.
+
+## Fix 1 - stale db.py hash in the final handoff
+
+File: HANDOFF/artifacts/PHASE3-FINAL-HANDOFF.md (project document, not an evidence file)
+before: 8ce82c9a8488dd73989fc7c53e7fe7fe9a415f7b7de1c7acf6fcce7412128a3f
+after:  c7d345664699d82de8ae633bf4e5bff549d50e2fe569bffc690f76903eb51694
+change: header hash claim eab4ad1a...1d31b replaced by 177c3330...5c20 (re-computed SHA-256 of
+src/guardian/storage/db.py on 2026-11-20) with a note that eab4ad1a...1d31b was the pre-revert
+file. Single-span text edit; nothing else in the document changed.
+
+## Fix 2 - ambiguous worktree counts in the inspection package
+
+File: <workspace-root>/artifacts/phase3-inspection-package.md (outside the certified snapshot;
+no manifest impact)
+change: the Worktree row now states the package-time counts AND the re-verified counts with
+their scope (Guardian-subtree vs repo-wide). Counts scope is now mandatory in every record.
+
+## Fix 3 - incorrect FileStream statement in the access probe preamble
+
+File: <workspace-root>/artifacts/guardian-access-probe.ps1 (comment-only edit)
+before (the version that produced guardian-probe-evidence-20261119T220451Z.txt):
+        b75c631e17cf9f32807883e4d30b8ec022e7f2e1d9cf820282a996d4ab6207f4
+after:  4ba2d6c7928e7582f36ff7eaaf57739ce789fbbe4aba7782497bfe05e536a677
+parse check (PowerShell Language Parser): 0 errors.
+Fact corrected: the FileStream(String, FileMode, FileSystemRights, FileShare, Int32,
+FileOptions[, FileSecurity]) overloads DO exist (two, verified by .NET reflection on this
+machine, 2026-11-20), and FileSystemRights does expose Delete / ChangePermissions /
+TakeOwnership. The earlier preamble claim that ".NET has no such constructor" was wrong.
+CreateFileW is retained deliberately (exact desired access mask, OPEN_EXISTING, no disposition
+change). The archived probe evidence was produced by the b75c631e version and stays valid.
+New sidecar guardian-access-probe.ps1.sha256 pins the current (post-fix) file.
+
+## Fix 4 - missing probe sidecar
+
+Added <workspace-root>/artifacts/inspector-probe-20261120.py.sha256 pinning
+d8ee91b918f31013b430dadca150f9f72c3ee179106cd1dde77c434d777937ae (the independent inspector
+probe used on 2026-11-20; mutation-verified earlier the same day: with the W3 line broken,
+both the suite test and the probe fail).
+
+## Worktree counts (re-verified at write time)
+
+git status --porcelain -- <Guardian subtree> : 10 modified, 14 untracked (24 entries)
+git status --porcelain (repo-wide)           : 16 modified, 16 untracked (32 entries)
+Note: this record itself is a new untracked pair under evidence/ (excluded from the snapshot
+manifest by the documented rule), so the counts above exclude this pair.
+
+## Post-fix snapshot identity
+
+WORKTREE_SNAPSHOT_SHA256 (120 files, manifest rule of the inspection package):
+c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83
+(previous value 7b3ebb3d...9311 covered the pre-fix tree and stays recorded in the earlier
+reports; it is superseded by this value for the closure inspection.)
+
+## SUMMARY
+
+docfix 4/4 applied; previous evidence preserved; manifest moved
+7b3ebb3d7f60f77116dc7d3b340d0aee4e24aa44701466afb3b3dd26a2ea9311 ->
+c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83

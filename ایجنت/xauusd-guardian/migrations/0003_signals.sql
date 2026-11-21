@@ -1,14 +1,10 @@
 -- 0003_signals.sql — Phase 3 signal layer (S5)
 -- Additive only. Never edit an applied migration; add a new file instead.
 --
--- Reverse (S6) is deliberately NOT implemented in this stage. The exact reverse
--- of this migration is:
---     DROP TABLE IF EXISTS signals;
---     DROP TABLE IF EXISTS signal_runs;
--- It is recorded as a documented manual statement instead of a
--- `0003_*_down*.sql` file, because db.py discovers forward migrations with
--- ^[0-9]{4}_[a-z0-9_]+\.sql$ and would apply a down-migration as the next
--- forward step.
+-- Reverse (S6) is `migrations/rollback/0003_signals.down.sql`. Its dotted name keeps it
+-- out of forward discovery, so it is never applied as a forward step. Since option 3
+-- (F1) no code executes it: emit_reverse_sql validates it and returns the SQL a human
+-- must review and run.
 
 CREATE TABLE IF NOT EXISTS signal_runs (
     run_id      TEXT    PRIMARY KEY,

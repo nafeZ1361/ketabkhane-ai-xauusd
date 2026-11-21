@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-15 (Phase 3 / S7 round 4)
+Last updated: 2026-11-20 (Phase 3 closure — ACCEPTED, D-022)
 
 ## Phase status
 
@@ -10,7 +10,7 @@ Last updated: 2026-11-15 (Phase 3 / S7 round 4)
 | 0.5 Reconciliation | DONE | `PHASE_0_5_RESOLUTION.md` (workspace root), 4 blockers mapped |
 | 1 Foundation | **PASS** (provisional, awaiting human sign-off) | structure, config, contracts, logging, storage, migrations, tests, identity resolver; three independent audit passes, no must-fix open |
 | 2 Market data | **ACCEPTED** | Phase 2 accepted under A-08 (2026-11-05); see `reports/PHASE2-REMEDIATION-REPORT.md` and approval chain A-01→A-08 |
-| 3 Analysis/strategy | **S1–S7 PASS; F1 closed by removal; Phase 3 awaiting inspection** | S1–S5 PASS; S6 PASS; S7 passed independent round-8 inspection (295 tests). F1's independent inspection returned BLOCK (no in-database proof of ownership). Per the owner's decision, the automated destructive reverse was **removed**: `revert_migration` now refuses, and `emit_reverse_sql` returns a reviewed script a human runs. Suite **297/297**. F2/F3 ADVISORY |
+| 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
 | 4 Risk | NOT STARTED | |
 | 5 Firewall | NOT STARTED | |
 | 6 Backtest | NOT STARTED | |
@@ -147,3 +147,61 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 | Reports | `HANDOFF/artifacts/REPORT-S7-ROUND4.md`, `REPORT-S7-ROUND5.md` (independent, BLOCK), `REPORT-S7-ROUND5-REMEDIATION.md` |
 | S7 status | S7 **PASS** (independent round 8). Phase 3 remains **OPEN** pending an independent inspection of the option-3 change (destructive reverse removed) |
 | Commit | none — changes are uncommitted, no push performed |
+
+## Verification pass (2026-11-19)
+
+| Item | Result |
+|---|---|
+| HEAD | `1d489dde` (this workspace; the project has no separate git history) |
+| Suite | `300 passed`, exit 0 — `evidence/gate-verify-20261119T194038Z.txt` |
+| compileall | exit 0 — same evidence file |
+| Collection defect | fixed: two research modules (`test_stageB_leakage.py`, `test_research_features.py`) aborted collection at HEAD; scoped out via `tests/conftest.py` `collect_ignore`, both files untouched (D-019) |
+| Option-3 inspection | `REPORT-OPT3-INSPECTION.md` → **PASS**, 0 must-fix; W1/W2/W3 non-blocking |
+| W1 | resolved: `REPORT-F1-OPTION3.md` exists (4,395 bytes) |
+| W2 | fixed 2026-11-19 in five places (D-019); no behaviour change |
+| W3 | **fixed 2026-11-19**: emitted SQL now uses `DELETE FROM main.<table>`; evidence `evidence/phase3-w3-20261119T203654Z.txt` (advisory, not gated) |
+| Unsupported claim | the handoff header cites `REPORT-CONFIRMATION-2.md`; no such file exists in this tree |
+| Owner decision pending | relocate the two research test modules out of this project |
+
+## Remediation pass (2026-11-20)
+
+| Item | Result |
+|---|---|
+| Baseline HEAD | `1d489dde` — the project has no separate git history; acceptance pins the worktree snapshot, not HEAD |
+| F-1 durability | **REVERTED** — `PRAGMA synchronous = NORMAL` removed from `connect()`; connections use SQLite's default FULL (2). Decision D-020. Tests: `test_wal_and_default_synchronous`, `test_synchronous_contract_holds_for_every_new_connection` |
+| Record conflict | `HANDOFF/artifacts/PHASE3-FINAL-HANDOFF.md` closure claim **withdrawn**; the cited `REPORT-CONFIRMATION-2.md` is not in this repository (only outside it, `C:\\GS7\\review-final\\`), so it is not claimed as evidence |
+| BOM claim | **corrected, not restored** — `tests/unit/test_migration_reversal.py` starts `22 22 22` (no BOM); the HEAD blob starts `EF BB BF`; D-019 corrected by D-020 |
+| Research modules | **NOT_RUN / out_of_scope** — `PHASE3_PLAN.md` §1 excludes ML frameworks and §8 excludes profitability work; both files test `scripts/research_edge.py` (pandas+numpy+sklearn) and are not Phase 3 deliverables (D-021). `collect_ignore` is collection scope, not PASS. Execution would need an owner-approved external venv or the D-019 relocation |
+| Suite | `302 passed`, exit 0 (after the F-1 revert and its two tests) |
+| Phase 3 status | **NOT closed** — a fresh independent inspection of the current snapshot is still required |
+| BOM correction | `evidence/phase3-bom-correction-20261119T212414Z.txt` (`99762d78…5388`) supersedes the false “BOM restored” claims; originals untouched |
+| Inspection package | `artifacts/phase3-inspection-package.md` (workspace root, outside this snapshot) — prepared, not executed |
+
+## Phase 2 clock recheck — PHASE2-CLOCK-RECHECK-1 (2026-11-20)
+
+| Item | Result |
+|---|---|
+| Run | 2026-11-20T13:36:32Z–13:36:34Z, market open, read-only adapter |
+| Model offset | `7200 s` (UTC+2, post-DST) |
+| Measured offset | `7200 s`, MAD `0` over `10` samples |
+| Verdict | **PASS** — fresh ticks existed and the measured broker offset equals the model; `clock_unverified:no_fresh_ticks` did not recur |
+| Safety | No balance/equity/margin/profit read; no order API; adapter detached |
+| Evidence | `evidence/phase2-clock-recheck-20261120T133632Z.txt` (`920cfef6…2588`) |
+
+## Phase 3 closure (2026-11-20, D-022)
+
+| Item | Result |
+|---|---|
+| Verdict | **`PASS` — Phase 3 ACCEPTED** |
+| Inspector | `GuardianInspector` token: standard account, `Users` only, not in `Administrators`; write-class rights explicitly denied on the snapshot (six/six probes DENIED, read/list OK); §6.2 inheritance check: 146 objects, 0 problems |
+| INSPECTED_REVISION | `1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files; manifest reproduced by the inspector before/after and independently on the live tree) |
+| Suite | junit `302 / 0 / 0`, exit 0 |
+| Migration tests | 46 cases (same junit run) |
+| Durability | `journal_mode=wal`, `synchronous=2` (FULL; D-020) |
+| Storage probes | all green: `revert_migration` refuses; W3 `main.` qualification; TEMP-homonym fail-closed; provenance refusal |
+| Machine-readable | `RESULT_JSON …"all_green":true` — `artifacts/inspector-run-20261120T124202/inspector-evidence-v2-20261120T124202.txt` (`031e2a06…7a76`) |
+| Doc fixes | 4/4 under owner authorization — `evidence/phase3-docfix-20261120T1045Z.txt` (`2eb2a3a0…9093` + sidecar) |
+| D-019 | **DEFERRED (formal, owner decision)** — research modules stay `out_of_scope` / `NOT_RUN`; not Phase 3 acceptance criteria |
+| Phase 2 clock | split out as ticket `PHASE2-CLOCK-RECHECK-1` (re-run smoke between 23:00Z–21:00Z) — not a Phase 3 condition |
+| Disclosure | harness-provenance residual recorded in D-022: harness pinned by hashes, W3 shield mutation-proven (breaking the line fails suite test + probe), raw logs archived with hashes |
+| Git | no commit/push; acceptance pinned by the manifest hash above, not by a commit id |

@@ -1,0 +1,33 @@
+﻿# gate verification (corrected evidence) 2026-11-19T19:54:37Z
+HEAD: 1d489dde71f5c6759a38a2f69ca56877408ba79e
+command: .venv/Scripts/python.exe -m pytest
+exit: 0
+........................................................................ [ 24%]
+........................................................................ [ 48%]
+........................................................................ [ 72%]
+........................................................................ [ 96%]
+............                                                             [100%]
+300 passed in 40.61s
+
+command: .venv/Scripts/python.exe -m compileall -q src scripts tests
+exit: 0
+
+
+changed files (sha256):
+ea37e8a707b27d84449af22a45180a7c186789f2006de890f906f963c41383d1  tests/conftest.py
+48ad2db314b0d0e8fe6a7205255f92f380bd9483c17e0c6fc4f3d21ccbdb859a  migrations/0003_signals.sql
+977b619b9c914bc8f6491ec496bafc2a73e5fdd37d8f764c59b3053ba744e4e6  migrations/rollback/0003_signals.down.sql
+590a449c27fb88057f27f917baf7488f7a6cb6239e1d274db4c931e3a16e0dd5  tests/unit/test_migration_reversal.py
+82890980814cc4be34a01ff2ce4a9b1615c9836e8f4d084b47b3363525ea91e2  PHASE3_PLAN.md
+f7a6d29c0338c0fd7bdd092b1ed85c8451b320755f630932f42c7de2b27184ff  DECISIONS_LOG.md
+b488e3b6e8c924f546399b5c306df550caa935c33f756f0c7997907189c3cd1a  PROJECT_STATE.md
+
+state manifest: 120 files, sorted '<sha256>  <relpath>' lines joined with LF (no trailing newline),
+excluding .git, .venv, __pycache__, .pytest_cache, .mypy_cache, evidence/, *.pyc, MANIFEST.sha256
+state manifest sha256: 574d8dc6dc8e14abb3a7a684cca70bd69ea23a317bef3110a65df24c5c27a6af
+
+notes:
+- supersedes evidence/gate-verify-20261119T194038Z.txt, whose 'changed files' section printed System.Object[] (inspection F1)
+- manifest digest c963069708aa8b9484b8b2ab9bd040563eb8f9dae4bf3712faa93eda5ed9f237 from the earlier file is withdrawn (inspection G1)
+- UTF-8 BOM restored at tests/unit/test_migration_reversal.py (inspection H2)
+- tests/unit/test_stageB_leakage.py and tests/unit/test_research_features.py are excluded from collection (conftest collect_ignore, D-019); their bytes are unmodified

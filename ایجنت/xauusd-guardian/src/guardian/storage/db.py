@@ -97,10 +97,9 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
-    # NORMAL trades a few ms of durability on power loss for far fewer fsyncs per
-    # commit. WAL still keeps the database consistent after a crash; only the last
-    # committed transaction can be lost on OS/power failure. Chosen for bulk ingest.
-    conn.execute("PRAGMA synchronous = NORMAL")
+    # synchronous is left at SQLite's default (FULL): the migration ledger and published
+    # signals are durability contracts. A NORMAL opt-in is a behaviour change and needs a
+    # recorded decision (D-020); it must not be reintroduced silently.
     return conn
 
 
@@ -812,7 +811,7 @@ def emit_reverse_sql(
         quoted = name.replace('"', '""')
         lines.append(f'DROP {kind.upper()} main."{quoted}";')
     for table in ("schema_migrations", "schema_objects", "schema_object_identity"):
-        lines.append(f"DELETE FROM {table} WHERE version = {plan.version};")
+        lines.append(f"DELETE FROM main.{table} WHERE version = {plan.version};")
     lines.append("COMMIT;")
     return "\n".join(lines) + "\n"
 
