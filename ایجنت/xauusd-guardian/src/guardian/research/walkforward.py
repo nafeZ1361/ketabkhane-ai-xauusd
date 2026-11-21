@@ -23,6 +23,8 @@ def walk_forward_folds(
     if any(isinstance(x, bool) or not isinstance(x, int) for x in values):
         raise ValueError("fold sizes must be integers")
     step = test_size if step_size is None else step_size
+    if isinstance(step, bool) or not isinstance(step, int):
+        raise ValueError("step_size must be an integer")
     if sample_count < 1 or initial_train_size < 2 or test_size < 1 or step < 1 or purge_bars < 0 or embargo_bars < 0:
         raise ValueError("invalid walk-forward sizes")
     folds: list[WalkForwardFold] = []

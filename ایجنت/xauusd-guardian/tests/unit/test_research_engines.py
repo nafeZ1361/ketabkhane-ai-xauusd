@@ -191,3 +191,30 @@ def test_backtest_higher_slippage_cannot_improve_same_trade_pnl():
     stressed = run_backtest(bars, signals, lots=Decimal("1"), initial_equity=Decimal("10000"),
                             costs=ExecutionCostModel(Decimal("1"), Decimal("1"), Decimal("2")))
     assert stressed.total_net_pnl < base.total_net_pnl
+
+
+def test_feed_health_rejects_wrong_runtime_types():
+    result = evaluate_feed_health(
+        FeedHealthSnapshot(True, 3.0, 10.0, Decimal("10")),
+        HealthLimits(Decimal("5"), Decimal("30"), Decimal("2")),
+    )
+    assert result.status is HealthStatus.BLOCKED
+    assert "TICK_AGE_INVALID" in result.alerts
+    assert "SPREAD_INVALID" in result.alerts
+
+
+def test_walk_forward_rejects_boolean_step_size():
+    with pytest.raises(ValueError):
+        walk_forward_folds(100, initial_train_size=40, test_size=10, step_size=True)
+
+
+def test_monte_carlo_rejects_unseeded_or_non_integer_seed():
+    with pytest.raises(ValueError):
+        monte_carlo_trades([Decimal("1")], simulations=2, seed=None)  # type: ignore[arg-type]
+
+
+def test_regime_classifier_rejects_non_finite_ohlc():
+    bad = _bar(130, float("nan"), 101, 99, 100)
+    bars = [_bar(i, 100, 101, 99, 100) for i in range(130)] + [bad]
+    with pytest.raises(ValueError):
+        classify_regime(bars, lookback=10, volatility_lookback=100)

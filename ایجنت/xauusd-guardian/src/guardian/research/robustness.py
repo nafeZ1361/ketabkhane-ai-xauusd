@@ -39,6 +39,8 @@ def monte_carlo_trades(trade_pnls: Sequence[Decimal], *, simulations: int = 2000
         raise ValueError("at least one trade PnL is required")
     if isinstance(simulations, bool) or not isinstance(simulations, int) or simulations < 1:
         raise ValueError("simulations must be a positive integer")
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("seed must be an integer")
     if isinstance(block_size, bool) or not isinstance(block_size, int) or not 1 <= block_size <= len(trade_pnls):
         raise ValueError("block_size must be an integer in [1, trade_count]")
     if not isinstance(starting_equity, Decimal) or not starting_equity.is_finite() or starting_equity <= 0:
@@ -70,11 +72,12 @@ def monte_carlo_trades(trade_pnls: Sequence[Decimal], *, simulations: int = 2000
     return MonteCarloResult(tuple(totals), tuple(drawdowns), tuple(drawdown_fractions), ruin, block_size)
 
 def compare_bootstrap_methods(trade_pnls: Sequence[Decimal], *, simulations: int = 2000, seed: int = 7,
-                              starting_equity: Decimal = Decimal("10000"), block_size: int = 3
+                              starting_equity: Decimal = Decimal("10000"), block_size: int | None = None
                               ) -> tuple[MonteCarloResult, MonteCarloResult]:
     """Return IID and moving-block results using the same reproducible seed."""
+    chosen_block_size = min(3, len(trade_pnls)) if block_size is None else block_size
     iid = monte_carlo_trades(trade_pnls, simulations=simulations, seed=seed,
                              starting_equity=starting_equity, block_size=1)
     blocked = monte_carlo_trades(trade_pnls, simulations=simulations, seed=seed,
-                                 starting_equity=starting_equity, block_size=block_size)
+                                 starting_equity=starting_equity, block_size=chosen_block_size)
     return iid, blocked

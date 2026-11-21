@@ -15,6 +15,12 @@ class KillSwitchState:
     level: KillSwitchLevel = KillSwitchLevel.NONE
     reasons: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.level, KillSwitchLevel):
+            raise RiskError("level must be a KillSwitchLevel")
+        if not isinstance(self.reasons, tuple) or any(not isinstance(x, str) or not x for x in self.reasons):
+            raise RiskError("reasons must be a tuple of non-empty strings")
+
     @property
     def active(self) -> bool:
         return self.level is not KillSwitchLevel.NONE
