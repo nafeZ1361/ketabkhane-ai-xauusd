@@ -1,6 +1,6 @@
 # Second Brain — proposed Schema v0.1 (DESIGN ONLY)
 
-Status: PROPOSAL — NOT LOCKED; Layer 1 implementation is prohibited until the owner sends the exact command: قفل Schema v0.1.
+Status: PROPOSAL — NOT LOCKED; the companion machine-readable draft is schema-proposal-v0.1.json. Layer 1 implementation is prohibited until the owner sends the exact command: قفل Schema v0.1.
 
 ## 1. Purpose and safety boundary
 

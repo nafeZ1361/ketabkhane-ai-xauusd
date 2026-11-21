@@ -403,3 +403,12 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Guardian CI:** Windows/Python 3.11 reports 359 tests passed and compileall success on commit 1340564b (run 44933297489).
 - **Independence:** CI is not the independent Inspector. No independent PASS is recorded; frozen-snapshot inspection remains pending.
 - **Safety:** no change to accepted Phase 1–4 decisions, no account access, no order APIs, no MT5 call, no new runtime dependencies, no migration or live-trading path.
+
+
+## D-029 — Drawdown de-risking, transaction-cost stress and machine-readable schema proposal (2026-11-21)
+
+- **De-risk schedule:** added pure Decimal drawdown_risk_multiplier() with predeclared ascending drawdown thresholds and non-increasing risk multipliers. It returns a sizing multiplier only; it does not mutate config or account state.
+- **Cost stress:** ExecutionCostModel now accepts a positive cost multiplier; run_cost_stress() repeats the identical simulation at 1x, 1.5x, 2x and 3x by default. It scales bar spread, fixed slippage and commission. It does not model market impact or prove these assumptions match the broker.
+- **Second Brain schema:** added docs/second-brain/schema-proposal-v0.1.json (JSON Schema 2020-12). This is a design artifact only; no Layer 1 runtime, database, connector or learner was created.
+- **Verification:** Guardian Windows/Python 3.11 run 44933647830 on code commit 67038fe1: 362 tests passed; compileall succeeded. Root CI run 44933652541 passed. Independent inspection remains pending.
+- **Safety:** no account access, order APIs, live mode, new dependencies, migrations or edits to accepted Phase 1–4 evidence.

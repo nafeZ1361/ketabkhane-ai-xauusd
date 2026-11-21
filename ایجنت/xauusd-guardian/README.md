@@ -36,10 +36,9 @@ Read HANDOFF/00_READ_ME_FIRST.md and HANDOFF/01_STATE_SNAPSHOT.md before working
 ## Current work documents
 
 - AUDIT/REPOSITORY_AUDIT_2026-11-21.md — confirmed source findings and limitations.
-- docs/second-brain/SCHEMA_PROPOSAL_v0.1.md — design only; not locked and not implemented.
+- docs/second-brain/SCHEMA_PROPOSAL_v0.1.md and schema-proposal-v0.1.json — design only; not locked and not implemented.
 - docs/claude-skills/ADOPTION_POLICY.md — pinned sources, license decisions and adoption policy.
 - docs/claude-skills/GUARDIAN_EXECUTION_CHECKLISTS.md — extracted, testable Guardian procedures.
-- AUDIT/REPOSITORY_AUDIT_2026-11-21.md — current CI evidence and residual limitations.
 - HANDOFF/02_ROADMAP.md — authorized workstreams and acceptance gates.
 
 ## Layout

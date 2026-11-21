@@ -38,14 +38,14 @@ A workstream advances only after focused tests and independent PASS on its froze
 Required files and tests exist; full Windows CI passes; compileall passes; evidence hashes reproduce; no safety boundary regression; independent Inspector proves read-only identity and snapshot integrity; owner receives a concise report. Green CI is not independent acceptance.
 
 
-## Current implementation snapshot (2026-11-21, head 1340564b)
+## Current implementation snapshot (2026-11-21, code head 67038fe1; docs head 2123de76)
 
 - W0: corrections and handoff synchronization implemented; Guardian CI and root CI green. Independent review pending.
-- W1: Decimal sizing correction and synthetic risk limits implemented. No account data integration.
-- W2: initial OHLC event-driven simulator implemented. No market impact, partial fills, variable latency or tick path.
+- W1: Decimal sizing, synthetic risk limits and predeclared drawdown de-risk schedule implemented. No account data integration.
+- W2: initial OHLC event-driven simulator and 1x/1.5x/2x/3x cost-stress runner implemented. No market impact, partial fills, variable latency or tick path.
 - W3: IID/block bootstrap implemented; walk-forward fold generator implemented. No optimizer or OOS metric aggregation.
 - W4: past-only trend/range/high-volatility labels implemented. No automatic adaptation or validated unknown-regime policy.
 - W5: pure health alerts and latched policy kill switch implemented. No alert delivery, independent watchdog, broker cancel or flatten.
-- W6: Second Brain schema proposal drafted; Layer 1 remains prohibited until exact owner command.
+- W6: Markdown + machine-readable JSON Schema proposal drafted; Layer 1 remains prohibited until exact owner command.
 - W7: selected MIT quant skills reviewed and paraphrased into execution checklists. Proprietary/unlicensed sources excluded.
 - W8: independent frozen-snapshot inspection pending; no PASS claimed.
