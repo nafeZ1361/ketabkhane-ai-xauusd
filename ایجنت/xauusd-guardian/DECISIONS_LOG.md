@@ -314,3 +314,62 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
   password reset first.
 - **Not changed.** No dependency installed, no research test executed, no MT5 call, no commit,
   no evidence file rewritten.
+
+## D-024 — Phase 4 ACCEPTED (S7 PASS by isolated inspector run on commit 15a210a) (2026-11-21)
+
+- **Phase 4 ACCEPTED.** Basis: an inspector execution run entirely under the `GuardianInspector`
+  token (standard local account, non-admin, member of `Users` only; every write-class right
+  explicitly denied on the frozen snapshot — six/six access-mask probes DENIED by the inspector
+  itself; ACL inheritance check 247 objects / 0 problems) against commit
+  `15a210a05c16744b9f114b13a86a76871b77b27c` ("guardian(phase4): Decimal risk sizing per
+  pre-registered D-023"), snapshotted read-only via `git archive`; snapshot manifest
+  `e939719fb6c3aed5fa98291cc844d9f50948116eb082702d92e0e8c0d8956ca1` (124 files) reproduced by the
+  inspector before/after and independently by the preparer; `git diff 15a210a -- <Guardian
+  subtree>` empty (worktree == commit).
+- **All pre-registered D-023 criteria verified green** (independent PASS report
+  `artifacts/phase4-inspection-20261121T1720Z.md`, raw evidence
+  `artifacts/inspector-run-20261121T164943/` with hashes): S1 risk bound over 384 grid points plus
+  the clamp-to-`max_lot` case; S2 lot_step multiple, range and cap; S3 monotonicity; S4 the full
+  fail-closed matrix (21 cases, including `float`/`int` refusal per `PHASE4_PLAN.md` §2); S5 no
+  trading surface (AST stdlib-only imports, no `MetaTrader5` import, no
+  `order_send`/`order_check`/`account_info`/`positions_get` reference); S6 junit **331 / 0 / 0**
+  (exit 0; 46 migration + 2 pragma + 29 risk cases), in-memory syntax gate green, durability fence
+  `wal`/`synchronous=2` (D-020), storage probes green (migrations `0001`–`0003` untouched). Pinned
+  hashes: `sizing.py fdebd07c…ea1f3`, `test_risk_sizing.py 0f335f5a…0153e53`, `db.py 177c3330…5c20`.
+- **S7 obtained** — the gap honestly recorded in D-023 ("S7 is not obtained… implemented but
+  unaccepted") is closed by this decision; the pre-registered criteria of D-023 were not edited.
+- **D-019 unchanged: DEFERRED.** The research modules remain `out_of_scope` / `NOT_RUN` (D-021);
+  this decision does not touch D-019's deferral.
+- **R1 residual carried forward (disclosed).** The inspection harness was prepared by sessions
+  sharing the assistant identity with earlier implementer/reviewer sessions. Mitigations: harness
+  scripts pinned by SHA-256, criteria taken verbatim from `PHASE4_PLAN.md` §2/D-023, the executing
+  token could not modify anything it judged, raw outputs archived with hashes, and the W3 shield
+  remains mutation-proven. Two first-run scan false positives (a docstring mention of
+  `MetaTrader5` and a relative intra-package import) were harness bugs, corrected and re-run;
+  both runs' evidence is preserved (`b51fda69…e4f5`, `855f2cb2…5041`).
+- **Consequences.** Phase 5 remains NOT STARTED and requires explicit human authorization. No
+  commit/push was performed by the inspector; acceptance is pinned by the manifest hash and the
+  commit id. `GuardianInspector` password is never stored; a future run needs an administrator
+  password reset.
+- **Not changed.** No source or migration edited by this decision; no dependency installed; no
+  research test executed; no MT5 call; no evidence file rewritten.
+
+## D-025 — D-024 registration published; PHASE2-CLOCK-RECHECK-1 attempt 1 blocked by a closed market (2026-11-21)
+
+- **D-024 registration published** in this commit (`DECISIONS_LOG.md` + `PROJECT_STATE.md`),
+  pinned to the independent PASS report `artifacts/phase4-inspection-20261121T1720Z.md`
+  (`539a38e7…f51b`) and raw evidence `artifacts/inspector-run-20261121T164943/`
+  (`inspector-evidence-v3…` = `855f2cb2…5041`). No source, migration or accepted evidence was
+  touched; **D-019 remains DEFERRED, unchanged**.
+- **PHASE2-CLOCK-RECHECK-1 — attempt 1 (2026-11-21T17:10Z).** Executed inside the nominal
+  window (23:00Z–21:00Z) via `scripts/collect.py --bars M1 --count 5`. The DEMO terminal
+  connected and returned 5 historical M1 bars (0 gaps), but the session is **Saturday — the
+  market is closed**, so no fresh ticks exist and the broker clock offset cannot be measured.
+  The run correctly reported `DEGRADED: clock_unverified:no_fresh_ticks`.
+  **Verdict: BLOCKED — window unavailable; no PASS claimed or simulated.**
+  Evidence: `evidence/phase2-clock-recheck-20261121T171004Z.txt` (`2b298b75…cb21` + sidecar).
+- **Consequences.** The ticket stays OPEN; re-run between the Sunday open (23:00Z) and the next
+  21:00Z halt. Full Guardian closure is **not** claimed while this ticket is open.
+- **Not changed.** No code, migration or accepted evidence edited; no dependency installed;
+  no MT5 order path touched (read-only DEMO collect); the only DB writes landed in
+  `data/guardian.sqlite3` (gitignored, never committed).

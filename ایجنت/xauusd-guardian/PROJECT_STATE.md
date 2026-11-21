@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-20 (Phase 3 closure — ACCEPTED, D-022)
+Last updated: 2026-11-21 (Phase 4 closure — ACCEPTED, D-024)
 
 ## Phase status
 
@@ -11,7 +11,7 @@ Last updated: 2026-11-20 (Phase 3 closure — ACCEPTED, D-022)
 | 1 Foundation | **PASS** (provisional, awaiting human sign-off) | structure, config, contracts, logging, storage, migrations, tests, identity resolver; three independent audit passes, no must-fix open |
 | 2 Market data | **ACCEPTED** | Phase 2 accepted under A-08 (2026-11-05); see `reports/PHASE2-REMEDIATION-REPORT.md` and approval chain A-01→A-08 |
 | 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
-| 4 Risk | **IMPLEMENTED — acceptance pending independent PASS (S7)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests; suite 331; D-023 criteria pre-registered before code |
+| 4 Risk | **ACCEPTED (2026-11-21, D-024)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests. S7 closed by an inspector run under the `GuardianInspector` token (write-denied snapshot; six/six probes DENIED; ACL check 247 objects / 0 problems) on commit `15a210a` (snapshot manifest `e939719f…56ca1`, 124 files; worktree == commit): junit **331 / 0 / 0** (46 migration + 2 pragma + 29 risk cases), `wal`+`synchronous=2`, storage probes green, independent black-box contract probe 31/31 (S1–S5 + cap), syntax gate green. Verdict `PASS` with disclosed residuals (R1/R2 in D-024). See `artifacts/phase4-inspection-20261121T1720Z.md` and `artifacts/inspector-run-20261121T164943/` |
 | 5 Firewall | NOT STARTED | |
 | 6 Backtest | NOT STARTED | |
 | 7 Monitoring | NOT STARTED | |
@@ -110,6 +110,7 @@ Independent reviewer pass: `reports/AUDIT-PHASE1-F7F8.md`. Seven checks, **all P
 
 - **F1 verification blocker (2026-11-04 22:28Z).** The tick-window clock fix and the server-relative freshness check are implemented and unit-tested, but the live re-verification ran during the daily halt (22:00–23:00Z), so no fresh ticks existed to measure the server clock. Every run therefore reports `DEGRADED: clock_unverified:no_fresh_ticks`. This is correct behaviour, not a failure — but it means F1 cannot be claimed verified today. Re-run the smoke between 23:00Z and 21:00Z the next day.
 - Clock verification is inherently unavailable during the daily halt: timestamps still use the deterministic model, the run is flagged.
+- **`PHASE2-CLOCK-RECHECK-1` attempt 1 (2026-11-21T17:10Z): BLOCKED — market closed (Saturday).** The smoke ran, the DEMO terminal connected, and it returned 5 historical M1 bars with 0 gaps; with no fresh ticks the run correctly reported `DEGRADED: clock_unverified:no_fresh_ticks` — no PASS claimed or simulated. Evidence: `evidence/phase2-clock-recheck-20261121T171004Z.txt` (`2b298b75…cb21` + sidecar). Re-run in a live session between the Sunday open (23:00Z) and the next 21:00Z halt; the ticket stays OPEN.
 - H1 shows 4 × 4-bar holes in ~3000 bars — holiday/session artifacts, flagged rather than hidden.
 
 ## Known unknowns
@@ -216,3 +217,21 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 | Phase 2 clock | split out as ticket `PHASE2-CLOCK-RECHECK-1` (re-run smoke between 23:00Z–21:00Z) — not a Phase 3 condition |
 | Disclosure | harness-provenance residual recorded in D-022: harness pinned by hashes, W3 shield mutation-proven (breaking the line fails suite test + probe), raw logs archived with hashes |
 | Git | no commit/push; acceptance pinned by the manifest hash above, not by a commit id |
+
+## Phase 4 closure (2026-11-21, D-024)
+
+| Item | Result |
+|---|---|
+| Verdict | **`PASS` — Phase 4 ACCEPTED** |
+| Inspector | `GuardianInspector` token: standard, `Users` only, not in `Administrators`; six/six write-class probes DENIED on the snapshot; §6.2: 247 objects, 0 problems |
+| Commit | `15a210a05c16744b9f114b13a86a76871b77b27c` (HEAD; parent `87084eb`) |
+| Snapshot | `git archive` of the commit → manifest `e939719fb6c3aed5fa98291cc844d9f50948116eb082702d92e0e8c0d8956ca1` (124 files); inspector reproduced before/after; `git diff` vs commit empty |
+| Suite | junit `331 / 0 / 0`, exit 0 (46 migration + 2 pragma + 29 risk cases) |
+| Contract probes | independent black-box probe from `PHASE4_PLAN.md` §2 / D-023: 31/31 PASS (S1–S5 incl. cap clamp; full fail-closed matrix) |
+| Durability | `journal_mode=wal`, `synchronous=2` (FULL; D-020) |
+| Pinned hashes | `sizing.py fdebd07c…ea1f3`; `test_risk_sizing.py 0f335f5a…0153e53`; `db.py 177c3330…5c20` (untouched) |
+| Machine-readable | `RESULT_JSON …"all_green":true` — `artifacts/inspector-run-20261121T164943/inspector-evidence-v3-20261121T164943.txt` (`855f2cb2…5041`) |
+| Report | `artifacts/phase4-inspection-20261121T1720Z.md` (delivered) |
+| D-019 | remains **DEFERRED** (untouched by this decision) |
+| R1/R2 | disclosed: harness provenance + two first-run scan false positives corrected and re-run; both evidence sets preserved |
+| Git | no commit/push by the inspector; HEAD is the accepted commit; registration docs are uncommitted worktree changes |

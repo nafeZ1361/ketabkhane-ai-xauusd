@@ -1,0 +1,16 @@
+# Phase 2 clock re-check - ticket PHASE2-CLOCK-RECHECK-1 (attempt 1)
+
+GENERATED_UTC: 2026-11-21T17:10Z (local 20:40, UTC+03:30)
+BRANCH: fix/w1-timezone-validation
+HEAD: 15a210a05c16744b9f114b13a86a76871b77b27c
+COMMAND: .venv\Scripts\python.exe scripts\collect.py --bars M1 --count 5
+EXIT: 0
+STATUS: DEGRADED - reason clock_unverified:no_fresh_ticks
+RUN: bars M1 inserted=5 revised=0 gaps=0 (historical bars; the terminal connected fine)
+SESSION: Saturday 2026-11-21 - the market is closed for the weekend, so no fresh ticks can
+exist and the broker clock offset cannot be measured. This is the documented, correct
+DEGRADED path (the deterministic DST clock stays authoritative; the run is flagged, never
+silently accepted).
+VERDICT: BLOCKED - window unavailable this session; NO PASS claimed and none simulated.
+NEXT: re-run in a live session between the Sunday open (23:00Z) and the next 21:00Z halt.
+DB: data/guardian.sqlite3 (gitignored; not committed)
