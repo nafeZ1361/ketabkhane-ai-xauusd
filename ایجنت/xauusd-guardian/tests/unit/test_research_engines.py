@@ -148,6 +148,7 @@ def test_kill_switch_latches_severe_risk_breach_until_owner_reset():
 
 def test_kill_switch_does_not_auto_clear_when_risk_recovers():
     from guardian.domain.risk.kill_switch import KillSwitchLevel, KillSwitchState, trip_kill_switch
+    from guardian.domain.risk.controls import RiskDecision
     latched = KillSwitchState(KillSwitchLevel.LATCHED, ("MAX_DRAWDOWN",))
     safe = RiskDecision(allowed=True, reasons=())
     assert trip_kill_switch(latched, safe) == latched
