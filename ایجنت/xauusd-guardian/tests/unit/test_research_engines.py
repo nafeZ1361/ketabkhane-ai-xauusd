@@ -128,3 +128,37 @@ def test_regime_classifier_requires_warmup():
     with pytest.raises(ValueError):
         classify_regime([_bar(i, 100, 101, 99, 100) for i in range(10)],
                         lookback=5, volatility_lookback=10)
+
+
+def test_kill_switch_latches_severe_risk_breach_until_owner_reset():
+    from guardian.domain.risk.kill_switch import (
+        KillSwitchLevel, KillSwitchState, reset_kill_switch, trip_kill_switch,
+    )
+    limits = RiskLimits(Decimal(".03"), Decimal(".06"), Decimal(".10"), Decimal(".02"), 3)
+    snapshot = RiskSnapshot(Decimal("9500"), Decimal("10000"), Decimal("10000"), Decimal("10000"),
+                            Decimal("0"), 0)
+    decision = evaluate_risk(snapshot, limits)
+    state = trip_kill_switch(KillSwitchState(), decision)
+    assert state.level is KillSwitchLevel.LATCHED
+    assert not state.allows_new_decisions
+    with pytest.raises(ValueError):
+        reset_kill_switch(state, owner_approved=False)
+    assert reset_kill_switch(state, owner_approved=True).level is KillSwitchLevel.NONE
+
+
+def test_kill_switch_does_not_auto_clear_when_risk_recovers():
+    from guardian.domain.risk.kill_switch import KillSwitchLevel, KillSwitchState, trip_kill_switch
+    latched = KillSwitchState(KillSwitchLevel.LATCHED, ("MAX_DRAWDOWN",))
+    safe = RiskDecision(allowed=True, reasons=())
+    assert trip_kill_switch(latched, safe) == latched
+
+
+def test_monte_carlo_block_bootstrap_is_seeded_and_exposes_percentiles():
+    from guardian.research.robustness import compare_bootstrap_methods
+    pnls = [Decimal("10"), Decimal("-20"), Decimal("30"), Decimal("-5"), Decimal("-15")]
+    iid_a, block_a = compare_bootstrap_methods(pnls, simulations=80, seed=19, block_size=2)
+    iid_b, block_b = compare_bootstrap_methods(pnls, simulations=80, seed=19, block_size=2)
+    assert iid_a == iid_b
+    assert block_a == block_b
+    assert block_a.block_size == 2
+    assert set(block_a.percentile_summary()["max_drawdown"]) == {"p05", "p25", "p50", "p75", "p95"}
