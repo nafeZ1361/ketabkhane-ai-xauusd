@@ -153,7 +153,7 @@ def test_module_has_no_trading_surface() -> None:
         "symbol_info_tick",
         "initialize",
     }
-    allowed_imports = {"__future__", "dataclasses", "decimal"}
+    allowed_imports = {"__future__", "dataclasses", "decimal", "enum"}
     sources = sorted(MODULE_DIR.glob("*.py"))
     assert sources, "risk package not found"
     for path in sources:
@@ -177,3 +177,25 @@ def test_module_has_no_trading_surface() -> None:
                 assert node.attr not in {"MetaTrader5", "mt5"}, (path.name, node.attr)
         text = path.read_text(encoding="utf-8-sig")
         assert "guardian.adapters" not in text
+
+
+def test_unaligned_max_lot_is_floored_to_valid_step() -> None:
+    # 0.505 is a ceiling, not a valid volume for a 0.01 step.
+    capped = spec(max_lot=Decimal("0.505"))
+    lots = position_size(Decimal("10000"), Decimal("1"), capped)
+    assert lots == Decimal("0.50")
+    assert lots % capped.lot_step == 0
+    assert lots <= capped.max_lot
+
+
+def test_unaligned_max_lot_never_breaks_risk_bound() -> None:
+    capped = spec(
+        risk_fraction=Decimal("0.02"),
+        value_per_point_lot=Decimal("10"),
+        lot_step=Decimal("0.01"),
+        max_lot=Decimal("0.505"),
+    )
+    lots = position_size(Decimal("10000"), Decimal("100"), capped)
+    assert lots == Decimal("0.20")
+    assert lots % capped.lot_step == 0
+    assert lots * Decimal("100") * capped.value_per_point_lot <= Decimal("10000") * capped.risk_fraction

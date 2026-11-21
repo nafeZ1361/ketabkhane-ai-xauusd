@@ -1,15 +1,19 @@
 import unittest
 from itertools import islice
+from pathlib import Path
 
 from validation.ledger import count
 from xauusd_research.schema import iter_candles
 from xauusd_research.strategy_generator import generate_and_evaluate
 
-DATA = "data/sample_300k.tsv"
+DATA = Path(__file__).resolve().parent / "fixtures" / "synthetic_500.csv"
 
 
 class A4PipelineTests(unittest.TestCase):
     """AT-A4-03 / AT-A4-04."""
+
+    def test_committed_synthetic_fixture_exists(self):
+        self.assertTrue(DATA.is_file(), DATA)
 
     def test_at_a4_03_ten_recorded(self):
         candles = list(islice(iter_candles(DATA), 20000))

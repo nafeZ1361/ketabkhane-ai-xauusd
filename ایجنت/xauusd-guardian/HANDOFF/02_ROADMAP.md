@@ -1,83 +1,51 @@
-# 02 — ROADMAP AND GATES
+# 02 — AUTHORIZED WORKSTREAMS AND ACCEPTANCE GATES
 
-Derived from `PHASE3_PLAN.md` §6 and `PROJECT_STATE.md`. Nothing here adds a requirement that the
-project has not already written down; where the source is silent, it says **TBD by human**.
+Owner instruction (2026-11-21): implement repository corrections, risk controls, realistic research/backtesting, Monte Carlo, walk-forward, regime analysis, kill switch, monitoring, Second Brain schema design, Claude skill extraction, tests and inspection.
 
-## Phase 3 gate map (current phase)
+This authorization does NOT grant account-data access (A-04), order checks/execution (A-05), live trading, new runtime dependencies, or permission to lock/implement Second Brain Layer 1.
 
-| Gate | Meaning | Status | Evidence |
+## Workstreams
+
+| ID | Workstream | Scope | Required gate |
 |---|---|---|---|
-| S1 | look-ahead property test | PASS | suite |
-| S2 | boundary / warmup tests | PASS | suite |
-| S3 | replay determinism on stored bars (same digest twice) | PASS | `evidence/phase3-S3-*` |
-| S4 | no `MetaTrader5` import outside adapters | PASS | `tests/security/test_boundaries.py` |
-| S5 | suite green | PASS | 252/252 at S5, commit `9a3b53a` |
-| S6 | migration 0003 additive and reversible | **PASS at the S6 inspection; F1, F1b, F1c found at S7, all fixed** | `evidence/phase3-S6-20261112T203848Z.txt` |
-| S7 | independent Inspector PASS on Phase 3 | **BLOCK ×3 (F1, F1b, F1c) → all fixed (279/279) → re-review pending** | `HANDOFF/artifacts/REPORT-S7*.md` |
+| W0 | Repository integrity | Correct confirmed defects; synchronize handoff docs; append decision/evidence | Regression tests + Windows CI + independent review |
+| W1 | Risk controls | Pure Decimal limits: per-trade sizing, daily/weekly loss, equity-curve drawdown, aggregate open risk, loss streak; synthetic/caller-supplied values | Fail-closed matrix, grid tests, no account/order imports |
+| W2 | Event-driven backtest | Closed-bar signal at t executes no earlier than next bar; explicit spread, slippage, commission, stop/target and gap fills; deterministic trade ledger | Hand-calculated fixtures, no-lookahead, adverse intrabar ordering, costs tests |
+| W3 | Robustness | Trade-sequence Monte Carlo; max drawdown distribution; chronological walk-forward folds with purge/embargo; no tuning on test folds | Seeded deterministic tests, leakage tests, out-of-sample separation |
+| W4 | Market regimes | Closed-bar-only trend/range/volatility labels using past-only windows | Warmup, boundary, no-lookahead and deterministic tests |
+| W5 | Kill switch + monitoring | Pure stop policy; stale tick, spread outlier, connection transition alerts; no order execution | Fail-closed state matrix and alert tests; read-only integration |
+| W6 | Second Brain design | Proposed schema, provenance, append-only learning lifecycle, verified lesson promotion; Guardian connector read-only | Schema review and threat model; no Layer 1 until exact قفل Schema v0.1 |
+| W7 | Claude skills | Inspect actual SKILL.md files at pinned commits; extract procedures into scoped checklists | Source hash, license, adversarial tests, independent review before approval |
+| W8 | Final audit | Full suite, security boundary, reproducibility, evidence manifest, separate read-only Inspector | PASS or INDEPENDENCE_NOT_ESTABLISHED; never self-approve |
 
-### S7 — what the reviewer must establish
+## Implementation constraints
 
-S7 is a **review gate, not an implementation stage**. It does not authorize new code.
+- Preserve Phase 1–4 acceptance records. Newly found defects are separate post-acceptance findings with their own regression and review.
+- No order path, account access, live mode, broker credentials or execution automation.
+- No new dependency in Guardian runtime without separate written approval. Prefer stdlib.
+- Keep the research ML experiment isolated; do not add pandas/scikit-learn to requirements.lock.
+- Reuse existing market-quality logic; do not duplicate it.
+- No database migration unless durable-storage need is proven and separately reviewed.
+- Every engine exposes pure deterministic functions first. MT5 adapter remains read-only.
 
-1. Read `PHASE3_PLAN.md` §1–§7 and check the delivered tree against it, not against a summary.
-2. Re-run the suite and `compileall` independently, and record exact commands, exit codes, counts.
-3. Re-verify the S1–S6 evidence: digests reproduce, files still match, nothing was edited after
-   the fact.
-4. Confirm scope: only Phase 3 files changed; no Phase 4+ work; no MT5 connection; no orders; no
-   new dependency; `main` and the parallel branch untouched; no commit/push performed.
-5. Return exactly one verdict: `PASS` or `BLOCK`, with evidence. A PASS without executed evidence
-   is invalid. Any unresolved destructive-risk finding is a `BLOCK`.
-6. Write the verdict into a new file (never edit an existing evidence file) and update the phase
-   status line **only after** a human accepts the verdict.
+## Sequence
 
-If S7 returns `BLOCK`: fix only the named defects, add focused tests, rerun, and hand back to the
-same reviewer. Do not bundle unrelated improvements.
+W0 → W1 → W2 → W3 → W4 → W5 → W6 design review → W7 extraction → W8.
+A workstream advances only after focused tests and independent PASS on its frozen snapshot. Parallel design is allowed; shared-file edits are not.
 
-## After S7
+## Completion definition
 
-Phase 4 is **not authorized**. Its shape is known only at the level below; the rest is TBD.
+Required files and tests exist; full Windows CI passes; compileall passes; evidence hashes reproduce; no safety boundary regression; independent Inspector proves read-only identity and snapshot integrity; owner receives a concise report. Green CI is not independent acceptance.
 
-| Phase | Name | Status | Entry condition |
-|---|---|---|---|
-| 4 | Risk | NOT STARTED | S7 PASS **and** explicit human authorization **and** a written phase plan |
-| 5 | Firewall | NOT STARTED | Phase 4 accepted; `firewall_process/` is the only future home of order APIs |
-| 6 | Backtest | NOT STARTED | TBD by human |
-| 7 | Monitoring | NOT STARTED | TBD by human |
-| 8 | Integration | NOT STARTED | TBD by human |
-| 9 | Independent audit | NOT STARTED | TBD by human |
-| 10 | Remediation | NOT STARTED | Phase 9 findings |
-| 11 | DEMO readiness | NOT STARTED | order submission is **not** authorized (approval A-05 never requested) |
 
-Do not infer Phase 4 deliverables from the word "risk". Ask for the plan; write it as
-`PHASE4_PLAN.md` and get it approved before writing code.
+## Current implementation snapshot (2026-11-21, code head 67038fe1; docs head 2123de76)
 
-## Standard stage protocol (applies to every future stage)
-
-A stage is done only when **all five** exist:
-
-1. the smallest code change that satisfies the written requirement;
-2. focused tests that fail when the protection is removed (a mutation probe, or an equivalent
-   negative control);
-3. the full suite green, with the exact commands and exit codes recorded;
-4. a timestamped evidence file under `evidence/` plus its `.sha256` sidecar — produced by commands,
-   never hand-written;
-5. a `DECISIONS_LOG.md` entry if a contract, rule or stack changed.
-
-And a stage closes only when an **independent** reviewer — one that did not write the change —
-returns `PASS` with executed evidence.
-
-## Never, at any stage
-
-- live trading, a live flag, or any path that sends an order;
-- reading balance/equity/margin/profit without approval A-04;
-- importing `MetaTrader5` outside `src/guardian/adapters/`;
-- editing an applied migration or an existing evidence file;
-- deleting or weakening a test to make a gate green;
-- rewriting history, force-pushing, or deleting the parallel branch.
-
-## Where the ambiguity is (report it, do not resolve it alone)
-
-- `PROJECT_STATE.md` lists phases 4–11 with names only. Acceptance criteria for 6–11 do not exist
-  in the repository yet.
-- S7 has no written template beyond `PHASE3_PLAN.md` §6; this pack adds the checklist above, which
-  a human should confirm before the review is commissioned.
+- W0: corrections and handoff synchronization implemented; Guardian CI and root CI green. Independent review pending.
+- W1: Decimal sizing, synthetic risk limits and predeclared drawdown de-risk schedule implemented. No account data integration.
+- W2: initial OHLC event-driven simulator and 1x/1.5x/2x/3x cost-stress runner implemented. No market impact, partial fills, variable latency or tick path.
+- W3: IID/block bootstrap implemented; walk-forward fold generator implemented. No optimizer or OOS metric aggregation.
+- W4: past-only trend/range/high-volatility labels implemented. No automatic adaptation or validated unknown-regime policy.
+- W5: pure health alerts and latched policy kill switch implemented. No alert delivery, independent watchdog, broker cancel or flatten.
+- W6: Markdown + machine-readable JSON Schema proposal drafted; Layer 1 remains prohibited until exact owner command.
+- W7: selected MIT quant skills reviewed and paraphrased into execution checklists. Proprietary/unlicensed sources excluded.
+- W8: independent frozen-snapshot inspection pending; no PASS claimed.

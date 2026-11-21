@@ -373,3 +373,42 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Not changed.** No code, migration or accepted evidence edited; no dependency installed;
   no MT5 order path touched (read-only DEMO collect); the only DB writes landed in
   `data/guardian.sqlite3` (gitignored, never committed).
+
+## D-026 — Post-acceptance audit remediation and research workstreams authorized (2026-11-21)
+
+- Owner authorization: implement repository corrections and requested risk, research/backtest, robustness, regime, kill-switch, monitoring, Second Brain schema design, Claude skill extraction, tests and inspection on a separate branch.
+- No reopening: Phases 1–4 remain accepted under existing records (A-08, D-022, D-024). D-019 remains DEFERRED. This entry does not amend those acceptances.
+- G-01 confirmed: position_size() returned raw max_lot when computed size exceeded it. If max_lot was not divisible by lot_step, output violated the result-multiple contract. Fix by flooring the cap to the nearest permitted step and add regression tests.
+- G-02 confirmed: README and HANDOFF entry pages contradicted the accepted state in PROJECT_STATE/D-022/D-024. Synchronize current handoff pages; preserve historic evidence files unchanged.
+- A-04/A-05 remain ungranted: new risk/kill-switch functions use synthetic/caller-supplied values; no account access, order construction, order submission or live mode.
+- Second Brain: schema proposal only. Layer 1 implementation is gated on exact owner command قفل Schema v0.1.
+- Dependencies: Guardian runtime remains stdlib-first. No pandas/scikit-learn dependency is added to the lockfile.
+- Acceptance: focused tests, full Windows CI, compileall, immutable evidence and independent read-only inspection are required. No developer self-approval.
+
+
+## D-027 — Research controls, bootstrap methods and skill provenance (2026-11-21)
+
+- **Monte Carlo upgrade:** default simulation count is 2,000; both IID and moving-block bootstrap are supported; results include total PnL, absolute/fractional max drawdown, ruin count and p05/p25/p50/p75/p95 summaries. A fixed seed is mandatory by default.
+- **Kill switch:** a pure policy state machine is added. It only blocks new decisions and latches severe loss/drawdown breaches until explicit owner approval. It does not cancel/flatten orders and is not an independent watchdog.
+- **Skill provenance:** selected quant procedures are paraphrased from Kryhr/26-quant-trading-skills at pinned commit 80c2f860f322207526ce7f31901234313253f263 (MIT). Marnenivishal/trading-bot-skills is UNLICENSED/proprietary and is excluded from copying/adaptation. MQL Developer is reference-only. agiprolabs source has no LICENSE file at inspected revision and is excluded pending license clarification.
+- **Known limitations:** current OHLC simulator does not model market impact, partial fills, financing/swap, tick-level path or variable latency; static slippage is an assumption. Walk-forward currently creates folds only. Regime classifier labels but does not adapt strategy. Monitoring emits local reports but no notification delivery/independent heartbeat. These gaps are not hidden or treated as complete.
+- **Acceptance:** Windows CI + focused tests + independent read-only inspection required. No profitability, live readiness or full operational kill-switch claim.
+
+
+## D-028 — Root test fixture repair and CI verification (2026-11-21)
+
+- **G-07 confirmed:** root tests/test_a4_pipeline.py depended on data/sample_300k.tsv, while .gitignore excludes data/* and README identifies tests/fixtures/synthetic_500.csv as the committed test dataset. Clean CI therefore failed two A4 tests on Python 3.10 and 3.12 with SchemaError: input file not found.
+- **Correction:** A4 tests now use the committed tests/fixtures/synthetic_500.csv through a path relative to the test file and assert the fixture exists. No local market data was committed and no data/* ignore rule was weakened.
+- **Root CI:** Python 3.10 and 3.12 each report 121 passed, 0 failed, 0 errors; line coverage 95.77% (run 44933144311 on commit 8a8e3c61; later rerun on 1340564b run 44933297549).
+- **Guardian CI:** Windows/Python 3.11 reports 359 tests passed and compileall success on commit 1340564b (run 44933297489).
+- **Independence:** CI is not the independent Inspector. No independent PASS is recorded; frozen-snapshot inspection remains pending.
+- **Safety:** no change to accepted Phase 1–4 decisions, no account access, no order APIs, no MT5 call, no new runtime dependencies, no migration or live-trading path.
+
+
+## D-029 — Drawdown de-risking, transaction-cost stress and machine-readable schema proposal (2026-11-21)
+
+- **De-risk schedule:** added pure Decimal drawdown_risk_multiplier() with predeclared ascending drawdown thresholds and non-increasing risk multipliers. It returns a sizing multiplier only; it does not mutate config or account state.
+- **Cost stress:** ExecutionCostModel now accepts a positive cost multiplier; run_cost_stress() repeats the identical simulation at 1x, 1.5x, 2x and 3x by default. It scales bar spread, fixed slippage and commission. It does not model market impact or prove these assumptions match the broker.
+- **Second Brain schema:** added docs/second-brain/schema-proposal-v0.1.json (JSON Schema 2020-12). This is a design artifact only; no Layer 1 runtime, database, connector or learner was created.
+- **Verification:** Guardian Windows/Python 3.11 run 44933647830 on code commit 67038fe1: 362 tests passed; compileall succeeded. Root CI run 44933652541 passed. Independent inspection remains pending.
+- **Safety:** no account access, order APIs, live mode, new dependencies, migrations or edits to accepted Phase 1–4 evidence.
