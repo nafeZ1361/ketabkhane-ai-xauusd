@@ -424,3 +424,14 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Disclosures.** Three first-run red results were Inspector-probe false positives, corrected before the complete rerun; both evidence runs were retained. The 129-versus-128 file count difference is the local gitignored `data/guardian.sqlite3`, absent from the committed archive. No Monte Carlo source or test changes were made during S11.
 - **Consequences.** Project state row 4b is updated to **ACCEPTED**. D-019 remains **DEFERRED**. `PHASE2-CLOCK-RECHECK-1` remains **OPEN** and separate from D-026 acceptance. This decision does not authorize Phase 5, live trading, order execution, PR merge, or other scope expansion.
 - **Publication.** S11 evidence record was published at commit `8a33cdd867d4073a9ee1b280759fc1153abdaa0b`. This D-027 registration is a documentation-only follow-up; no source, tests, migrations, or accepted phase implementation are changed.
+
+
+## D-028 — Phase 5 Firewall scope and weighted acceptance (2026-11-21)
+
+- **Authorization:** Owner explicitly approved preparation and execution of permitted Phase 5 work in this conversation. This decision freezes scope and weights only; it does not waive entry gates.
+- **Plan:** `PHASE5_PLAN.md` is the controlling Phase 5 plan.
+- **Frozen weights:** F1=10, F2=12, F3=12, F4=15, F5=15, F6=15, F7=13, F8=8 (total 100).
+- **Measurement:** A gate earns its weight only after a genuinely independent read-only Inspector PASS on a frozen snapshot. In-progress, blocked, failed, and unverified work earns zero. Phase completion = accepted weighted points / 100.
+- **Entry blockers:** D-008 remains ACCEPTED_PROVISIONAL until a hermetic, hash-verified, reproducible environment and full verification evidence are recorded. Redaction bypass remediation and nested AGENTS scope clarification are required before Phase 5 implementation begins.
+- **Safety:** DEMO remains disabled; A-05 and A-04 remain absent. This decision authorizes no broker order request construction/submission, no LIVE mode, no account financial-field access, no PR merge, and no live execution.
+- **Phase 6–11:** No criteria or weights are implied; each requires a separate pre-registered owner-approved plan.
