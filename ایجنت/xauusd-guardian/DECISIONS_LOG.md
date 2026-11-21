@@ -384,3 +384,12 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - Second Brain: schema proposal only. Layer 1 implementation is gated on exact owner command قفل Schema v0.1.
 - Dependencies: Guardian runtime remains stdlib-first. No pandas/scikit-learn dependency is added to the lockfile.
 - Acceptance: focused tests, full Windows CI, compileall, immutable evidence and independent read-only inspection are required. No developer self-approval.
+
+
+## D-027 — Research controls, bootstrap methods and skill provenance (2026-11-21)
+
+- **Monte Carlo upgrade:** default simulation count is 2,000; both IID and moving-block bootstrap are supported; results include total PnL, absolute/fractional max drawdown, ruin count and p05/p25/p50/p75/p95 summaries. A fixed seed is mandatory by default.
+- **Kill switch:** a pure policy state machine is added. It only blocks new decisions and latches severe loss/drawdown breaches until explicit owner approval. It does not cancel/flatten orders and is not an independent watchdog.
+- **Skill provenance:** selected quant procedures are paraphrased from Kryhr/26-quant-trading-skills at pinned commit 80c2f860f322207526ce7f31901234313253f263 (MIT). Marnenivishal/trading-bot-skills is UNLICENSED/proprietary and is excluded from copying/adaptation. MQL Developer is reference-only. agiprolabs source has no LICENSE file at inspected revision and is excluded pending license clarification.
+- **Known limitations:** current OHLC simulator does not model market impact, partial fills, financing/swap, tick-level path or variable latency; static slippage is an assumption. Walk-forward currently creates folds only. Regime classifier labels but does not adapt strategy. Monitoring emits local reports but no notification delivery/independent heartbeat. These gaps are not hidden or treated as complete.
+- **Acceptance:** Windows CI + focused tests + independent read-only inspection required. No profitability, live readiness or full operational kill-switch claim.

@@ -162,3 +162,31 @@ def test_monte_carlo_block_bootstrap_is_seeded_and_exposes_percentiles():
     assert block_a == block_b
     assert block_a.block_size == 2
     assert set(block_a.percentile_summary()["max_drawdown"]) == {"p05", "p25", "p50", "p75", "p95"}
+
+
+def test_backtest_past_trade_is_unchanged_by_future_bar_corruption():
+    bars = [_bar(0, 100, 101, 99, 100), _bar(1, 101, 103, 100, 102),
+            _bar(2, 102, 104, 101, 103)]
+    signals = [
+        Signal("XAUUSD.", "M1", bars[0].time_utc, Direction.LONG, Decimal("1"), "test", "LONG"),
+        Signal("XAUUSD.", "M1", bars[1].time_utc, Direction.FLAT, Decimal("0"), "test", "EXIT"),
+    ]
+    costs = ExecutionCostModel(Decimal("1"), Decimal("1"))
+    prefix = run_backtest(bars, signals, lots=Decimal("1"), initial_equity=Decimal("10000"), costs=costs)
+    corrupted_future = bars + [_bar(3, 500, 900, 100, 600, spread=20)]
+    full = run_backtest(corrupted_future, signals, lots=Decimal("1"), initial_equity=Decimal("10000"), costs=costs)
+    assert prefix.trades[0] == full.trades[0]
+
+
+def test_backtest_higher_slippage_cannot_improve_same_trade_pnl():
+    bars = [_bar(0, 100, 101, 99, 100), _bar(1, 101, 103, 100, 102),
+            _bar(2, 102, 104, 101, 103)]
+    signals = [
+        Signal("XAUUSD.", "M1", bars[0].time_utc, Direction.LONG, Decimal("1"), "test", "LONG"),
+        Signal("XAUUSD.", "M1", bars[1].time_utc, Direction.FLAT, Decimal("0"), "test", "EXIT"),
+    ]
+    base = run_backtest(bars, signals, lots=Decimal("1"), initial_equity=Decimal("10000"),
+                        costs=ExecutionCostModel(Decimal("1"), Decimal("1")))
+    stressed = run_backtest(bars, signals, lots=Decimal("1"), initial_equity=Decimal("10000"),
+                            costs=ExecutionCostModel(Decimal("1"), Decimal("1"), Decimal("2")))
+    assert stressed.total_net_pnl < base.total_net_pnl
