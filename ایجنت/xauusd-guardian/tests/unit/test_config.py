@@ -77,6 +77,11 @@ def test_live_expected_mode_is_rejected():
         parse_settings(_mutate(["account", "expected_trade_mode"], "REAL"))
 
 
+def test_logging_redaction_cannot_be_disabled():
+    with pytest.raises(ConfigError, match="redact must be true"):
+        parse_settings(_mutate(["logging", "redact"], False))
+
+
 @pytest.mark.parametrize("value", [0.0, -0.1, 5.1, 50])
 def test_risk_percent_bounds(value):
     with pytest.raises(ConfigError, match="risk_percent"):
