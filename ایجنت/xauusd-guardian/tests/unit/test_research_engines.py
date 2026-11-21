@@ -26,7 +26,7 @@ def test_risk_gate_blocks_daily_drawdown_and_loss_streak():
                         Decimal("250"), 3)
     result = evaluate_risk(snap, limits)
     assert not result.allowed
-    assert set(result.reasons) == {"DAILY_LOSS_LIMIT", "AGGREGATE_OPEN_RISK_LIMIT", "CONSECUTIVE_LOSS_LIMIT"}
+    assert set(result.reasons) == {"DAILY_LOSS_LIMIT", "MAX_DRAWDOWN", "AGGREGATE_OPEN_RISK_LIMIT", "CONSECUTIVE_LOSS_LIMIT"}
 
 
 def test_risk_gate_allows_safe_snapshot():

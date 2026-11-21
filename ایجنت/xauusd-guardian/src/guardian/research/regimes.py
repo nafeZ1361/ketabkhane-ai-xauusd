@@ -43,7 +43,8 @@ def classify_regime(
             raise RegimeError(f"{name} must be a positive finite Decimal")
     if trend_efficiency_threshold > 1 or high_volatility_multiple <= 1:
         raise RegimeError("thresholds outside supported range")
-    needed = volatility_lookback + lookback + 1
+    # Need volatility_lookback complete historical ATR windows, plus the current window.
+    needed = volatility_lookback + (2 * lookback)
     if len(bars) < needed:
         raise RegimeError(f"insufficient closed bars: need {needed}, got {len(bars)}")
     if any(bars[i].time_utc >= bars[i + 1].time_utc for i in range(len(bars) - 1)):
@@ -59,10 +60,13 @@ def classify_regime(
     current_start = len(bars) - lookback
     current_atr = sum((tr(i) for i in range(current_start, len(bars))), Decimal(0)) / Decimal(lookback)
     historical_atrs = []
-    hist_start = current_start - volatility_lookback
-    for end in range(hist_start + lookback, current_start + 1):
-        start = end - lookback
-        historical_atrs.append(sum((tr(i) for i in range(start, end)), Decimal(0)) / Decimal(lookback))
+    first_start = current_start - volatility_lookback - lookback
+    last_start = current_start - lookback
+    for start in range(first_start, last_start):
+        historical_atrs.append(
+            sum((tr(i) for i in range(start + 1, start + lookback + 1)), Decimal(0))
+            / Decimal(lookback)
+        )
     baseline = Decimal(str(median(historical_atrs)))
     closes = [Decimal(str(b.close)) for b in bars[current_start - 1:]]
     path = sum((abs(closes[i] - closes[i - 1]) for i in range(1, len(closes))), Decimal(0))

@@ -9,6 +9,7 @@ from decimal import Decimal
 class MonteCarloResult:
     total_pnls: tuple[Decimal, ...]
     max_drawdowns: tuple[Decimal, ...]
+    max_drawdown_fractions: tuple[Decimal, ...]
     ruin_count: int
 
     @property
@@ -41,6 +42,7 @@ def monte_carlo_trades(
     rng = random.Random(seed)
     totals: list[Decimal] = []
     drawdowns: list[Decimal] = []
+    drawdown_fractions: list[Decimal] = []
     ruin = 0
     n = len(trade_pnls)
     for _ in range(simulations):
@@ -56,5 +58,6 @@ def monte_carlo_trades(
             max_dd = max(max_dd, peak - equity)
         totals.append(total)
         drawdowns.append(max_dd)
+        drawdown_fractions.append(max_dd / peak if peak > 0 else Decimal(1))
         ruin += equity <= 0
-    return MonteCarloResult(tuple(totals), tuple(drawdowns), ruin)
+    return MonteCarloResult(tuple(totals), tuple(drawdowns), tuple(drawdown_fractions), ruin)

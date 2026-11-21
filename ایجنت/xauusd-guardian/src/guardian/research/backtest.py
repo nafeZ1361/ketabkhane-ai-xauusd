@@ -5,7 +5,9 @@ If stop and target both trade inside one OHLC bar, the stop is assumed first.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
+import math
 from typing import Sequence
 
 from guardian.contracts.market import MarketBar
@@ -37,8 +39,8 @@ class ExecutionCostModel:
 @dataclass(frozen=True, slots=True)
 class Trade:
     direction: Direction
-    entry_time_utc: object
-    exit_time_utc: object
+    entry_time_utc: datetime
+    exit_time_utc: datetime
     entry_price: Decimal
     exit_price: Decimal
     lots: Decimal
@@ -60,7 +62,7 @@ class BacktestResult:
 @dataclass(slots=True)
 class _Position:
     direction: Direction
-    entry_time: object
+    entry_time: datetime
     entry_price: Decimal
     lots: Decimal
     stop: Decimal | None
@@ -89,6 +91,14 @@ def run_backtest(
     for name, value in (("stop_loss_points", stop_loss_points), ("take_profit_points", take_profit_points)):
         if value is not None and (not isinstance(value, Decimal) or not value.is_finite() or value <= 0):
             raise BacktestError(f"{name} must be a positive finite Decimal")
+    for bar in bars:
+        prices = (bar.open, bar.high, bar.low, bar.close)
+        if any(not isinstance(value, (int, float)) or not math.isfinite(float(value)) or value <= 0 for value in prices):
+            raise BacktestError("bar prices must be positive and finite")
+        if bar.high < max(bar.open, bar.close) or bar.low > min(bar.open, bar.close) or bar.high < bar.low:
+            raise BacktestError("bar OHLC relationship is invalid")
+        if isinstance(bar.spread_points, bool) or not isinstance(bar.spread_points, int) or bar.spread_points < 0:
+            raise BacktestError("spread_points must be a non-negative integer")
     if any(bars[i].time_utc >= bars[i + 1].time_utc for i in range(len(bars) - 1)):
         raise BacktestError("bars must be strictly increasing")
     if any(bars[i].symbol != bars[0].symbol or bars[i].timeframe != bars[0].timeframe for i in range(len(bars))):
@@ -96,6 +106,8 @@ def run_backtest(
     index = {bar.time_utc: i for i, bar in enumerate(bars)}
     scheduled: dict[int, Signal] = {}
     for signal in signals:
+        if signal.symbol != bars[0].symbol or signal.timeframe != bars[0].timeframe.value:
+            raise BacktestError("signal symbol/timeframe does not match the bar series")
         if signal.bar_time_utc not in index:
             raise BacktestError("signal timestamp does not match a supplied bar")
         i = index[signal.bar_time_utc]
