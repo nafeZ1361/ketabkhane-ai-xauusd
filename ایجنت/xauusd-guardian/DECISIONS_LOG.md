@@ -393,3 +393,13 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Skill provenance:** selected quant procedures are paraphrased from Kryhr/26-quant-trading-skills at pinned commit 80c2f860f322207526ce7f31901234313253f263 (MIT). Marnenivishal/trading-bot-skills is UNLICENSED/proprietary and is excluded from copying/adaptation. MQL Developer is reference-only. agiprolabs source has no LICENSE file at inspected revision and is excluded pending license clarification.
 - **Known limitations:** current OHLC simulator does not model market impact, partial fills, financing/swap, tick-level path or variable latency; static slippage is an assumption. Walk-forward currently creates folds only. Regime classifier labels but does not adapt strategy. Monitoring emits local reports but no notification delivery/independent heartbeat. These gaps are not hidden or treated as complete.
 - **Acceptance:** Windows CI + focused tests + independent read-only inspection required. No profitability, live readiness or full operational kill-switch claim.
+
+
+## D-028 — Root test fixture repair and CI verification (2026-11-21)
+
+- **G-07 confirmed:** root tests/test_a4_pipeline.py depended on data/sample_300k.tsv, while .gitignore excludes data/* and README identifies tests/fixtures/synthetic_500.csv as the committed test dataset. Clean CI therefore failed two A4 tests on Python 3.10 and 3.12 with SchemaError: input file not found.
+- **Correction:** A4 tests now use the committed tests/fixtures/synthetic_500.csv through a path relative to the test file and assert the fixture exists. No local market data was committed and no data/* ignore rule was weakened.
+- **Root CI:** Python 3.10 and 3.12 each report 121 passed, 0 failed, 0 errors; line coverage 95.77% (run 44933144311 on commit 8a8e3c61; later rerun on 1340564b run 44933297549).
+- **Guardian CI:** Windows/Python 3.11 reports 359 tests passed and compileall success on commit 1340564b (run 44933297489).
+- **Independence:** CI is not the independent Inspector. No independent PASS is recorded; frozen-snapshot inspection remains pending.
+- **Safety:** no change to accepted Phase 1–4 decisions, no account access, no order APIs, no MT5 call, no new runtime dependencies, no migration or live-trading path.

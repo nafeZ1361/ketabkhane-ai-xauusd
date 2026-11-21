@@ -235,3 +235,25 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 | D-019 | remains **DEFERRED** (untouched by this decision) |
 | R1/R2 | disclosed: harness provenance + two first-run scan false positives corrected and re-run; both evidence sets preserved |
 | Git | no commit/push by the inspector; HEAD is the accepted commit; registration docs are uncommitted worktree changes |
+
+
+## Post-acceptance workstreams — owner authorization D-026 through D-028 (2026-11-21)
+
+| Workstream | Current implementation | Status |
+|---|---|---|
+| Repository corrections | max_lot step clamp; synchronized handoff; root A4 tests use committed fixture | CI green; independent inspection pending |
+| Risk controls | Decimal per-trade sizing plus synthetic daily/weekly loss, drawdown, aggregate open risk and loss-streak gates | Implemented; no account integration |
+| Kill switch | Monotonic PAUSE/LATCHED policy state; owner-approved reset | Policy only; no independent watchdog or broker actions |
+| Backtest | Next-bar OHLC fills; spread, fixed slippage, commission, stop/target | Initial engine; market impact/partial fills/tick path not implemented |
+| Monte Carlo | IID and moving-block bootstrap; default 2,000 paths; drawdown percentiles | Implemented; frozen research-report pipeline pending |
+| Walk-forward | Chronological folds with purge/embargo | Split generator only; optimizer/OOS aggregation pending |
+| Market regimes | Past-only trend efficiency and volatility classifier | Labels only; no automatic adaptation |
+| Monitoring | Tick age, spread and connection health evaluator | Pure rules only; notification delivery/watchdog pending |
+| Second Brain | Schema v0.1 proposal and verified-learning lifecycle | Design only; exact lock command required before Layer 1 |
+| Claude skills | Pinned MIT quant procedures and Guardian execution checklists | Selected procedures extracted; independent approval pending |
+
+Current remediation branch: work/guardian-risk-research-second-brain-audit
+Current head at this update: 1340564b76e1bafb876d460778a74e4c418fb632
+Draft PR: https://github.com/nafeZ1361/ketabkhane-ai-xauusd/pull/6
+
+No independent Inspector PASS is claimed for these post-acceptance changes. Phases 1–4 retain their existing acceptance records; D-019 remains DEFERRED.
