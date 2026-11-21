@@ -218,3 +218,42 @@ def test_regime_classifier_rejects_non_finite_ohlc():
     bars = [_bar(i, 100, 101, 99, 100) for i in range(130)] + [bad]
     with pytest.raises(ValueError):
         classify_regime(bars, lookback=10, volatility_lookback=100)
+
+
+def test_drawdown_derisk_schedule_reduces_risk_at_predeclared_levels():
+    from guardian.domain.risk.controls import drawdown_risk_multiplier
+    steps = ((Decimal(".05"), Decimal(".75")),
+             (Decimal(".10"), Decimal(".50")),
+             (Decimal(".15"), Decimal(".25")))
+    assert drawdown_risk_multiplier(Decimal(".03"), steps=steps) == Decimal("1")
+    assert drawdown_risk_multiplier(Decimal(".07"), steps=steps) == Decimal(".75")
+    assert drawdown_risk_multiplier(Decimal(".12"), steps=steps) == Decimal(".50")
+    assert drawdown_risk_multiplier(Decimal(".16"), steps=steps) == Decimal(".25")
+
+
+def test_drawdown_derisk_rejects_non_monotonic_schedule():
+    from guardian.domain.risk.controls import drawdown_risk_multiplier
+    with pytest.raises(ValueError):
+        drawdown_risk_multiplier(
+            Decimal(".12"),
+            steps=((Decimal(".05"), Decimal(".50")), (Decimal(".10"), Decimal(".75"))),
+        )
+
+
+def test_cost_stress_runs_1x_1_5x_2x_3x_and_degrades_pnl():
+    from guardian.research.backtest import run_cost_stress
+    bars = [_bar(0, 100, 101, 99, 100), _bar(1, 101, 103, 100, 102),
+            _bar(2, 102, 104, 101, 103)]
+    signals = [
+        Signal("XAUUSD.", "M1", bars[0].time_utc, Direction.LONG, Decimal("1"), "test", "LONG"),
+        Signal("XAUUSD.", "M1", bars[1].time_utc, Direction.FLAT, Decimal("0"), "test", "EXIT"),
+    ]
+    stress = run_cost_stress(
+        bars, signals, lots=Decimal("1"), initial_equity=Decimal("10000"),
+        costs=ExecutionCostModel(Decimal("1"), Decimal("1"), Decimal("1"), Decimal("1")),
+    )
+    assert tuple(x.multiplier for x in stress) == (
+        Decimal("1"), Decimal("1.5"), Decimal("2"), Decimal("3")
+    )
+    pnls = [x.result.total_net_pnl for x in stress]
+    assert pnls == sorted(pnls, reverse=True)

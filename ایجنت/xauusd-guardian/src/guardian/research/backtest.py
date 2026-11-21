@@ -4,7 +4,7 @@ Signals are formed at a bar close and can execute only at the next bar open.
 If stop and target both trade inside one OHLC bar, the stop is assumed first.
 """
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
 import math
@@ -24,9 +24,10 @@ class ExecutionCostModel:
     value_per_point_lot: Decimal
     slippage_points_per_side: Decimal = Decimal("0")
     commission_per_lot_per_side: Decimal = Decimal("0")
+    cost_multiplier: Decimal = Decimal("1")
 
     def __post_init__(self) -> None:
-        for name in ("point_size", "value_per_point_lot", "slippage_points_per_side", "commission_per_lot_per_side"):
+        for name in ("point_size", "value_per_point_lot", "slippage_points_per_side", "commission_per_lot_per_side", "cost_multiplier"):
             value = getattr(self, name)
             if not isinstance(value, Decimal) or not value.is_finite():
                 raise BacktestError(f"{name} must be a finite Decimal")
@@ -34,6 +35,8 @@ class ExecutionCostModel:
             raise BacktestError("point_size and value_per_point_lot must be positive")
         if self.slippage_points_per_side < 0 or self.commission_per_lot_per_side < 0:
             raise BacktestError("costs cannot be negative")
+        if self.cost_multiplier <= 0:
+            raise BacktestError("cost_multiplier must be positive")
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,8 +131,8 @@ def run_backtest(
     def close_position(bar: MarketBar, raw_price: Decimal, reason: str) -> None:
         nonlocal position, equity, peak, max_dd
         assert position is not None
-        spread_cost = _d(bar.spread_points) / Decimal(2)
-        slip = costs.slippage_points_per_side
+        spread_cost = (_d(bar.spread_points) / Decimal(2)) * costs.cost_multiplier
+        slip = costs.slippage_points_per_side * costs.cost_multiplier
         adjustment = (spread_cost + slip) * costs.point_size
         exit_price = raw_price - adjustment if position.direction is Direction.LONG else raw_price + adjustment
         signed_points = (
@@ -138,7 +141,7 @@ def run_backtest(
             else (position.entry_price - exit_price) / costs.point_size
         )
         gross = signed_points * costs.value_per_point_lot * position.lots
-        commission = costs.commission_per_lot_per_side * position.lots * Decimal(2)
+        commission = costs.commission_per_lot_per_side * costs.cost_multiplier * position.lots * Decimal(2)
         net = gross - commission
         trades.append(Trade(position.direction, position.entry_time, bar.time_utc, position.entry_price,
                             exit_price, position.lots, gross, commission, net, reason))
@@ -154,8 +157,9 @@ def run_backtest(
             if prior_signal.direction is Direction.FLAT or prior_signal.direction is not position.direction:
                 close_position(bar, _d(bar.open), "OPPOSITE_OR_FLAT_SIGNAL")
         if position is None and prior_signal is not None and prior_signal.direction in (Direction.LONG, Direction.SHORT):
-            half_spread = _d(bar.spread_points) / Decimal(2)
-            entry_adjustment = (half_spread + costs.slippage_points_per_side) * costs.point_size
+            half_spread = (_d(bar.spread_points) / Decimal(2)) * costs.cost_multiplier
+            entry_slippage = costs.slippage_points_per_side * costs.cost_multiplier
+            entry_adjustment = (half_spread + entry_slippage) * costs.point_size
             entry = _d(bar.open) + entry_adjustment if prior_signal.direction is Direction.LONG else _d(bar.open) - entry_adjustment
             stop = None
             target = None
@@ -187,3 +191,40 @@ def run_backtest(
         close_position(last, _d(last.close), "END_OF_DATA")
     total = equity - initial_equity
     return BacktestResult(tuple(trades), initial_equity, equity, total, max_dd)
+
+
+@dataclass(frozen=True, slots=True)
+class CostStressResult:
+    multiplier: Decimal
+    result: BacktestResult
+
+
+def run_cost_stress(
+    bars: Sequence[MarketBar],
+    signals: Sequence[Signal],
+    *,
+    lots: Decimal,
+    initial_equity: Decimal,
+    costs: ExecutionCostModel,
+    multipliers: tuple[Decimal, ...] = (
+        Decimal("1"), Decimal("1.5"), Decimal("2"), Decimal("3"),
+    ),
+    stop_loss_points: Decimal | None = None,
+    take_profit_points: Decimal | None = None,
+) -> tuple[CostStressResult, ...]:
+    """Re-run the same deterministic test at increasing transaction-cost levels."""
+    if not multipliers:
+        raise BacktestError("at least one cost multiplier is required")
+    if any(not isinstance(x, Decimal) or not x.is_finite() or x <= 0 for x in multipliers):
+        raise BacktestError("all stress multipliers must be positive finite Decimals")
+    if any(multipliers[i] >= multipliers[i + 1] for i in range(len(multipliers) - 1)):
+        raise BacktestError("stress multipliers must be strictly increasing")
+    out = []
+    for multiplier in multipliers:
+        scenario = replace(costs, cost_multiplier=costs.cost_multiplier * multiplier)
+        result = run_backtest(
+            bars, signals, lots=lots, initial_equity=initial_equity, costs=scenario,
+            stop_loss_points=stop_loss_points, take_profit_points=take_profit_points,
+        )
+        out.append(CostStressResult(multiplier, result))
+    return tuple(out)

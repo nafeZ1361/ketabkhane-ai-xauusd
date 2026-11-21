@@ -80,3 +80,37 @@ def evaluate_risk(snapshot: RiskSnapshot, limits: RiskLimits) -> RiskDecision:
     if snapshot.consecutive_losses >= limits.max_consecutive_losses:
         reasons.append("CONSECUTIVE_LOSS_LIMIT")
     return RiskDecision(allowed=not reasons, reasons=tuple(reasons))
+
+
+
+def drawdown_risk_multiplier(
+    drawdown_fraction: Decimal,
+    *,
+    steps: tuple[tuple[Decimal, Decimal], ...],
+) -> Decimal:
+    """Return a predeclared de-risk multiplier for the current drawdown.
+
+    Each step is (drawdown_threshold, risk_multiplier). Thresholds must rise
+    strictly and multipliers must be non-increasing in [0, 1]. An empty schedule
+    is rejected so callers cannot silently omit the de-risk policy.
+    """
+    _require_decimal("drawdown_fraction", drawdown_fraction)
+    if not Decimal(0) <= drawdown_fraction < Decimal(1):
+        raise RiskError("drawdown_fraction must be in [0, 1)")
+    if not isinstance(steps, tuple) or not steps:
+        raise RiskError("steps must be a non-empty tuple")
+    previous_threshold = Decimal(0)
+    previous_multiplier = Decimal(1)
+    selected = Decimal(1)
+    for threshold, multiplier in steps:
+        _require_decimal("drawdown threshold", threshold)
+        _require_decimal("risk multiplier", multiplier)
+        if not Decimal(0) < threshold < Decimal(1) or threshold <= previous_threshold:
+            raise RiskError("drawdown thresholds must be strictly increasing in (0, 1)")
+        if not Decimal(0) <= multiplier <= Decimal(1) or multiplier > previous_multiplier:
+            raise RiskError("risk multipliers must be non-increasing in [0, 1]")
+        if drawdown_fraction >= threshold:
+            selected = multiplier
+        previous_threshold = threshold
+        previous_multiplier = multiplier
+    return selected
