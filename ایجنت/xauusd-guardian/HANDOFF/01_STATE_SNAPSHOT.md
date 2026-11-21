@@ -1,3 +1,5 @@
+> **HISTORICAL SNAPSHOT — SUPERSEDED (2026-11-21).** This file describes the 2026-11-15 Phase 3 review state and is retained as historical evidence/context. It is not a current status authority. Current accepted phases and gates are in PROJECT_STATE.md and DECISIONS_LOG.md; current roadmap is HANDOFF/02_ROADMAP.md; Phase 5 scope is PHASE5_PLAN.md / D-028.
+
 # 01 — STATE SNAPSHOT
 
 Snapshot written **2026-11-15**, after **seven** S7 rounds. Rounds 1–6 produced BLOCK verdicts and
