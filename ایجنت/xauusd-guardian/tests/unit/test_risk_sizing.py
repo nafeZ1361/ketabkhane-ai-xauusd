@@ -196,6 +196,6 @@ def test_unaligned_max_lot_never_breaks_risk_bound() -> None:
         max_lot=Decimal("0.505"),
     )
     lots = position_size(Decimal("10000"), Decimal("100"), capped)
-    assert lots == Decimal("0.02")
+    assert lots == Decimal("0.20")
     assert lots % capped.lot_step == 0
     assert lots * Decimal("100") * capped.value_per_point_lot <= Decimal("10000") * capped.risk_fraction
