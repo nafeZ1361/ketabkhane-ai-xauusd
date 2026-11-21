@@ -1,6 +1,6 @@
 # AGENTS.md — working rules for this repository
 
-Scope: `xauusd-guardian`. Other user projects (e.g. `ketabkhane-ai-xauusd`) are out of scope and must never be touched.
+Scope: this nested project directory only (`ایجنت/xauusd-guardian/`). The containing Git repository is `ketabkhane-ai-xauusd`; its root-level `AGENTS.md` governs the parent project, not this nested project's implementation. Do not modify files outside this directory unless a specific owner-approved task explicitly requires it. This file governs work inside this directory and must not be interpreted as permission to alter sibling projects.
 
 ## Hard rules
 
