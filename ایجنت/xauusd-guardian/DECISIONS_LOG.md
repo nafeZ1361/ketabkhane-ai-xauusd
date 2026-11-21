@@ -373,3 +373,14 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Not changed.** No code, migration or accepted evidence edited; no dependency installed;
   no MT5 order path touched (read-only DEMO collect); the only DB writes landed in
   `data/guardian.sqlite3` (gitignored, never committed).
+
+## D-026 — Post-acceptance audit remediation and research workstreams authorized (2026-11-21)
+
+- Owner authorization: implement repository corrections and requested risk, research/backtest, robustness, regime, kill-switch, monitoring, Second Brain schema design, Claude skill extraction, tests and inspection on a separate branch.
+- No reopening: Phases 1–4 remain accepted under existing records (A-08, D-022, D-024). D-019 remains DEFERRED. This entry does not amend those acceptances.
+- G-01 confirmed: position_size() returned raw max_lot when computed size exceeded it. If max_lot was not divisible by lot_step, output violated the result-multiple contract. Fix by flooring the cap to the nearest permitted step and add regression tests.
+- G-02 confirmed: README and HANDOFF entry pages contradicted the accepted state in PROJECT_STATE/D-022/D-024. Synchronize current handoff pages; preserve historic evidence files unchanged.
+- A-04/A-05 remain ungranted: new risk/kill-switch functions use synthetic/caller-supplied values; no account access, order construction, order submission or live mode.
+- Second Brain: schema proposal only. Layer 1 implementation is gated on exact owner command قفل Schema v0.1.
+- Dependencies: Guardian runtime remains stdlib-first. No pandas/scikit-learn dependency is added to the lockfile.
+- Acceptance: focused tests, full Windows CI, compileall, immutable evidence and independent read-only inspection are required. No developer self-approval.

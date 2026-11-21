@@ -1,117 +1,44 @@
-# 01 — STATE SNAPSHOT
+# 01 — CURRENT STATE SNAPSHOT
 
-Snapshot written **2026-11-15**, after **seven** S7 rounds. Rounds 1–6 produced BLOCK verdicts and
-their findings were fixed round by round; round 7 closed the last four open items (single-quoted
-identifiers, `ON DELETE SET DEFAULT`, VIEW/TRIGGER scope, ATTACH coverage). **S7 PASS is still not
-claimed**: the round-7 changes need an independent round-8 inspection.
-If `git rev-parse HEAD` does not contain this file's commit, re-derive first.
+Snapshot baseline: 2026-11-21
+Accepted baseline revision: 907f4e37ce63ce2b28a33cb5132d70831032a56e
+Current work branch: work/guardian-risk-research-second-brain-audit
 
-## Git
+## Authoritative phase status
 
-| Item | Value |
-|---|---|
-| Branch | `fix/w1-timezone-validation` |
-| Commit chain | `9a3b53a` S5 → `2e56ae7` S6 → `f3f6644`, `b2057d2` handoff → `3deaf8c` F1 → `69e783d` F1b → the F1c commit that carries this file |
-| `main` | `1dad9588083f210fca868f49358aff44826e6f2f` (unchanged) |
-| Parallel branch `fix/xauusd-guardian-w1-timezone` | `76d468eda3e15e2c7d87a4fdcfe0f7b45c620b45` (unchanged, deliberately kept) |
-| S5 commit | `9a3b53a` — accepted baseline, never amended |
-
-`S5_IS_HEAD: False` in the evidence is correct: HEAD has moved past S5. The baseline check is
-"is `9a3b53a` an ancestor", not "is it HEAD".
-
-## S7 review history (four rounds)
-
-| Round | Verdict | Finding | Fix |
-|---|---|---|---|
-| 1 | BLOCK | **F1** — a pre-existing same-named table was adopted by `CREATE TABLE IF NOT EXISTS`, recorded as applied, then dropped by the reverse | adoption refused at apply time; shape check widened; comments stripped before the whitelist scan |
-| 2 | BLOCK | **F1b** — identifiers were compared case-sensitively while SQLite is not, so `SIGNALS` slipped through; apply was not atomic | case-insensitive comparison everywhere; DDL + ledger in one transaction |
-| 3 | BLOCK | **F1c** — (i) databases written by the pre-fix build have no provenance and still lose adopted rows; (ii) an unqualified `DROP` can hit `TEMP` or an `ATTACH`ed schema; (iii) quoted / `main.`-qualified `CREATE` was not parsed, so adoption was recorded | **measured provenance** (`schema_objects`), reverse requires it, every DROP qualified with `main.`, post-condition checks every schema, SQLite's four identifier spellings parsed |
-| 4 | BLOCK | **N1** `HANDOFF/MANIFEST.sha256` did not verify for `REPORT-S7.md`, `-ROUND2`, `-ROUND3` (same commit; no line-ending or BOM variant matched); **N2** backticked identifiers and quoted schema prefixes were misparsed, so a backticked `CREATE` could not be applied at all | manifest regenerated (11/11 verify); `_bare_identifier` splits the schema prefix before unquoting and accepts backticks; `_SCHEMA_PREFIX` accepts all four spellings; +3 tests; round-3 M1/M2/M3 confirmed closed |
-| 5 | BLOCK | **MF1** a migration that created nothing was recorded; **MF2** `_declared_shape` left on the old dialect, so backticked declarations applied but never reverted; **MF3** `ON DELETE CASCADE` deleted operator rows on revert | comments incl. `/* */` stripped; empty `created` refused; one identifier dialect; FK pre-flight; suite 287 |
-| 6 | BLOCK | one *inferred* must-fix: single-quoted identifiers | executed by the implementer: it does not reproduce (refused both ways, operator row intact); reduced to a diagnostics defect |
-| 7 | — | closed all four open items | statement-named refusal + `(?!IF\b)`; `SET DEFAULT` added; VIEW/TRIGGER/TEMP out of scope and refused; ATTACH test; suite 292 |
-| 8 | pending | — | independent inspection of the round-7 changes |
-
-## What the migrations code guarantees now
-
-1. **Additive.** `0003_signals.sql` is `CREATE ... IF NOT EXISTS` only; `0001`/`0002` untouched; digest
-   pinned in `schema_migrations`.
-2. **No adoption.** `apply_migrations` refuses a migration whose declared objects already exist —
-   bare, double-quoted, bracketed, backticked or schema-qualified, any case.
-3. **Atomic apply.** DDL, ledger row and provenance commit in one `BEGIN IMMEDIATE ... COMMIT`.
-4. **Measured provenance.** Each apply diffs `main.sqlite_master` before/after and stores the objects
-   it actually created in `schema_objects`. The ledger records what happened, not what the text said.
-5. **Narrow reverse.** `reversal_plan` requires provenance (a database applied before provenance
-   existed is refused, not guessed at), no later version, an unchanged forward digest, exactly one
-   strict `NNNN_name.down.sql`, and only `DROP TABLE`/`DROP INDEX` of objects recorded as created —
-   targeting `main`.
-6. **Verified reverse.** Drops are executed with `main.` qualification inside one transaction; the
-   post-condition then requires that no recorded object survives in **any** schema and that no object
-   the migration did not create disappeared from any schema. Otherwise everything rolls back.
-7. **Policy.** Reverses are DROP-only; a reverse needing `ALTER` requires a new decision.
-
-## The delta — committed state (post F1c)
-
-Paths relative to `ایجنت/xauusd-guardian/`. SHA-256 over raw file bytes as checked out.
-
-| Path | State | SHA-256 |
+| Area | Status | Authority |
 |---|---|---|
-| `src/guardian/storage/db.py` | M (598 lines) | `7a5e06168818bda6b35c14556bc4f447e43169f5182b87543464b849e8d938bb` |
-| `tests/unit/test_migration_reversal.py` | new (561 lines, 27 tests) | `80aca7c330216b400bf9d3d0262a469a46966ea618deefd48e80b2a2d5d8391f` |
-| `migrations/rollback/0003_signals.down.sql` | new (unchanged since S6) | `8b5e42635e887387ec4dc44d2d7dcf10d59476ce12a243b41e1c08cc7437aa42` |
-| `DECISIONS_LOG.md` | M (D-016 §8 rewritten) | `398a0c33c2b18d139d4fcb7190fac5f84caaf3d020d3b4d47c1884ac81fa17b5` |
-| `PHASE3_PLAN.md` | M (§5 + status/gate lines) | `ef90bfbc481df58d638643c4f94547cf9eb63d2822a7a6b47c1eee474536f8b3` |
-| `PROJECT_STATE.md` | M (Phase 3 row) | `71f697f6b2ea5c1fc459b9b2a4d7737e7e23468dafaa3215a2ffdf6efe494584` |
-| `evidence/phase3-S6-20261112T203848Z.txt` | new (authoritative) | `6266b7c7507d5af80aa6aa381e7a6690f0f471424135a0b0681821303794e771` |
-| `evidence/phase3-S6-20261112T203848Z.txt.sha256` | new | `599096dd1ad616ef1642042dca6a5bf2e5ba3cf179da523d7f45832bed6860eb` |
-| older `evidence/phase3-S6-*` files | committed history (pre-F1, pre-F1b, pre-F1c) | see each file |
-| `evidence/phase3-S6-20261109T170723Z.txt`, `evidence/phase3-S5-…txt` | **local-only**, not committed | — |
+| Phase 1 | PASS (provisional sign-off) | PROJECT_STATE.md |
+| Phase 2 | ACCEPTED under A-08 | PROJECT_STATE.md, A-08 |
+| Phase 3 | ACCEPTED | D-022 |
+| Phase 4 | ACCEPTED | D-024 |
+| D-019 research test relocation | DEFERRED | D-019/D-021 |
+| Phase 5 firewall/order path | NOT STARTED | A-05 not granted |
+| Phase 2 clock recheck | Separate ticket OPEN/BLOCKED on 2026-11-21 attempt | D-025 |
 
-## Test and tool results
+Older status text in historical artifacts is not current authority. D-022/D-024 supersede earlier S7/Phase 4 blockers.
 
-| Command | Result |
-|---|---|
-| `pytest tests/unit/test_migration_reversal.py -v` | 27 passed, exit 0 |
-| `pytest -q` | 295 passed, 0 failed, 0 error, 0 skipped, exit 0 (F1 remediation; 279 at `e56b3a6`) |
-| `python -m compileall -q src scripts tests` | exit 0 |
-| mutation probes | 11 probes, all killed (`unkilled=0`) |
-| live demo | 9 steps: apply, revert, re-apply, hostile down, lowercase adoption, `SIGNALS` adoption, legacy DB refusal |
+## Safety and approvals
 
-Suite history: 252 (S5) → 267 (S6) → 270 (F1) → 274 (F1b) → 279 (F1c) → 282 (round 4) → 287 (round 5) → 292 (round 7) → **295** (F1 remediation).
+- DEMO-only; no live trading, order construction or order submission.
+- A-04 account Balance/Equity/Margin/Profit access: NOT REQUESTED. Use synthetic fixtures only.
+- A-05 DEMO order checks/execution: NOT REQUESTED.
+- D-019 remains DEFERRED.
+- No applied migration or historical evidence may be edited.
+- Current work is on a separate branch; do not merge to main without explicit approval.
 
-## Evidence
+## Known source gaps at this snapshot
 
-| File | Role |
-|---|---|
-| `evidence/phase3-S6-20261112T203848Z.txt` | **authoritative for S6**: refs, hashes, 279 tests, 11 mutations, 9-step demo + demo source |
-| `evidence/phase3-S7-20261115T171715Z.txt` | **authoritative for S7 round 4**: HEAD/tree, 279 → 282, 15/15 probes, manifest 11/11 |
-| `…203848Z.txt.sha256` | sidecar digest |
-| `…191535Z`, `…182517Z`, `…173019Z` | historical: pre-F1c, pre-F1b, pre-F1 |
+1. src/guardian/domain/risk/sizing.py: max_lot clamp can return a value not divisible by lot_step. A regression correction is included in this work branch.
+2. Handoff documents had stale Phase 3/4 statuses; current branch synchronizes their entry points without changing historic evidence.
+3. Phase 4 is pure per-trade sizing only. Portfolio/daily loss limits, drawdown gate and emergency stop require a separate synthetic-input control layer; account integration remains forbidden.
+4. scripts/research_edge.py is a single chronological holdout model comparison, not a realistic trade simulator, Monte Carlo engine or sequential walk-forward.
+5. domain.market.quality already has bar/tick sanity checks; alert policy for stale tick and spread anomaly is a separate capability to verify/implement.
+6. Second Brain is not an existing connected repository in the available repo inventory. Schema proposal is design-only.
 
-## Residuals
+## Evidence baseline
 
-| # | Residual | Status |
-|---|---|---|
-| R1 | adoption of a same-named table | **FIXED** (F1) — refused at apply |
-| R1b | case-sensitive identifier comparison | **FIXED** (F1b) — inventory normalises case |
-| R1c | non-atomic apply | **FIXED** (F1b) — one transaction |
-| R1d | databases applied **before** provenance tracking (commits `2e56ae7`, `3deaf8c`) can still lose an adopted table on revert | **FIXED by refusal** (F1c) — no provenance ⇒ `revert_migration` refuses with an explicit instruction to audit or rebuild. Those databases are not migrated automatically and must be treated as suspect. |
-| R2 | shape-check docstring overclaimed | **FIXED** — states exactly what it checks |
-| R3 | header of `0003_signals.sql` says the reverse is "deliberately NOT implemented" | **OPEN, accepted** — hash-pinned; corrected in the down file header and D-016 §8 |
-| R4 | historical evidence files carry no banner of their own | **OPEN, accepted** — evidence is never edited; each current file's `NOTE` names its predecessors |
-| R5 | status lines lagged reality | **FIXED** — plan and state now say S6 PASS / S7 BLOCK ×3 + fixes |
-| R6 | mutation-probe source not embedded in evidence | **OPEN, accepted** — path + digest recorded; the probe lives outside the repo |
-| R7 | backticked identifiers / quoted schema prefixes | **FIXED** (round 4, N2) — parsed like every other spelling |
-| R8 | `HANDOFF/MANIFEST.sha256` did not verify for three reports | **FIXED** (round 4, N1) — regenerated, 11/11 |
-| R9 | a same-named object in `temp`/attached schemas makes a reverse refuse | **OPEN, accepted** — over-strict, never destructive (probe G) |
-| R10 | a missing `main` table or `schema_objects` surfaces as a raw `OperationalError` | **OPEN, accepted** — fail-closed, poor message (probes B2, C, D) |
-| R7 | D-016's trailing `**Rollback:**` line still shows the old manual statement | **OPEN** — superseded by §8; fix when the S7 verdict is recorded |
-
-## Open decisions that are NOT yours to close
-
-| ID | Question | Owner |
-|---|---|---|
-| F1 (branch) | Two parallel branches implement the same W1 timezone fix. Human decided: keep both, delete nothing. | Human |
-| D-003 | Symbol policy amendment `spot_metal_usd_v2` | Human (pending) |
-| S5-R1 | Stale signal survives when a bar revision makes a published signal disappear | Next stage, by decision |
-| S5-R2 | `scripts/replay_signals.py` behaviour change has no automated test | Next stage, by decision |
+Phase 3: artifacts/phase3-closure-20261120T1255Z.md, D-022.
+Phase 4: artifacts/phase4-inspection-20261121T1720Z.md, D-024.
+Phase 2 clock recheck attempt: evidence/phase2-clock-recheck-20261121T171004Z.txt, D-025.
+No new tests are claimed as executed by this snapshot. Consult current branch CI and independent inspection evidence for remediation status.
