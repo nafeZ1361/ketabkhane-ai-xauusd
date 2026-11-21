@@ -413,3 +413,14 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
   implemented and tested, not accepted. One pre-existing test (`test_risk_sizing`
   allow-list) was corrected to admit the new stdlib imports; its `MetaTrader5` ban is intact.
   `data/guardian.sqlite3` (gitignored, never committed).
+
+## D-027 — D-026 Monte Carlo risk engine ACCEPTED (S11 independent PASS) (2026-11-21)
+
+- **Decision.** D-026 is **ACCEPTED**. Its pre-registered acceptance criteria remain unchanged; criterion 11 is satisfied by the independent S11 PASS. This entry records the result and does not expand D-026 scope.
+- **Inspected revision.** Developer commit `701a4ddbee1d410d6accbec483e0096670c1f443`; frozen read-only snapshot SHA-256 `0eadf45eb82b0b27a62657a03836da5344ccdd6d33561b981d00eeff67e12192` (128-file manifest; 225 raw files). The inspector reproduced the snapshot hash before and after inspection; snapshot unchanged.
+- **Inspector.** `DESKTOP-2NLF7CP\\GuardianInspector`, standard account, `admin_in_token=False`, `users_in_token=True`; six of six write probes DENIED on the snapshot; ACL review: 253 objects, zero problems. Inspection ran under the Inspector token in a separate execution context. Verdict: **PASS**.
+- **Evidence.** Mirrored S11 record: `docs/agent-log/2026-11-21-s11-inspection.md` and `ایجنت/agent-log/2026-11-21-s11-inspection.md` (published in commit `8a33cdd867d4073a9ee1b280759fc1153abdaa0b`). Primary evidence file SHA-256: `7735b6a565f50cf7284b229f6a7075348754906e58c99098417112244c5d8c28`. JUnit SHA-256: `91bb5ab6d256ea786f56c1c45e303a09823a0baa0118543c50110fdf8617986a`. Additional probe hashes and first-run false-positive disclosure are preserved in the mirrored Inspector record.
+- **Verification.** Full suite: 361 tests, 0 failures, 0 errors; 30 Monte Carlo cases; D-023 regression 31/31; independent D-026 probes C1–C10 PASS; CLI reproducibility confirmed by two runs with identical `content_sha256`. Snapshot and manifest matched; no technical finding remained.
+- **Disclosures.** Three first-run red results were Inspector-probe false positives, corrected before the complete rerun; both evidence runs were retained. The 129-versus-128 file count difference is the local gitignored `data/guardian.sqlite3`, absent from the committed archive. No Monte Carlo source or test changes were made during S11.
+- **Consequences.** Project state row 4b is updated to **ACCEPTED**. D-019 remains **DEFERRED**. `PHASE2-CLOCK-RECHECK-1` remains **OPEN** and separate from D-026 acceptance. This decision does not authorize Phase 5, live trading, order execution, PR merge, or other scope expansion.
+- **Publication.** S11 evidence record was published at commit `8a33cdd867d4073a9ee1b280759fc1153abdaa0b`. This D-027 registration is a documentation-only follow-up; no source, tests, migrations, or accepted phase implementation are changed.
