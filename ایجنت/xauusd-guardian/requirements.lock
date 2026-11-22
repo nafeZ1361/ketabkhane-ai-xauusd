@@ -1,8 +1,10 @@
-# Pinned runtime + test dependencies for xauusd-guardian (D-008 offline closure)
+# Pinned runtime + test dependencies for xauusd-guardian (approach A, completed)
 # Python: 3.11.8 x64 (C:\\Python311\\python.exe) - Windows
+#
 # Direct: MetaTrader5 (runtime), pytest (tests).
-# Transitive closure: numpy (MetaTrader5); pluggy, iniconfig, packaging, colorama, Pygments (pytest).
-# Exact cryptographic hashes are in requirements-hashed.lock; wheel bytes are listed in WHEELHOUSE.sha256.
+# Transitive closure pinned: pytest -> pluggy, iniconfig, packaging, colorama, Pygments;
+# MetaTrader5 -> numpy. Cryptographic hashes are in requirements-hashed.lock.
+# Wheel bytes are listed in WHEELHOUSE.sha256; use --require-hashes for offline install.
 MetaTrader5==5.0.6231
 numpy==2.4.6
 pytest==9.2.0
