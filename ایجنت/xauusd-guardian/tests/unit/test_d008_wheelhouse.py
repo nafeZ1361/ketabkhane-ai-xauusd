@@ -100,6 +100,22 @@ def test_lock_and_manifest_disagreement_is_reported(tmp_path: Path) -> None:
     assert any("disagree" in p or "does not match the wheel bytes" in p for p in problems)
 
 
+@pytest.mark.parametrize(
+    "duplicate_name",
+    [
+        "pytest-9.1.0-py3-none-any.whl",
+        "pytest-9.2.0-1-py3-none-any.whl",
+    ],
+)
+def test_duplicate_wheels_for_distribution_are_reported(
+    tmp_path: Path, duplicate_name: str
+) -> None:
+    wh, lock, manifest = _write_tree(tmp_path)
+    (wh / duplicate_name).write_bytes(b"duplicate-wheel-bytes")
+    problems = wheelhouse_tool.verify(wh, lock, manifest)
+    assert any("duplicate wheels for distribution on disk: pytest" in p for p in problems)
+
+
 def test_build_refuses_a_non_empty_directory(tmp_path: Path) -> None:
     wh = tmp_path / "wheelhouse"
     wh.mkdir()
