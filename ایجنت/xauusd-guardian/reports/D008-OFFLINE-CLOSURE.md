@@ -54,3 +54,8 @@ Expected: eight packages installed from local wheels, `pip check` clean, **361 p
 
 - D-008 is **not** marked CLOSED; the independent Inspector must confirm it.
 - No trading, MT5 order path, account field or safety boundary was touched.
+
+
+## 6. Integration-branch qualification (2026-11-22)
+
+This report preserves the engineering claims and reproduction instructions from the source D-008 candidate. The integration branch is a different snapshot: later Phase 4/5/11 records were retained, the dependency lock was carried forward, and `build_wheelhouse.py` was hardened to refuse a non-empty output directory and verify the exact eight-package/version closure before writing manifests. Consequently, the source evidence file's embedded file hashes describe the original candidate snapshot, not every file byte on this integration branch. The evidence sidecar in this branch hashes the committed evidence text itself. No test suite or independent Inspector run has been executed against this integration snapshot in this session; it remains **CANDIDATE / NOT ACCEPTED** until those checks are rerun.
