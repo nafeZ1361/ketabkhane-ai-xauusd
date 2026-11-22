@@ -245,3 +245,14 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 - Phases 6–11 require separate pre-registered plans before implementation; no weights are assigned until those plans are approved.
 - Post-completion Live Verification is deferred to an owner-run validation. The owner will return raw evidence for a separate PASS/FAIL/BLOCKED/REMEDIATION verdict.
 - Safety unchanged: DEMO disabled pending A-05 + explicit authorization; A-04 absent; no LIVE mode/order submission; no destructive operations or unrelated-project changes.
+
+
+## D-008 — offline dependency closure (candidate carried forward, 2026-11-22)
+
+| Item | Result |
+|---|---|
+| Source | Candidate package from commit `234e73ea2586e393deb401a289681cbd9bcf6165` |
+| Isolation / closure | Python 3.11.8 hermetic venv; eight pinned distributions; hashed lock and wheel manifest added |
+| Engineering evidence | Source report records offline install with unreachable index, clean `pip check`, 361 tests passed, and `compileall` exit 0 |
+| Residual | Read-only attribute is not an ACL boundary; wheelhouse binaries are external to Git |
+| Integration status | **CANDIDATE — fresh independent inspection of this integrated snapshot required; no inherited PASS** |
