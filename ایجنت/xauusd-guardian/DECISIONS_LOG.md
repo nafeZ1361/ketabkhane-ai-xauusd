@@ -435,3 +435,12 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Entry blockers:** D-008 remains ACCEPTED_PROVISIONAL until a hermetic, hash-verified, reproducible environment and full verification evidence are recorded. Redaction bypass remediation and nested AGENTS scope clarification are required before Phase 5 implementation begins.
 - **Safety:** DEMO remains disabled; A-05 and A-04 remain absent. This decision authorizes no broker order request construction/submission, no LIVE mode, no account financial-field access, no PR merge, and no live execution.
 - **Phase 6–11:** No criteria or weights are implied; each requires a separate pre-registered owner-approved plan.
+
+## D-029 — Full completion path with deferred Live Verification (2026-11-22)
+
+- **Owner direction:** continue the Guardian project through all engineering phases to final readiness; defer live-environment verification until after engineering completion.
+- **Scope:** Phase 5 remains governed by D-028/PHASE5_PLAN.md. Phases 6–11 require separate pre-registered plans before implementation; this decision does not invent their acceptance criteria or weights.
+- **Completion:** engineering completion requires approved criteria, evidence, and independent read-only Inspector PASS for each applicable phase. Developer self-approval never counts.
+- **Live verification:** no live execution is required for engineering completion and no LIVE mode is authorized. After completion, the owner may perform a separately authorized real-environment validation and return the raw evidence for review.
+- **Safety unchanged:** DEMO remains disabled pending A-05 + explicit owner authorization; A-04 remains absent; no order construction/submission is authorized by this decision; no destructive operations, force-push, history rewrite, or unrelated-project changes.
+- **Current blocker:** D-008 remains the immediate Phase 5 entry gate and must be closed with real hermetic/provenance/hash evidence, not documentation alone.
