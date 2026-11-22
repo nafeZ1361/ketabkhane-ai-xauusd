@@ -1,6 +1,7 @@
 """A4 pipeline tests use deterministic synthetic candles, never local market data."""
 
 import math
+import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -32,23 +33,23 @@ def _write_synthetic_data(path: Path, rows: int = 1200) -> Path:
 class A4PipelineTests(unittest.TestCase):
     """AT-A4-03 / AT-A4-04."""
 
+    def _candles(self):
+        with tempfile.TemporaryDirectory(prefix="a4-pipeline-") as directory:
+            path = _write_synthetic_data(Path(directory) / "a4_sample.tsv")
+            return list(iter_candles(path))
+
     def test_at_a4_03_ten_recorded(self):
-        self.skipTest("requires pytest tmp_path fixture; use module-level pytest tests")
+        candles = self._candles()
+        before = count()
+        results = generate_and_evaluate(10, seed=11, candles=candles)
+        self.assertGreaterEqual(len(results), 5)
+        self.assertEqual(count() - before, len(results))
 
     def test_at_a4_04_verdict_never_none(self):
-        self.skipTest("requires pytest tmp_path fixture; use module-level pytest tests")
+        candles = self._candles()
+        for row in generate_and_evaluate(10, seed=13, candles=candles):
+            self.assertIn(row["verdict"], {"PASS", "FAIL", "INSUFFICIENT_EVIDENCE"})
 
 
-# pytest-style tests keep fixture creation isolated and deterministic.
-def test_at_a4_03_ten_recorded(tmp_path: Path):
-    candles = list(iter_candles(_write_synthetic_data(tmp_path / "a4_sample.tsv")))
-    before = count()
-    results = generate_and_evaluate(10, seed=11, candles=candles)
-    assert len(results) >= 5
-    assert count() - before == len(results)
-
-
-def test_at_a4_04_verdict_never_none(tmp_path: Path):
-    candles = list(iter_candles(_write_synthetic_data(tmp_path / "a4_sample.tsv")))
-    for row in generate_and_evaluate(10, seed=13, candles=candles):
-        assert row["verdict"] in {"PASS", "FAIL", "INSUFFICIENT_EVIDENCE"}
+if __name__ == "__main__":
+    unittest.main()
