@@ -124,13 +124,19 @@ def verify(wheelhouse: Path, lock: Path, manifest: Path) -> list[str]:
     errors.extend(lock_errors)
     errors.extend(manifest_errors)
 
-    on_disk: dict[str, Path] = {}
+    on_disk: dict[str, list[Path]] = {}
     for wheel in sorted(wheelhouse.glob("*.whl")):
         chunks = wheel.name[:-4].split("-")
         if len(chunks) < 5:
             errors.append(f"invalid wheel filename on disk: {wheel.name}")
             continue
-        on_disk[canonical(chunks[0])] = wheel
+        key = canonical(chunks[0])
+        on_disk.setdefault(key, []).append(wheel)
+
+    for key, wheels in sorted(on_disk.items()):
+        if len(wheels) > 1:
+            names = ", ".join(wheel.name for wheel in wheels)
+            errors.append(f"duplicate wheels for distribution on disk: {key}: {names}")
 
     expected = expected_closure()
     for scope, table in (("lock", locked), ("manifest", listed)):
@@ -139,32 +145,34 @@ def verify(wheelhouse: Path, lock: Path, manifest: Path) -> list[str]:
             errors.append(f"{scope} names {key} but no wheel is present")
         extra = sorted(set(on_disk) - set(table))
         for key in extra:
-            errors.append(f"{scope} does not name {key}, but {on_disk[key].name} is on disk")
+            names = ", ".join(wheel.name for wheel in on_disk[key])
+            errors.append(f"{scope} does not name {key}, but {names} are on disk")
 
     for key in sorted(set(expected) - set(on_disk)):
         errors.append(f"required distribution missing from the wheelhouse: {key}")
     for key in sorted(set(on_disk) - set(expected)):
         errors.append(f"unexpected distribution in the wheelhouse: {key}")
 
-    for key, wheel in sorted(on_disk.items()):
-        digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
-        version_on_disk = wheel.name[:-4].split("-")[1]
-        if key in listed:
-            version, declared = listed[key]
-            if version != version_on_disk:
-                errors.append(
-                    f"version mismatch for {key}: filename {version_on_disk}, manifest {version}"
-                )
-            if declared != digest:
-                errors.append(f"manifest hash does not match the wheel bytes: {key}")
-        if key in locked:
-            version, declared = locked[key]
-            if version != version_on_disk:
-                errors.append(
-                    f"version mismatch for {key}: filename {version_on_disk}, lock {version}"
-                )
-            if declared != digest:
-                errors.append(f"lock hash does not match the wheel bytes: {key}")
+    for key, wheels in sorted(on_disk.items()):
+        for wheel in wheels:
+            digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+            version_on_disk = wheel.name[:-4].split("-")[1]
+            if key in listed:
+                version, declared = listed[key]
+                if version != version_on_disk:
+                    errors.append(
+                        f"version mismatch for {key}: filename {version_on_disk}, manifest {version}"
+                    )
+                if declared != digest:
+                    errors.append(f"manifest hash does not match the wheel bytes: {key}")
+            if key in locked:
+                version, declared = locked[key]
+                if version != version_on_disk:
+                    errors.append(
+                        f"version mismatch for {key}: filename {version_on_disk}, lock {version}"
+                    )
+                if declared != digest:
+                    errors.append(f"lock hash does not match the wheel bytes: {key}")
     for key in sorted(set(locked) & set(listed)):
         if locked[key][1] != listed[key][1]:
             errors.append(f"lock and manifest disagree on the hash for {key}")
