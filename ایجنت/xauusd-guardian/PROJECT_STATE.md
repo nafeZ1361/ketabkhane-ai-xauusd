@@ -236,3 +236,12 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 | D-019 | remains **DEFERRED** (untouched by this decision) |
 | R1/R2 | disclosed: harness provenance + two first-run scan false positives corrected and re-run; both evidence sets preserved |
 | Git | no commit/push by the inspector; HEAD is the accepted commit; registration docs are uncommitted worktree changes |
+
+
+## D-029 completion path — 2026-11-22
+
+- Engineering work continues through Phase 11; live execution is not required for engineering completion.
+- Phase 5 remains blocked only until its entry gates are evidenced, with D-008 the immediate blocker.
+- Phases 6–11 require separate pre-registered plans before implementation; no weights are assigned until those plans are approved.
+- Post-completion Live Verification is deferred to an owner-run validation. The owner will return raw evidence for a separate PASS/FAIL/BLOCKED/REMEDIATION verdict.
+- Safety unchanged: DEMO disabled pending A-05 + explicit authorization; A-04 absent; no LIVE mode/order submission; no destructive operations or unrelated-project changes.
