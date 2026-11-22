@@ -59,3 +59,18 @@ Expected: eight packages installed from local wheels, `pip check` clean, **361 p
 ## 6. Integration-branch qualification (2026-11-22)
 
 This report preserves the engineering claims and reproduction instructions from the source D-008 candidate. The integration branch is a different snapshot: later Phase 4/5/11 records were retained, the dependency lock was carried forward, and `build_wheelhouse.py` was hardened to refuse a non-empty output directory and verify the exact eight-package/version closure before writing manifests. Consequently, the source evidence file's embedded file hashes describe the original candidate snapshot, not every file byte on this integration branch. The evidence sidecar in this branch hashes the committed evidence text itself. No test suite or independent Inspector run has been executed against this integration snapshot in this session; it remains **CANDIDATE / NOT ACCEPTED** until those checks are rerun.
+
+## Integration snapshot (2026-11-22, branch `integration/d008-offline-closure-20261122`)
+
+Reproduction on the integration HEAD found a real defect: `requirements-hashed.lock` carried a
+malformed `pytest` digest (not 64 hex characters) and a `packaging` digest that did not match
+the wheel, so `pip install --require-hashes` could not succeed. The lock was regenerated from
+`WHEELHOUSE.sha256` (single source of truth) and `scripts/build_wheelhouse.py` gained a
+`--verify` mode that compares lock, manifest and actual wheel bytes, reporting missing, extra,
+stale, version-mismatched and closure-mismatched wheels. Negative paths are covered by
+`tests/unit/test_d008_wheelhouse.py` (8 tests, no network).
+
+Fresh hermetic venv `C:\GuardianD008\venv-integration` (Python 3.11.8,
+`include-system-site-packages=false`): offline install with `--no-index --require-hashes`
+succeeded, `pip check` clean, **372 passed**, `compileall` exit 0, `--verify` OK.
+No independent PASS is claimed for this HEAD.
