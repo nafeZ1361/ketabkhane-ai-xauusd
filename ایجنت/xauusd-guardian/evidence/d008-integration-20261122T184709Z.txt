@@ -1,0 +1,15 @@
+﻿# D-008 integration-branch reproduction (20261122T184709Z)
+branch: integration/d008-offline-closure-20261122
+base_head_at_start: 61bcfa66763e2c6e2b02780b5f737ce56c7beb7a
+venv: C:\GuardianD008\venv-integration (Python 3.11.8, include-system-site-packages=false)
+offline install: PIP_NO_INDEX=1 PIP_INDEX_URL=http://127.0.0.1:1/simple --no-index --find-links C:\GuardianD008\wheelhouse --require-hashes -> exit 0
+pip check -> No broken requirements found. exit 0
+verify (lock/manifest/wheel bytes) -> exit 0 : VERIFY OK: lock, manifest and wheel bytes agree; closure is exact
+pytest -> exit 0 : 372 passed in 32.69s
+compileall -> exit 0
+
+defect fixed on this branch: requirements-hashed.lock had a malformed pytest digest and a
+packaging digest that did not match the wheel; regenerated from WHEELHOUSE.sha256 and now
+verified by scripts/build_wheelhouse.py --verify (lock == manifest == wheel bytes).
+
+note: this is developer evidence; no independent PASS is claimed for this HEAD.

@@ -1,0 +1,44 @@
+# D-008 offline dependency closure - evidence (20261122T163504Z)
+
+## environment
+project venv : ایجنت/xauusd-guardian\.venv -> Python 3.11.8, include-system-site-packages=false, prefix!=base_prefix
+D-008 venv   : C:\GuardianD008\venv-d008 -> Python 3.11.8, include-system-site-packages=false
+base python  : C:\Python311\python.exe (3.11.8)
+
+## closure and wheelhouse
+  colorama==0.4.6 --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
+  iniconfig==2.3.1 --hash=sha256:9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7
+  MetaTrader5==5.0.6231 --hash=sha256:1e0fb5e43437f426be3e5aef614f6798a918377db4cdb380593a66d1908f918d
+  numpy==2.4.6 --hash=sha256:1e254a00cdf42b1e4d5b3d68d33af63268d41340d8885df2ab6470f2e1500147
+  packaging==25.0 --hash=sha256:29572ef2b1f17581046b3a2224c8dfe87ccc2d5dee45947b78e68f499790d7a7
+  pluggy==1.7.0 --hash=sha256:7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec
+  Pygments==2.21.0 --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9
+  pytest==9.2.0 --hash=sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588
+wheelhouse: C:\GuardianD008\wheelhouse (8 wheels, read-only attribute; write attempt -> UnauthorizedAccessException)
+manifest  : WHEELHOUSE.sha256 (8 lines, 0 mismatches after marking read-only)
+
+## commands and results
+pip download ... --only-binary=:all: --index-url https://pypi.org/simple -d C:\GuardianD008\wheelhouse -> exit 0 (8 wheels)
+C:\Python311\python.exe -m venv C:\GuardianD008\venv-d008 -> exit 0
+PIP_NO_INDEX=1 PIP_INDEX_URL=http://127.0.0.1:1/simple pip install --no-index --find-links <wheelhouse> --require-hashes -r requirements-hashed.lock -> exit 0
+pip check -> 'No broken requirements found.' exit 0
+pytest -p no:cacheprovider (D-008 venv, project cwd) -> exit 0, 361 passed
+compileall -q src scripts tests (D-008 venv) -> exit 0
+
+## pinned versions (importlib.metadata)
+  MetaTrader5 5.0.6231 | numpy 2.4.6 | pytest 9.2.0 | pluggy 1.7.0 | iniconfig 2.3.1 | packaging 25.0 | colorama 0.4.6 | Pygments 2.21.0
+
+## files (sha256)
+  cce39a446129765027894aba7f213f4cdb47075f041978d3d038c5cdee174471  requirements.lock
+  5213c9e0020542468b7cf6a6dcb9fc9c9f132c7e08527211f64496d60c0a8284  requirements-hashed.lock
+  2ce366bec96d391c04f508e85abd6ed8f9e6155dbd5fced6bc127afb13c935b0  WHEELHOUSE.sha256
+  44965ecf2204baba7ff25f1a53dd8cbca098cf7eb8926b5a7c001166a7215f07  scripts/build_wheelhouse.py
+  49a075b43616cea0ed5e58b3452f88c809f494dcada3b5eab446cf3b8f50d11f  reports/D008-OFFLINE-CLOSURE.md
+  813e569f2f11d82b463254cf40ee9c90f1347a890a656b07d7fcbac88dea5863  DECISIONS_LOG.md
+  5dada0c2d49b488d60b979326da0accb041c87060baa8e8d05bf999108eea6bb  PROJECT_STATE.md
+
+## limits (honest)
+- read-only attribute is an operational guard, not an ACL boundary
+- wheelhouse stays outside git (numpy wheel 12.6 MB > 5 MB rule); a fresh machine must rebuild or receive it
+- pip list returns [] in this environment (non-ASCII path quirk); versions proven via importlib.metadata
+- no independent PASS: this is engineering evidence only

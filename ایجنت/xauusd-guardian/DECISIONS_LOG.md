@@ -444,3 +444,8 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 - **Live verification:** no live execution is required for engineering completion and no LIVE mode is authorized. After completion, the owner may perform a separately authorized real-environment validation and return the raw evidence for review.
 - **Safety unchanged:** DEMO remains disabled pending A-05 + explicit owner authorization; A-04 remains absent; no order construction/submission is authorized by this decision; no destructive operations, force-push, history rewrite, or unrelated-project changes.
 - **Current blocker:** D-008 remains the immediate Phase 5 entry gate and must be closed with real hermetic/provenance/hash evidence, not documentation alone.
+
+
+## D-008 — Offline dependency closure addendum (2026-11-22)
+
+The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6165` is being carried onto the current integration branch without replacing later Phase 4/5/11 records. Its original independent inspection verdict applies only to its frozen source snapshot; this integration snapshot requires a fresh independent inspection. The recorded engineering evidence reports a hermetic Python 3.11.8 venv, eight pinned distributions with hashes, offline installation with an unreachable index, clean `pip check`, 361 tests passed, and clean `compileall`. Residual limitation: read-only attributes are not an ACL boundary; wheelhouse binaries remain external to Git. D-008 is not marked accepted on this integration snapshot until the independent Inspector verifies it.

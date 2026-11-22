@@ -1,12 +1,10 @@
 # Pinned runtime + test dependencies for xauusd-guardian (approach A, completed)
-# Python: 3.11.8 x64 (C:\Python311\python.exe) - Windows
+# Python: 3.11.8 x64 (C:\\Python311\\python.exe) - Windows
 #
 # Direct: MetaTrader5 (runtime), pytest (tests).
-# Transitive closure pinned: pytest -> pluggy, iniconfig, packaging, colorama;
-# MetaTrader5 -> numpy. Verified by installing into a fresh venv with
-#   pip install --index-url https://pypi.org/simple -r requirements.lock
-# (the configured mirror mirror.runflare.com has no DNS on this host; PyPI itself works).
-# Hashes intentionally omitted: add --require-hashes before Phase 5.
+# Transitive closure pinned: pytest -> pluggy, iniconfig, packaging, colorama, Pygments;
+# MetaTrader5 -> numpy. Cryptographic hashes are in requirements-hashed.lock.
+# Wheel bytes are listed in WHEELHOUSE.sha256; use --require-hashes for offline install.
 MetaTrader5==5.0.6231
 numpy==2.4.6
 pytest==9.2.0
@@ -14,3 +12,4 @@ pluggy==1.7.0
 iniconfig==2.3.1
 packaging==25.0
 colorama==0.4.6
+Pygments==2.21.0
