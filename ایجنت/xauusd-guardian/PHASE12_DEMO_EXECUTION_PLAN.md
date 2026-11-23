@@ -1,7 +1,7 @@
 # PHASE 12 — CONTROLLED DEMO EXECUTION VALIDATION
 
-Status: DRAFT / NOT STARTED (2026-11-23)
-Authority: Owner instruction in the active project conversation; formal append-only decision and approval record still required.
+Status: PRE-REGISTERED / BLOCKED ON PHASE 11 AND ACCOUNT-DATA/RISK GATES (2026-11-23)
+Authority: D-030 + append-only approval A-09. No execution is authorized before all prerequisites pass.
 Prerequisite: Phase 11 accepted with independent read-only Inspector PASS.
 
 ## Mission
