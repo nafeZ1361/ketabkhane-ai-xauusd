@@ -1,0 +1,12 @@
+{
+  "action": "Post-completion Phase 12 autonomous DEMO execution validation",
+  "approval_id": "A-09",
+  "approver": "Owner (explicit written instruction in ChatGPT conversation, 2026-11-23)",
+  "expires": "Single use; expires after the first authorized 4-hour-30-minute validation or upon any safety-gate change",
+  "granted_utc": "2026-11-23T12:29:33+00:00",
+  "note": "No per-trade approval is required after all prerequisites pass. This does not grant A-04, does not authorize LIVE/CONTEST trading, does not authorize execution before Phase 11 independent PASS, and does not waive any risk, firewall, kill-switch, audit or Inspector gate. Approval hash is tamper evidence only and is not a cryptographic human signature.",
+  "phase": "12 (post-completion validation)",
+  "prev_sha256": "sha256:d7126270255acacc2badfc3836ba8106fc4efc0670e3882457a9286d6d6acdf9",
+  "record_sha256": "sha256:a9f8d36cf8cee605773377a25bf929afc0e67e95ba74ccf80257b5754e893919",
+  "scope": "One bounded 4-hour-30-minute validation only after Phase 11 acceptance and independent Inspector PASS; DEMO account only; approved Aron Markets DEMO server/company; exact symbol XAUUSD.; autonomous open, manage, modify and close test-owned positions during the window with no per-trade human approval. No LIVE or CONTEST account. No order activity before every Phase 5-11 gate and execution safety control passes. No balance, equity, margin or profit reads unless a separate A-04 approval is granted. If the approved sizing method needs a prohibited financial field, the test remains blocked."
+}
