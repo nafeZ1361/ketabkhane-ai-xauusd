@@ -4,7 +4,7 @@ Status: OWNER-DIRECTED EXECUTION PLAN (2026-11-22)
 Authority: D-029 + phase-specific plans.
 
 ## Objective
-Complete all engineering, safety, testing, audit, and readiness work without requiring a live-trading execution test. Live verification is a post-completion validation performed by the owner and reviewed from returned evidence.
+Complete all engineering, safety, testing, audit, and readiness work without requiring LIVE trading. After engineering completion, Guardian performs the separately authorized Phase 12 DEMO validation under D-030/A-09; no LIVE account is permitted.
 
 ## Sequence
 1. Close Phase 5 entry gates, especially D-008.
