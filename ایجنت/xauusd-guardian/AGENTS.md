@@ -2,6 +2,15 @@
 
 Scope: this nested project directory only (`ایجنت/xauusd-guardian/`). The containing Git repository is `ketabkhane-ai-xauusd`; its root-level `AGENTS.md` governs the parent project, not this nested project's implementation. Do not modify files outside this directory unless a specific owner-approved task explicitly requires it. This file governs work inside this directory and must not be interpreted as permission to alter sibling projects.
 
+## Authority and precedence
+
+- The repository-root `AGENTS.md` continues to apply its repository-wide baseline restrictions (including secret/market-data handling, file-size limits, and the read-only `legacy/source/` archive).
+- This nested file adds Guardian-specific implementation and safety rules only within `ایجنت/xauusd-guardian/`; it does not cancel or weaken repository-root restrictions.
+- Where both files apply, satisfy both. If requirements appear to conflict, apply the stricter restriction and stop for owner clarification when the conflict cannot be safely resolved.
+- Any future `AGENTS.md` below this directory applies only to its descendants and may narrow scope, but may not weaken the hard rules in this file.
+- Neither this file nor a child instruction grants permission to modify parent or sibling project paths.
+
+
 ## Hard rules
 
 1. DEMO only. There is no live mode, no live flag, no override. Do not add one.
