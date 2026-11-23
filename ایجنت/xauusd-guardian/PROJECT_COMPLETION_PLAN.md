@@ -33,7 +33,7 @@ Each phase must have its own plan before implementation. The plan must freeze sc
 
 ## Safety boundary
 - No LIVE mode.
-- DEMO remains disabled until A-05 and separate explicit owner authorization.
+- DEMO remains disabled throughout Phases 5–11. The single post-completion Phase 12 test is separately governed by D-030/A-09; A-05 remains ungranted and is superseded only for that bounded Phase 12 test.
 - No account financial-field access without A-04.
 - No order construction/submission during Phases 5–10.
 - Phase 11 prepares and verifies readiness only; it does not activate execution.
