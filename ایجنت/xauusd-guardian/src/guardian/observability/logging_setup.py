@@ -62,19 +62,26 @@ def setup_logging(level: str = "INFO", *, stream: Any = None) -> logging.Logger:
     return logger
 
 
+def _scrub_value(value: Any) -> Any:
+    """Recursively scrub nested mappings and list/tuple containers."""
+    if isinstance(value, dict):
+        cleaned: dict[Any, Any] = {}
+        for key, nested in value.items():
+            if isinstance(key, str):
+                field = key.casefold()
+                if field in SENSITIVE_ACCOUNT_FIELDS or field.startswith("margin"):
+                    continue
+            cleaned[key] = _scrub_value(nested)
+        return cleaned
+    if isinstance(value, list):
+        return [_scrub_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_scrub_value(item) for item in value)
+    return value
+
+
 def scrub_mapping(data: dict[str, Any]) -> dict[str, Any]:
-    """Recursively drop sensitive account fields from mappings and sequences."""
-    cleaned: dict[str, Any] = {}
-    for key, value in data.items():
-        if key.lower() in SENSITIVE_ACCOUNT_FIELDS:
-            continue
-        if isinstance(value, dict):
-            cleaned[key] = scrub_mapping(value)
-        elif isinstance(value, list):
-            cleaned[key] = [
-                scrub_mapping(item) if isinstance(item, dict) else item
-                for item in value
-            ]
-        else:
-            cleaned[key] = value
-    return cleaned
+    """Recursively drop sensitive account fields from all nested containers."""
+    if not isinstance(data, dict):
+        raise TypeError("data must be a dict")
+    return _scrub_value(data)
