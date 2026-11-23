@@ -449,3 +449,17 @@ Append-only. One entry per decision that changes a contract, a rule, or the stac
 ## D-008 — Offline dependency closure addendum (2026-11-22)
 
 The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6165` is being carried onto the current integration branch without replacing later Phase 4/5/11 records. Its original independent inspection verdict applies only to its frozen source snapshot; this integration snapshot requires a fresh independent inspection. The recorded engineering evidence reports a hermetic Python 3.11.8 venv, eight pinned distributions with hashes, offline installation with an unreachable index, clean `pip check`, 361 tests passed, and clean `compileall`. Residual limitation: read-only attributes are not an ACL boundary; wheelhouse binaries remain external to Git. D-008 is not marked accepted on this integration snapshot until the independent Inspector verifies it.
+
+## D-030 — Owner-authorized post-completion autonomous DEMO validation (2026-11-23)
+
+- **Owner instruction:** the owner explicitly authorized Guardian to autonomously open, manage, modify and close its own positions on the owner's DEMO account for one bounded 4-hour-30-minute validation. No per-trade human approval is required after all prerequisites pass.
+- **Approval record:** `approvals/A-09.json`, record SHA-256 `sha256:a9f8d36cf8cee605773377a25bf929afc0e67e95ba74ccf80257b5754e893919`; previous record hash `sha256:d7126270255acacc2badfc3836ba8106fc4efc0670e3882457a9286d6d6acdf9`. The hash chain is tamper evidence only, not a cryptographic human signature.
+- **Execution timing:** this authorization applies only to the separate Phase 12 validation, after Phases 5–11 are accepted and Phase 11 receives an independent read-only Inspector PASS. It does not accelerate or waive any engineering phase.
+- **Instrument/account scope:** DEMO only, approved Aron Markets DEMO server/company, exact symbol `XAUUSD.`; LIVE and CONTEST are prohibited. One test only, exactly 4 hours 30 minutes, no restart/extension without new authorization.
+- **Trading controls:** orders and order lifecycle are permitted only through the future isolated firewall execution process. Stop-loss, take-profit, risk, exposure, spread, freshness, clock, audit and kill-switch checks remain mandatory. A signal is never itself an order authorization.
+- **Account-data boundary:** A-04 remains NOT GRANTED. This decision does not authorize reading balance, equity, margin or profit. If the existing sizing model requires equity, Phase 12 remains BLOCKED until A-04 is separately granted or a separately accepted fixed-volume risk contract is implemented and inspected.
+- **Risk parameter:** the existing `0.25` value must be validated for exact unit and calculation path before use; no interpretation, increase or override is permitted.
+- **Supersession:** this decision supersedes D-029 only to the extent that D-029 deferred the post-completion DEMO validation to an owner-operated run. The validation may instead be operated autonomously by Guardian under A-09. D-029's engineering sequence, independent inspection rules and prohibition on LIVE trading remain unchanged.
+- **Non-authorization:** no Phase 5–11 order activity, no LIVE mode, no per-trade risk escalation, no credentials in logs, and no execution before all entry gates pass.
+- **Plan:** `PHASE12_DEMO_EXECUTION_PLAN.md` is the controlling protocol. Its status remains BLOCKED until every prerequisite is accepted.
+
