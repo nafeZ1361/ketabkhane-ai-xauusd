@@ -13,7 +13,7 @@ Last updated: 2026-11-23 (D-030 / A-09 registered; Phase 5 entry gates remain bl
 | 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
 | 4 Risk | **ACCEPTED (2026-11-21, D-024)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests. S7 closed by an inspector run under the `GuardianInspector` token (write-denied snapshot; six/six probes DENIED; ACL check 247 objects / 0 problems) on commit `15a210a` (snapshot manifest `e939719f…56ca1`, 124 files; worktree == commit): junit **331 / 0 / 0** (46 migration + 2 pragma + 29 risk cases), `wal`+`synchronous=2`, storage probes green, independent black-box contract probe 31/31 (S1–S5 + cap), syntax gate green. Verdict `PASS` with disclosed residuals (R1/R2 in D-024). See `artifacts/phase4-inspection-20261121T1720Z.md` and `artifacts/inspector-run-20261121T164943/` |
 | 4b Monte Carlo | **ACCEPTED (2026-11-21, D-027; D-026 S11 PASS)** | `MONTE_CARLO.md`; `domain/risk/montecarlo.py` + `scripts/montecarlo.py` + 30 tests; suite **361/0/0**; independent S11 PASS on commit `701a4dd`; snapshot SHA-256 `0eadf45e…`; Inspector evidence SHA-256 `7735b6a5…`; registration: `DECISIONS_LOG.md` D-027. |
-| 5 Firewall | **PRE-REGISTERED / BLOCKED** | D-028; F1–F8 frozen at 100 points. D-008 independent Inspector PASS applies to code snapshot `cc106b5`; local D-1 ReadOnly operation is not yet verified, D-2 owner disposition remains pending, and redaction/scope entry evidence must still be formally closed |
+| 5 Firewall | **PRE-REGISTERED / BLOCKED** | D-028; F1–F8 frozen at 100 points. D-008 independent PASS applies to code snapshot `cc106b5`; D-1 local ReadOnly verification and D-2 owner disposition remain pending. Redaction bypass fix committed (`logging_setup.py`, nested mappings/lists/tuples and structured `run_id`) with 3 regression tests; CI run `45175590370` PASS on `20de160a` (377 tests, compileall success). Nested AGENTS authority clarified in `b9708a8b`. Independent Inspector must still review these changes before the Phase 5 entry gates can be accepted |
 | 6 Backtest | NOT STARTED | |
 | 7 Monitoring | NOT STARTED | |
 | 8 Integration | NOT STARTED | |
@@ -270,4 +270,14 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 - D-4: Inspector supplied full suite result **374 / 0 / 0** and builder verification evidence; the prior developer omission is disclosed, not hidden.
 - Administrative D-008 status remains **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION** until D-1 local verification and D-2 owner disposition are recorded. Phase 5 entry is still blocked by its remaining formal gates.
 - The current work branch adds governance documents only; it has not received a fresh independent inspection yet.
+
+## Phase 5 entry remediation on work branch (2026-11-23)
+
+- Work branch: `work/guardian-phase5-entry-20261123`
+- Latest CI-verified commit: `20de160a487247b86e3414108bf064ac113191d8`
+- Redaction fix: `src/guardian/observability/logging_setup.py` now scrubs arbitrarily nested dict/list/tuple values, financial fields (including `margin*`), credential-like keys and embedded strings; formatter redacts structured `run_id` as well as the message.
+- Regression tests added/expanded in `tests/unit/test_logging_redaction.py`; Windows GitHub Actions run `45175590370` completed SUCCESS. Pytest progress: 377/377; compileall step completed successfully.
+- Nested `AGENTS.md` authority/precedence clarified: repository-root baseline applies repository-wide; nested Guardian instructions add stricter subtree rules; stricter rule wins on conflict.
+- **Acceptance not yet claimed:** an independent read-only Inspector must inspect the frozen work-branch snapshot and verify the redaction/config/API/nested-data negative paths and AGENTS scope.
+- No MT5 order code, DEMO activation, new dependency, account-field access, or LIVE functionality was added.
 
