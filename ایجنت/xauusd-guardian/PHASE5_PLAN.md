@@ -1,6 +1,6 @@
 # PHASE 5 — FIREWALL
 
-Status: **PRE-REGISTERED / ENTRY BLOCKED ON CURRENT PREFLIGHT EVIDENCE** (2026-11-23)
+Status: **PRE-REGISTERED / ENTRY READY — ALL FIVE ENTRY GATES INDEPENDENTLY VERIFIED** (2026-11-23)
 Decision: D-028. Weights are frozen before implementation.
 
 ## Mission
@@ -29,9 +29,9 @@ Completion is weighted accepted work / 100. A gate earns weight only after indep
 4. Redaction cannot be disabled by API or config; negative tests cover both paths.
 5. Scope and authority of nested AGENTS.md files are unambiguous.
 
-> Gate 2 status (2026-11-23): AP-7 independent PASS recorded (report `47a9e1f6...`); hermetic Python 3.11.8, pinned hashes, offline install, 377/0/0 and compileall are verified. **Preflight evidence for the current D-008 target is absent**; gate 2 is not closed.
+> Gate 2 status (2026-11-23): AP-7 independent PASS recorded (report `47a9e1f6...`); hermetic Python 3.11.8, pinned hashes, offline install, 377/0/0 and compileall are verified. Current D-008 preflight evidence (`preflight-20261123T194424Z.json`, SHA-256 `1d80668eeb25b3c9e08c55c87391eb2e3e6707ec82a9141f3e0ac066d50a72bc`) passed 9/9 checks. Independent GuardianInspector review returned PASS (`REVIEW-REPORT.md`, SHA-256 `ced929a1...b9f2`; result `fa07fc49...5d5d`). Gate 2 is MET.
 
-Until every entry gate is proven, Phase 5 implementation gates F1–F8 remain NOT STARTED. No workaround or inherited system package may be treated as closing D-008.
+All five Phase 5 entry gates are now independently verified. Phase 5 implementation gates F1–F8 remain NOT STARTED and earn zero completion weight until each is implemented, tested and independently accepted. No workaround or inherited system package may be treated as closing D-008.
 
 ## Security and scope constraints
 - DEMO remains disabled; A-05 is absent. Activation requires A-05 plus separate explicit owner authorization.
