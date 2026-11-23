@@ -114,3 +114,11 @@ D-008 is **ACCEPTED WITH A DISCLOSED NON-BLOCKING D-2 FOLLOW-UP**. The owner dis
 - **PR #8 exact head:** c3b5ca9efe2d8fea9168a712c47d1482f814769e.
 - **Local verification report:** pr8-verification-report-20261123T1550Z.md; SHA-256 60cd8d923ae7341a56c7f96526240672f557347d0ed6750b08bfdd25a697b29b. The report records 377/0/0 tests, compileall, hermetic offline install, clean pip check, wheel verification and 19/19 content checks.
 - **Administrative disposition:** D-008 is accepted with the D-2 residual disclosed as non-blocking. D-3 remains unused/preserved and D-4 remains disclosed. Phase 5 formal entry gates remain separate; this addendum does not authorize trading, merge PR #8, or change ACLs.
+
+## AP-7 independent PASS and Phase 5 entry status (2026-11-23)
+
+- Exact inspected HEAD: `177cf62d2cce6b69fd7ecbe92d2bfde9a789c59d`; tree `ec607842883e25832e08478210ff55fa69e24166`; Inspector `DESKTOP-2NLF7CP\GuardianInspector`, SID `...-1004`, logon ID `S-1-5-5-0-1350151026`, session 25, Medium; snapshot 243 files; manifest `34ac2f22...da9f` before=after.
+- Tests: **377/0/0**; hermetic offline install 8/8; `pip check` clean; `builder --verify` OK; `compileall` exit 0.
+- Report `artifacts/ap7-inspector-run-20261123T175859Z/INSPECTION-REPORT.md` SHA-256 `47a9e1f6...0f0d`; Inspector evidence `18ab43b2...443c`; JUnit `793cf5c8...2b21`.
+- D-4 remains **OPEN/ADVISORY** and non-blocking; D-2 remains owner-accepted; D-3 preserved/unused. No ACL/code change.
+- Phase 5 entry remains **BLOCKED** on current preflight evidence; F1-F8 NOT STARTED.

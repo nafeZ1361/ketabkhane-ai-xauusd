@@ -1,6 +1,6 @@
 # PHASE 5 — FIREWALL
 
-Status: **PRE-REGISTERED / BLOCKED ON D-008** (2026-11-21)
+Status: **PRE-REGISTERED / ENTRY BLOCKED ON CURRENT PREFLIGHT EVIDENCE** (2026-11-23)
 Decision: D-028. Weights are frozen before implementation.
 
 ## Mission
@@ -28,6 +28,8 @@ Completion is weighted accepted work / 100. A gate earns weight only after indep
 3. Owner-approved scope and this frozen plan recorded in D-028.
 4. Redaction cannot be disabled by API or config; negative tests cover both paths.
 5. Scope and authority of nested AGENTS.md files are unambiguous.
+
+> Gate 2 status (2026-11-23): AP-7 independent PASS recorded (report `47a9e1f6...`); hermetic Python 3.11.8, pinned hashes, offline install, 377/0/0 and compileall are verified. **Preflight evidence for the current D-008 target is absent**; gate 2 is not closed.
 
 Until every entry gate is proven, Phase 5 implementation gates F1–F8 remain NOT STARTED. No workaround or inherited system package may be treated as closing D-008.
 
