@@ -95,7 +95,7 @@ def test_scrub_mapping_recurses_through_nested_lists_tuples_margin_and_credentia
             [
                 {
                     "symbol": "XAUUSD.",
-                    "note": "login=<redacted-id>",
+                    "note": "login=<redacted>",
                 }
             ],
             (
@@ -121,6 +121,6 @@ def test_formatter_redacts_structured_run_id():
     payload = json.loads(stream.getvalue().strip())
     assert "99887766" not in payload["run_id"]
     assert "hidden" not in payload["run_id"]
-    assert "<redacted-id>" in payload["run_id"]
+    assert "login=<redacted>" in payload["run_id"]
     assert "token=<redacted>" in payload["run_id"]
 
