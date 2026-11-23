@@ -67,3 +67,47 @@ def test_logger_does_not_propagate_to_root():
     logger = setup_logging("INFO", stream=io.StringIO())
     assert logger.propagate is False
     assert logging.getLogger("guardian") is logger
+
+def test_scrub_mapping_recurses_through_nested_lists_tuples_and_margin_fields():
+    cleaned = scrub_mapping({
+        "envelope": [
+            [
+                {
+                    "BALANCE": 1000.0,
+                    "margin_used": 250.0,
+                    "symbol": "XAUUSD.",
+                }
+            ],
+            (
+                {
+                    "equity": 900.0,
+                    "margin_initial": 100.0,
+                    "direction": "BUY",
+                },
+            ),
+        ],
+        "trade_mode": "DEMO",
+    })
+    assert cleaned == {
+        "envelope": [
+            [
+                {
+                    "symbol": "XAUUSD.",
+                }
+            ],
+            (
+                {
+                    "direction": "BUY",
+                },
+            ),
+        ],
+        "trade_mode": "DEMO",
+    }
+
+
+def test_scrub_mapping_does_not_fail_on_non_string_mapping_keys():
+    cleaned = scrub_mapping({
+        1: {"balance": 1000.0, "safe": "kept"},
+    })
+    assert cleaned == {1: {"safe": "kept"}}
+
