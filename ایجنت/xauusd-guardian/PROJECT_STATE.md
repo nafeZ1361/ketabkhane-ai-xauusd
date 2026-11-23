@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-21 (Phase 5 plan D-028 pre-registered; entry blocked on D-008)
+Last updated: 2026-11-23 (D-030 / A-09 registered; Phase 5 entry gates remain blocked)
 
 ## Phase status
 
@@ -13,13 +13,14 @@ Last updated: 2026-11-21 (Phase 5 plan D-028 pre-registered; entry blocked on D-
 | 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
 | 4 Risk | **ACCEPTED (2026-11-21, D-024)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests. S7 closed by an inspector run under the `GuardianInspector` token (write-denied snapshot; six/six probes DENIED; ACL check 247 objects / 0 problems) on commit `15a210a` (snapshot manifest `e939719f…56ca1`, 124 files; worktree == commit): junit **331 / 0 / 0** (46 migration + 2 pragma + 29 risk cases), `wal`+`synchronous=2`, storage probes green, independent black-box contract probe 31/31 (S1–S5 + cap), syntax gate green. Verdict `PASS` with disclosed residuals (R1/R2 in D-024). See `artifacts/phase4-inspection-20261121T1720Z.md` and `artifacts/inspector-run-20261121T164943/` |
 | 4b Monte Carlo | **ACCEPTED (2026-11-21, D-027; D-026 S11 PASS)** | `MONTE_CARLO.md`; `domain/risk/montecarlo.py` + `scripts/montecarlo.py` + 30 tests; suite **361/0/0**; independent S11 PASS on commit `701a4dd`; snapshot SHA-256 `0eadf45e…`; Inspector evidence SHA-256 `7735b6a5…`; registration: `DECISIONS_LOG.md` D-027. |
-| 5 Firewall | **PRE-REGISTERED / BLOCKED** | D-028; F1–F8 frozen at 100 points in PHASE5_PLAN.md; entry blocked until D-008 is hermetically closed and prerequisite redaction/scope checks are evidenced |
+| 5 Firewall | **PRE-REGISTERED / BLOCKED** | D-028; F1–F8 frozen at 100 points. D-008 independent Inspector PASS applies to code snapshot `cc106b5`; local D-1 ReadOnly operation is not yet verified, D-2 owner disposition remains pending, and redaction/scope entry evidence must still be formally closed |
 | 6 Backtest | NOT STARTED | |
 | 7 Monitoring | NOT STARTED | |
 | 8 Integration | NOT STARTED | |
 | 9 Independent audit | NOT STARTED | |
 | 10 Remediation | NOT STARTED | |
-| 11 DEMO readiness | NOT STARTED | order submission not authorized |
+| 11 DEMO readiness | PRE-REGISTERED / WAITING FOR PHASE 10 | Readiness only; no order activity in Phase 11. A-09 governs a separate post-acceptance Phase 12 test |
+| 12 DEMO execution validation | **PRE-REGISTERED / BLOCKED** | D-030 / A-09: one 4h30m autonomous DEMO test after Phase 11 independent PASS; A-04 and risk-sizing/account-data gate still unresolved |
 
 ## Approvals held
 
@@ -33,7 +34,8 @@ Last updated: 2026-11-21 (Phase 5 plan D-028 pre-registered; entry blocked on D-
 ## Open approvals
 
 - (none for Phase 2 — A-08 granted; A-04/A-05 below remain closed)- A-04 balance/equity access — NOT REQUESTED (synthetic fixtures only)
-- A-05 DEMO-level order checks / DEMO execution — NOT REQUESTED
+- A-05 DEMO-level order checks / DEMO execution — NOT GRANTED (historical; Phase 12 one-time scope is separately authorized by A-09)
+- A-09 post-completion Phase 12 autonomous DEMO validation — GRANTED, conditional on Phase 11 independent PASS; one use only
 - D-003 symbol policy amendment `spot_metal_usd_v2` — **PENDING**
 
 ## Blockers
@@ -256,3 +258,16 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 | Engineering evidence | Source report records offline install with unreachable index, clean `pip check`, 361 tests passed, and `compileall` exit 0 |
 | Residual | Read-only attribute is not an ACL boundary; wheelhouse binaries are external to Git |
 | Integration status | **CANDIDATE — fresh independent inspection of this integrated snapshot required; no inherited PASS** |
+
+## D-008 independent inspection and administrative follow-ups (2026-11-23)
+
+- Inspected code snapshot: `integration/d008-offline-closure-20261122` at `cc106b557586e3e4cd867897c642ae7dc7d3fd16`.
+- Independent Inspector verdict: **PASS**. Report SHA-256: `029d9e9546514b4c058786c950abb542ef117a1361ae8fbe4f5318714b17079c`.
+- Mirrored agent-log files: byte-identical; both SHA-256 `3ead974ca6109d9754e3c3fe3195f801fb60950036c475d0fc3534abdc2c474a`.
+- D-1: **PENDING LOCAL VERIFICATION**. The exact manifest/lock Windows ReadOnly attributes have not yet been confirmed applied on the target worktree. No ACL-protection claim.
+- D-2: **OWNER DECISION PENDING**. No ACL modification or risk acceptance inferred; future snapshots should use an owner-only root.
+- D-3: **VERIFIED / UNUSED / PRESERVED**. External lock SHA-256 `404f36ed4512d1ac97c4b5d4a64f3bff152b07a3e3754224e734c28670126b8c`, mismatching the committed lock SHA-256 `ed42dbdc2c65bb1393c1313e9ffdc897badb615d41e41e337ab8109db1b81970`. It remains unchanged.
+- D-4: Inspector supplied full suite result **374 / 0 / 0** and builder verification evidence; the prior developer omission is disclosed, not hidden.
+- Administrative D-008 status remains **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION** until D-1 local verification and D-2 owner disposition are recorded. Phase 5 entry is still blocked by its remaining formal gates.
+- The current work branch adds governance documents only; it has not received a fresh independent inspection yet.
+
