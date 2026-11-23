@@ -1,7 +1,6 @@
-# D-008 — Offline dependency closure (closure candidate, 2026-11-22)
+# D-008 — Offline dependency closure (2026-11-22)
 
-Status: **CLOSED-CANDIDATE** — engineering evidence complete; independent Inspector PASS
-is still required (this session does not self-approve).
+Status: **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION** — independent Inspector PASS is recorded for the exact integration code snapshot. D-1 local verification and D-2 owner disposition remain pending; Phase 5 entry gates are not yet all satisfied.
 
 ## 1. Why D-008 existed
 
@@ -74,3 +73,34 @@ Fresh hermetic venv `C:\GuardianD008\venv-integration` (Python 3.11.8,
 `include-system-site-packages=false`): offline install with `--no-index --require-hashes`
 succeeded, `pip check` clean, **372 passed**, `compileall` exit 0, `--verify` OK.
 No independent PASS is claimed for this HEAD.
+
+
+## 7. Independent integration inspection and administrative disposition (2026-11-23)
+
+### Frozen snapshot and verdict
+
+- Inspected branch: `integration/d008-offline-closure-20261122`
+- Inspected HEAD: `cc106b557586e3e4cd867897c642ae7dc7d3fd16`
+- Independent Inspector verdict: **PASS**
+- External Inspector report: `C:\GuardianInspect\reports\d008-final-inspection-20261122T1955Z.md`
+- External Inspector report SHA-256: `029d9e9546514b4c058786c950abb542ef117a1361ae8fbe4f5318714b17079c`
+- Both mirrored agent-log files are byte-identical; each SHA-256 is `3ead974ca6109d9754e3c3fe3195f801fb60950036c475d0fc3534abdc2c474a`.
+- Frozen snapshot manifest: 140 files; SHA-256 `912dbd85…0626`; independently reproduced from the exact commit with zero differences.
+- Independent suite: **374 passed / 0 failed / 0 errors**; `compileall` exit 0; snapshot unchanged during inspection.
+- Primary evidence SHA-256: `97d43f1b…1cec`
+- JUnit SHA-256: `7f6ccb45…d6c6`
+- Builder verification SHA-256: `6af40108…e3f0`
+- Offline installation SHA-256: `1517a57a…529a`
+
+### Findings
+
+- **D-1 — PENDING LOCAL VERIFICATION.** The required Windows ReadOnly attributes on the exact `WHEELHOUSE.sha256` and `requirements-hashed.lock` files have not been confirmed applied in the target worktree. No ACL protection is claimed.
+- **D-2 — OWNER DECISION PENDING.** No ACL changes were made and no risk acceptance is inferred. Recommendation: future snapshots should be created under an owner-only root with restrictive inheritance, followed by independent effective-access verification.
+- **D-3 — VERIFIED / UNUSED / PRESERVED.** External file `C:\GuardianD008\requirements-hashed.lock` SHA-256: `404f36ed4512d1ac97c4b5d4a64f3bff152b07a3e3754224e734c28670126b8c`. It mismatches the committed lock SHA-256 `ed42dbdc2c65bb1393c1313e9ffdc897badb615d41e41e337ab8109db1b81970`. The external file was not changed or deleted.
+- **D-4 — DISCLOSED / EVIDENCE SUPPLIED.** The Inspector independently recorded the final suite count and builder verification. The earlier Developer-evidence omission remains disclosed; historical evidence was not rewritten.
+
+### Scope and closure rule
+
+No trading behavior, source code, dependencies, wheel files, wheel contents, ACLs, or PR #7 were changed by the Inspector or by the reported local administrative inspection. No branch switch, commit, push, merge, deletion or cleanup was performed by that inspection.
+
+D-008 is **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION**, not CLOSED. The PASS applies to the frozen code snapshot above; it does not by itself satisfy every Phase 5 entry gate. D-1 still needs local attribute verification, D-2 needs explicit owner disposition, and Phase 5 redaction/nested-AGENTS entry evidence must be formally closed.
