@@ -22,7 +22,7 @@ Run one bounded 4-hour-30-minute XAUUSD DEMO execution test after engineering co
 
 ## Authorization and account-data prerequisites
 
-1. Record the owner's one-time, bounded DEMO authorization as a new append-only approval (do not rewrite historical A-01…A-08 records). It authorizes autonomous trades only after Phase 11 PASS, for the exact duration, symbol, account mode and risk limits in the final test manifest.
+1. Verify the existing append-only `approvals/A-09.json` against its record hash and previous A-08 hash. It authorizes autonomous trades only after Phase 11 PASS, for the exact duration, symbol, account mode and risk limits in the final test manifest. Do not rewrite historical approval records.
 2. A-04 is still absent. Do not read balance, equity, margin or profit until A-04 is explicitly granted. Because the current Phase 4 sizing function requires equity, execution remains BLOCKED until either:
    - A-04 is explicitly granted for the minimum fields strictly required for sizing; or
    - a separately accepted, fixed-volume risk contract is implemented and proven not to require account financial fields.
