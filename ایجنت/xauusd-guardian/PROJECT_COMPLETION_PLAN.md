@@ -20,7 +20,7 @@ Complete all engineering, safety, testing, audit, and readiness work without req
 11. Apply only approved Phase 10 Remediation; re-inspect affected gates.
 12. Pre-register and execute Phase 11 DEMO-readiness preparation without enabling DEMO or sending orders.
 13. Independent final readiness inspection and completion report.
-14. Owner performs the separate post-completion Live Verification only when explicitly authorized. The owner returns raw evidence/report; no live test is performed as part of engineering completion.
+14. After engineering completion and Phase 11 independent PASS, execute the separate one-time Phase 12 autonomous DEMO validation under D-030 / A-09 (4h30m, DEMO only, XAUUSD.); no LIVE execution is permitted. This validation is separate from engineering completion and retains its own evidence and independent verdict.
 
 ## Completion rule
 A phase is complete only when its approved criteria are satisfied, required evidence is recorded, and an independent read-only Inspector returns PASS on a frozen snapshot. Developer self-approval never counts.
