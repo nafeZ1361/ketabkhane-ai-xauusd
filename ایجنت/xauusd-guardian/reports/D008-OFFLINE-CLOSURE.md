@@ -1,6 +1,6 @@
 # D-008 — Offline dependency closure (2026-11-22)
 
-Status: **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION** — independent Inspector PASS is recorded for the exact integration code snapshot. D-1 local verification and D-2 owner disposition remain pending; Phase 5 entry gates are not yet all satisfied.
+Status: **ACCEPTED WITH NON-BLOCKING FOLLOW-UP** — independent inspection PASS is recorded for the D-008 integration snapshot and PR #8 local verification. D-1 is applied and independently verified. The owner accepted D-2 as a non-blocking follow-up; ACLs remain unchanged. Phase 5 entry gates are separately controlled.
 
 ## 1. Why D-008 existed
 
@@ -94,8 +94,8 @@ No independent PASS is claimed for this HEAD.
 
 ### Findings
 
-- **D-1 — PENDING LOCAL VERIFICATION.** The required Windows ReadOnly attributes on the exact `WHEELHOUSE.sha256` and `requirements-hashed.lock` files have not been confirmed applied in the target worktree. No ACL protection is claimed.
-- **D-2 — OWNER DECISION PENDING.** No ACL changes were made and no risk acceptance is inferred. Recommendation: future snapshots should be created under an owner-only root with restrictive inheritance, followed by independent effective-access verification.
+- **D-1 — APPLIED / INDEPENDENTLY VERIFIED.** In the PR #8 verification worktree, the Windows ReadOnly bit was applied to the exact `WHEELHOUSE.sha256` and `requirements-hashed.lock` files. Hashes remained unchanged; write-open was denied. This is an operational attribute, not ACL protection.
+- **D-2 — OWNER ACCEPTED AS NON-BLOCKING FOLLOW-UP (2026-11-23).** The owner explicitly accepts this residual as non-blocking. Existing ACLs must remain unchanged. All future snapshots must be created beneath an Owner-only root/path with restrictive inheritance, followed by independent effective-access verification. No claim is made that current ACL exposure has been remediated.
 - **D-3 — VERIFIED / UNUSED / PRESERVED.** External file `C:\GuardianD008\requirements-hashed.lock` SHA-256: `404f36ed4512d1ac97c4b5d4a64f3bff152b07a3e3754224e734c28670126b8c`. It mismatches the committed lock SHA-256 `ed42dbdc2c65bb1393c1313e9ffdc897badb615d41e41e337ab8109db1b81970`. The external file was not changed or deleted.
 - **D-4 — DISCLOSED / EVIDENCE SUPPLIED.** The Inspector independently recorded the final suite count and builder verification. The earlier Developer-evidence omission remains disclosed; historical evidence was not rewritten.
 
@@ -103,4 +103,14 @@ No independent PASS is claimed for this HEAD.
 
 No trading behavior, source code, dependencies, wheel files, wheel contents, ACLs, or PR #7 were changed by the Inspector or by the reported local administrative inspection. No branch switch, commit, push, merge, deletion or cleanup was performed by that inspection.
 
-D-008 is **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION**, not CLOSED. The PASS applies to the frozen code snapshot above; it does not by itself satisfy every Phase 5 entry gate. D-1 still needs local attribute verification, D-2 needs explicit owner disposition, and Phase 5 redaction/nested-AGENTS entry evidence must be formally closed.
+D-008 is **ACCEPTED WITH A DISCLOSED NON-BLOCKING D-2 FOLLOW-UP**. The owner disposition is recorded; D-1 is independently verified. The PR #8 local verification report for exact head c3b5ca9efe2d8fea9168a712c47d1482f814769e has SHA-256 60cd8d923ae7341a56c7f96526240672f557347d0ed6750b08bfdd25a697b29b and records 377/0/0, compileall, hermetic offline install, clean pip check, wheel verification and 19/19 content checks. No ACL was changed. The residual requires Owner-only roots for future snapshots and remains disclosed; it is not a claim of ACL remediation. Phase 5 entry gates remain separate and must still be formally closed.
+
+
+## 7. Owner disposition and PR #8 local verification (2026-11-23)
+
+- **D-2 owner decision:** accepted as a **non-blocking follow-up**. Existing ACLs remain unchanged; no ACL change is authorized or claimed.
+- **Future snapshots:** must be created under an Owner-only root/path with restrictive inheritance, then independently checked for effective access.
+- **D-1:** the exact WHEELHOUSE.sha256 and requirements-hashed.lock files received the Windows ReadOnly attribute in the PR #8 verification worktree. Their hashes were unchanged, write-open was denied, and the independent Inspector verified the preserved copy. This is not ACL protection.
+- **PR #8 exact head:** c3b5ca9efe2d8fea9168a712c47d1482f814769e.
+- **Local verification report:** pr8-verification-report-20261123T1550Z.md; SHA-256 60cd8d923ae7341a56c7f96526240672f557347d0ed6750b08bfdd25a697b29b. The report records 377/0/0 tests, compileall, hermetic offline install, clean pip check, wheel verification and 19/19 content checks.
+- **Administrative disposition:** D-008 is accepted with the D-2 residual disclosed as non-blocking. D-3 remains unused/preserved and D-4 remains disclosed. Phase 5 formal entry gates remain separate; this addendum does not authorize trading, merge PR #8, or change ACLs.

@@ -473,3 +473,12 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - Both mirrored logs are byte-identical; SHA-256 each `3ead974ca6109d9754e3c3fe3195f801fb60950036c475d0fc3534abdc2c474a`.
 - D-1 remains pending local Windows ReadOnly verification (not ACL protection); D-2 remains an owner decision (no ACL change/risk acceptance); D-3 is verified mismatched, UNUSED and preserved (external SHA `404f36ed4512d1ac97c4b5d4a64f3bff152b07a3e3754224e734c28670126b8c`, committed lock SHA `ed42dbdc2c65bb1393c1313e9ffdc897badb615d41e41e337ab8109db1b81970`); D-4 omission is disclosed and Inspector evidence supplies final results.
 - Status: **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION**, not CLOSED. Phase 5 entry remains blocked until the outstanding administrative and formal Phase 5 entry gates are evidenced.
+
+
+## D-008 — Owner disposition for D-2 and local verification record (2026-11-23)
+
+- **Owner decision (explicit):** D-2 is accepted as a **non-blocking follow-up**. The existing ACL configuration must remain unchanged; no ACL modification is authorized by this decision.
+- **Forward control:** all future D-008 or comparable verification snapshots must be created beneath an Owner-only root/path with restrictive inheritance, followed by independent effective-access verification. This is a prospective requirement, not a claim that the current ACL has been repaired.
+- **D-1:** Windows ReadOnly attributes are **APPLIED / INDEPENDENTLY VERIFIED** on the exact WHEELHOUSE.sha256 and requirements-hashed.lock files in the PR #8 verification worktree. Their hashes remained unchanged and write-open was denied. ReadOnly is an operational guard, not an ACL boundary.
+- **PR #8 verification:** exact inspected head c3b5ca9efe2d8fea9168a712c47d1482f814769e; local verification report pr8-verification-report-20261123T1550Z.md, SHA-256 60cd8d923ae7341a56c7f96526240672f557347d0ed6750b08bfdd25a697b29b. Reported checks: 377/0/0 tests, compileall, hermetic offline install, clean pip check, wheel verification, and 19/19 PR content checks.
+- **Disposition:** D-008 is accepted with the disclosed non-blocking D-2 follow-up. No ACL was changed; D-3 remains unused/preserved; D-4 remains disclosed. Phase 5 entry remains subject to its own formal gate closure. This record does not authorize DEMO or LIVE trading, merge PR #8, or alter any other approval.
