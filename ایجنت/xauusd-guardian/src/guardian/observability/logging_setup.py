@@ -17,7 +17,12 @@ REDACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 SENSITIVE_ACCOUNT_FIELDS = frozenset(
-    {"balance", "equity", "margin", "margin_free", "margin_level", "profit", "credit"}
+    {
+        "balance", "equity", "margin", "margin_free", "margin_level", "profit", "credit",
+        "login", "login_id", "account", "account_id", "account_number",
+        "password", "passwd", "pwd", "token", "secret", "api_key", "apikey",
+        "authorization", "bearer",
+    }
 )
 
 
@@ -46,7 +51,7 @@ class RedactingJsonFormatter(logging.Formatter):
             "message": message,
         }
         if record.__dict__.get("run_id"):
-            payload["run_id"] = record.__dict__["run_id"]
+            payload["run_id"] = redact(str(record.__dict__["run_id"]))
         return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
 
@@ -63,13 +68,17 @@ def setup_logging(level: str = "INFO", *, stream: Any = None) -> logging.Logger:
 
 
 def _scrub_value(value: Any) -> Any:
-    """Recursively scrub nested mappings and list/tuple containers."""
+    """Recursively scrub nested mappings, containers and embedded text."""
     if isinstance(value, dict):
         cleaned: dict[Any, Any] = {}
         for key, nested in value.items():
             if isinstance(key, str):
-                field = key.casefold()
-                if field in SENSITIVE_ACCOUNT_FIELDS or field.startswith("margin"):
+                field = key.casefold().replace("-", "_")
+                credential_field = any(
+                    marker in field
+                    for marker in ("token", "secret", "password", "passwd", "api_key", "apikey", "authorization", "bearer")
+                )
+                if field in SENSITIVE_ACCOUNT_FIELDS or field.startswith("margin") or credential_field:
                     continue
             cleaned[key] = _scrub_value(nested)
         return cleaned
@@ -77,6 +86,8 @@ def _scrub_value(value: Any) -> Any:
         return [_scrub_value(item) for item in value]
     if isinstance(value, tuple):
         return tuple(_scrub_value(item) for item in value)
+    if isinstance(value, str):
+        return redact(value)
     return value
 
 
