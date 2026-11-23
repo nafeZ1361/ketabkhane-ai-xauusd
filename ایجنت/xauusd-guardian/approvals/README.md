@@ -25,4 +25,5 @@ A local hash chain is **not** a cryptographic human signature and does not authe
 | A-02 | venv + pinned dependencies | 1 | GRANTED |
 | A-03 | local git repository | 1 | GRANTED |
 | A-04 | read balance/equity | 4 | NOT REQUESTED |
-| A-05 | DEMO order checks / execution | 5 / 11 | NOT REQUESTED |
+| A-05 | Phase 5/11 DEMO order checks | 5 / 11 | NOT GRANTED (historical gate unchanged) |
+| A-09 | One-time autonomous Phase 12 DEMO validation | 12 | GRANTED — conditional on Phase 11 independent PASS; single use |
