@@ -463,3 +463,13 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - **Non-authorization:** no Phase 5–11 order activity, no LIVE mode, no per-trade risk escalation, no credentials in logs, and no execution before all entry gates pass.
 - **Plan:** `PHASE12_DEMO_EXECUTION_PLAN.md` is the controlling protocol. Its status remains BLOCKED until every prerequisite is accepted.
 - **A-05 relationship:** A-09 supersedes the A-05 requirement solely for the single post-completion Phase 12 test after Phase 11 independent PASS. A-05 remains NOT GRANTED; no order activity is authorized in Phases 5–11.
+
+## D-008 final independent inspection addendum (2026-11-23)
+
+- Exact inspected code snapshot: `integration/d008-offline-closure-20261122` / `cc106b557586e3e4cd867897c642ae7dc7d3fd16`.
+- Independent Inspector verdict: **PASS**; external report SHA-256 `029d9e9546514b4c058786c950abb542ef117a1361ae8fbe4f5318714b17079c`.
+- Inspector reproduced the 140-file snapshot manifest (`912dbd85…0626`) with zero differences; wheel closure 8/8, builder verification exit 0, hermetic offline install exit 0, `pip check` clean, suite **374/0/0**, `compileall` exit 0.
+- External evidence: primary `97d43f1b…1cec`; JUnit `7f6ccb45…d6c6`; builder `6af40108…e3f0`; offline install `1517a57a…529a`.
+- Both mirrored logs are byte-identical; SHA-256 each `3ead974ca6109d9754e3c3fe3195f801fb60950036c475d0fc3534abdc2c474a`.
+- D-1 remains pending local Windows ReadOnly verification (not ACL protection); D-2 remains an owner decision (no ACL change/risk acceptance); D-3 is verified mismatched, UNUSED and preserved (external SHA `404f36ed4512d1ac97c4b5d4a64f3bff152b07a3e3754224e734c28670126b8c`, committed lock SHA `ed42dbdc2c65bb1393c1313e9ffdc897badb615d41e41e337ab8109db1b81970`); D-4 omission is disclosed and Inspector evidence supplies final results.
+- Status: **ACCEPTED_CLOSURE_PENDING_OWNER_DECISION**, not CLOSED. Phase 5 entry remains blocked until the outstanding administrative and formal Phase 5 entry gates are evidenced.
