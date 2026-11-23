@@ -462,4 +462,4 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - **Supersession:** this decision supersedes D-029 only to the extent that D-029 deferred the post-completion DEMO validation to an owner-operated run. The validation may instead be operated autonomously by Guardian under A-09. D-029's engineering sequence, independent inspection rules and prohibition on LIVE trading remain unchanged.
 - **Non-authorization:** no Phase 5–11 order activity, no LIVE mode, no per-trade risk escalation, no credentials in logs, and no execution before all entry gates pass.
 - **Plan:** `PHASE12_DEMO_EXECUTION_PLAN.md` is the controlling protocol. Its status remains BLOCKED until every prerequisite is accepted.
-
+- **A-05 relationship:** A-09 supersedes the A-05 requirement solely for the single post-completion Phase 12 test after Phase 11 independent PASS. A-05 remains NOT GRANTED; no order activity is authorized in Phases 5–11.
