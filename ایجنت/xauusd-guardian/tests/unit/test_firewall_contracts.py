@@ -133,3 +133,101 @@ def test_direct_contract_rejects_non_utc_and_non_mapping_payload():
             issued_at_utc=T,
             payload={"x": object()},
         )
+
+
+@pytest.mark.parametrize("version", [True, 1.0, "1", 0, 2])
+def test_direct_request_constructor_rejects_non_exact_schema_version(version):
+    with pytest.raises(FirewallContractError):
+        FirewallRequest("req", "TEST", T, {}, schema_version=version)
+
+
+@pytest.mark.parametrize("version", [True, 1.0, "1", 0, 2])
+def test_direct_response_constructor_rejects_non_exact_schema_version(version):
+    with pytest.raises(FirewallContractError):
+        FirewallResponse("req", "REJECTED", "NO_AUTH", T, schema_version=version)
+
+
+class PermissiveProtocol:
+    def __eq__(self, other):
+        return True
+
+    def __ne__(self, other):
+        return False
+
+
+@pytest.mark.parametrize("contract", ["request", "response"])
+def test_direct_constructor_rejects_non_string_protocol(contract):
+    with pytest.raises(FirewallContractError):
+        if contract == "request":
+            FirewallRequest("req", "TEST", T, {}, protocol=PermissiveProtocol())
+        else:
+            FirewallResponse("req", "REJECTED", "NO_AUTH", T, protocol=PermissiveProtocol())
+
+
+def test_direct_request_constructor_rejects_non_mapping_payload():
+    with pytest.raises(FirewallContractError):
+        FirewallRequest("req", "TEST", T, [])
+
+
+def test_payload_is_deeply_immutable_and_detached_from_input():
+    source = {"nested": {"items": [1, {"ok": True}]}}
+    request = FirewallRequest("req", "TEST", T, source)
+
+    source["nested"]["items"][1]["ok"] = False
+    assert request.to_dict()["payload"]["nested"]["items"][1]["ok"] is True
+
+    with pytest.raises(TypeError):
+        request.payload["new"] = "value"
+    with pytest.raises(TypeError):
+        request.payload["nested"]["new"] = "value"
+    with pytest.raises(AttributeError):
+        request.payload["nested"]["items"].append(2)
+
+
+def test_to_dict_returns_independent_nested_payload_copy():
+    request = FirewallRequest(
+        "req", "TEST", T, {"nested": {"items": [1, {"ok": True}]}}
+    )
+    exported = request.to_dict()
+    exported["payload"]["nested"]["items"][1]["ok"] = False
+    exported["payload"]["nested"]["items"].append("changed")
+
+    assert request.to_dict()["payload"] == {
+        "nested": {"items": [1, {"ok": True}]}
+    }
+
+
+def test_to_dict_revalidates_payload_after_low_level_object_injection():
+    request = FirewallRequest("req", "TEST", T, {"safe": True})
+    object.__setattr__(request, "payload", {"injected": object()})
+
+    with pytest.raises(FirewallContractError):
+        request.to_dict()
+
+
+def test_payload_nesting_limit_fails_with_contract_error():
+    payload = {}
+    cursor = payload
+    for _ in range(65):
+        child = {}
+        cursor["nested"] = child
+        cursor = child
+
+    with pytest.raises(FirewallContractError, match="maximum JSON nesting depth"):
+        FirewallRequest("req", "TEST", T, payload)
+
+
+def test_cyclic_payload_fails_with_contract_error_not_recursion_error():
+    payload = {}
+    payload["self"] = payload
+
+    with pytest.raises(FirewallContractError, match="maximum JSON nesting depth"):
+        FirewallRequest("req", "TEST", T, payload)
+
+
+def test_payload_exact_json_types_reject_container_subclasses():
+    class StrangeList(list):
+        pass
+
+    with pytest.raises(FirewallContractError):
+        FirewallRequest("req", "TEST", T, {"items": StrangeList([1])})
