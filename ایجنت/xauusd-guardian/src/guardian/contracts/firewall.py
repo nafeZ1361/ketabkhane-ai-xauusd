@@ -7,7 +7,7 @@ no MT5 access, no authorization, and no order construction.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import MappingProxyType
 from typing import Any, Mapping, TypeAlias
 
@@ -23,8 +23,23 @@ class FirewallContractError(ValueError):
     """Raised when a firewall contract is malformed or unsafe."""
 
 
-def _require_exact_keys(data: Mapping[str, Any], expected: set[str]) -> None:
-    actual = set(data)
+def _copy_mapping(name: str, value: Any) -> dict[Any, Any]:
+    if not isinstance(value, Mapping):
+        raise FirewallContractError(f"{name} must be a mapping")
+    try:
+        return dict(value)
+    except Exception as exc:
+        raise FirewallContractError(f"{name} cannot be read safely") from exc
+
+
+def _require_exact_keys(data: Mapping[Any, Any], expected: set[str]) -> None:
+    try:
+        keys = tuple(data.keys())
+    except Exception as exc:
+        raise FirewallContractError("contract fields cannot be read safely") from exc
+    if any(type(key) is not str for key in keys):
+        raise FirewallContractError("contract field names must be strings")
+    actual = set(keys)
     missing = expected - actual
     unknown = actual - expected
     if missing:
@@ -51,15 +66,20 @@ def _require_utc_datetime(name: str, value: Any) -> datetime:
     if type(value) is not datetime:
         raise FirewallContractError(f"{name} must be a datetime")
     try:
-        if value.tzinfo is None or value.utcoffset() is None:
+        if value.tzinfo is None:
             raise FirewallContractError(f"{name} must be timezone-aware")
-        if value.utcoffset() != timezone.utc.utcoffset(value):
+        # Read an untrusted tzinfo exactly once, then discard it. A mutable tzinfo
+        # must not change the timestamp between validation and serialization.
+        offset = value.utcoffset()
+        if type(offset) is not timedelta:
+            raise FirewallContractError(f"{name} must have a valid UTC offset")
+        if offset != timedelta(0):
             raise FirewallContractError(f"{name} must use UTC")
+        return value.replace(tzinfo=timezone.utc)
     except FirewallContractError:
         raise
     except Exception as exc:
         raise FirewallContractError(f"{name} has invalid timezone data") from exc
-    return value
 
 
 def _serialize_utc_datetime(name: str, value: Any) -> str:
@@ -121,15 +141,16 @@ def _thaw_json(value: Any) -> JsonValue:
 
 
 def _validated_payload(payload: Any) -> Mapping[str, Any]:
-    if not isinstance(payload, Mapping):
-        raise FirewallContractError("payload must be a mapping")
     try:
-        validated = _validate_json(dict(payload))
-    except RecursionError as exc:
-        raise FirewallContractError("payload exceeds safe nesting depth") from exc
-    if type(validated) is not dict:
-        raise FirewallContractError("payload must be a JSON object")
-    return _freeze_json(validated)
+        copied = _copy_mapping("payload", payload)
+        validated = _validate_json(copied)
+        if type(validated) is not dict:
+            raise FirewallContractError("payload must be a JSON object")
+        return _freeze_json(validated)
+    except FirewallContractError:
+        raise
+    except Exception as exc:
+        raise FirewallContractError("payload cannot be validated safely") from exc
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,7 +171,8 @@ class FirewallRequest:
         _require_schema_protocol(self.schema_version, self.protocol)
         _require_nonempty_str("request_id", self.request_id)
         _require_nonempty_str("message_type", self.message_type)
-        _require_utc_datetime("issued_at_utc", self.issued_at_utc)
+        issued_at_utc = _require_utc_datetime("issued_at_utc", self.issued_at_utc)
+        object.__setattr__(self, "issued_at_utc", issued_at_utc)
         object.__setattr__(self, "payload", _validated_payload(self.payload))
 
     def to_dict(self) -> dict[str, JsonValue]:
@@ -179,8 +201,7 @@ class FirewallRequest:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "FirewallRequest":
-        if not isinstance(data, Mapping):
-            raise FirewallContractError("request must be a mapping")
+        data = _copy_mapping("request", data)
         expected = {
             "schema_version",
             "protocol",
@@ -194,11 +215,11 @@ class FirewallRequest:
         request_id = _require_nonempty_str("request_id", data["request_id"])
         message_type = _require_nonempty_str("message_type", data["message_type"])
         issued = data["issued_at_utc"]
-        if not isinstance(issued, str):
+        if type(issued) is not str:
             raise FirewallContractError("issued_at_utc must be an ISO-8601 string")
         try:
             parsed = datetime.fromisoformat(issued.replace("Z", "+00:00"))
-        except ValueError as exc:
+        except (ValueError, OverflowError) as exc:
             raise FirewallContractError("invalid issued_at_utc") from exc
         return cls(
             request_id=request_id,
@@ -229,7 +250,10 @@ class FirewallResponse:
             ("reason_code", self.reason_code),
         ):
             _require_nonempty_str(name, value)
-        _require_utc_datetime("responded_at_utc", self.responded_at_utc)
+        responded_at_utc = _require_utc_datetime(
+            "responded_at_utc", self.responded_at_utc
+        )
+        object.__setattr__(self, "responded_at_utc", responded_at_utc)
 
     def to_dict(self) -> dict[str, JsonValue]:
         try:
@@ -255,8 +279,7 @@ class FirewallResponse:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "FirewallResponse":
-        if not isinstance(data, Mapping):
-            raise FirewallContractError("response must be a mapping")
+        data = _copy_mapping("response", data)
         expected = {
             "schema_version",
             "protocol",
@@ -275,12 +298,12 @@ class FirewallResponse:
             "schema_version": data["schema_version"],
         }
         timestamp = data["responded_at_utc"]
-        if not isinstance(timestamp, str):
+        if type(timestamp) is not str:
             raise FirewallContractError("responded_at_utc must be an ISO-8601 string")
         try:
             values["responded_at_utc"] = datetime.fromisoformat(
                 timestamp.replace("Z", "+00:00")
             )
-        except ValueError as exc:
+        except (ValueError, OverflowError) as exc:
             raise FirewallContractError("invalid responded_at_utc") from exc
         return cls(**values)

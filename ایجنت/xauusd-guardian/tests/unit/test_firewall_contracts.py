@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from collections.abc import Mapping
+from datetime import datetime, timedelta, timezone, tzinfo
 
 import pytest
 
@@ -274,3 +275,104 @@ def test_response_to_dict_revalidates_every_field_after_low_level_injection(fiel
 
     with pytest.raises(FirewallContractError):
         response.to_dict()
+
+
+class ExplodingMapping(Mapping):
+    """Mapping whose read operations fail with a non-contract exception."""
+
+    def __getitem__(self, key):
+        raise RuntimeError("hostile mapping access")
+
+    def __iter__(self):
+        return iter(("payload",))
+
+    def __len__(self):
+        return 1
+
+
+class OffsetChangesAfterValidation(tzinfo):
+    """Return UTC during validation, then attempt to change the serialized offset."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def utcoffset(self, dt):
+        self.calls += 1
+        return timedelta(0) if self.calls <= 4 else timedelta(hours=1)
+
+    def dst(self, dt):
+        return timedelta(0)
+
+
+def test_request_freezes_untrusted_timezone_before_serialization():
+    changing_tz = OffsetChangesAfterValidation()
+    request = FirewallRequest(
+        "req", "TEST", datetime(2026, 11, 24, 12, 0, tzinfo=changing_tz), {}
+    )
+
+    assert changing_tz.calls == 1
+    assert request.issued_at_utc.tzinfo is timezone.utc
+    assert request.to_dict()["issued_at_utc"] == "2026-11-24T12:00:00Z"
+    assert changing_tz.calls == 1
+
+
+def test_response_freezes_untrusted_timezone_before_serialization():
+    changing_tz = OffsetChangesAfterValidation()
+    response = FirewallResponse(
+        "req", "REJECTED", "NO_AUTH",
+        datetime(2026, 11, 24, 12, 0, tzinfo=changing_tz),
+    )
+
+    assert changing_tz.calls == 1
+    assert response.responded_at_utc.tzinfo is timezone.utc
+    assert response.to_dict()["responded_at_utc"] == "2026-11-24T12:00:00Z"
+    assert changing_tz.calls == 1
+
+
+def test_request_constructor_wraps_hostile_payload_mapping_exception():
+    with pytest.raises(FirewallContractError, match="cannot be read safely"):
+        FirewallRequest("req", "TEST", T, ExplodingMapping())
+
+
+@pytest.mark.parametrize("contract", ["request", "response"])
+def test_from_dict_wraps_hostile_top_level_mapping_exception(contract):
+    with pytest.raises(FirewallContractError, match="cannot be read safely"):
+        if contract == "request":
+            FirewallRequest.from_dict(ExplodingMapping())
+        else:
+            FirewallResponse.from_dict(ExplodingMapping())
+
+
+def test_request_rejects_non_string_field_names_before_sorting():
+    data = valid_request()
+    data["unexpected"] = "value"
+    data[1] = "non-string key"
+
+    with pytest.raises(FirewallContractError, match="field names must be strings"):
+        FirewallRequest.from_dict(data)
+
+
+def test_to_dict_wraps_hostile_payload_mapping_after_low_level_injection():
+    request = FirewallRequest("req", "TEST", T, {"safe": True})
+    object.__setattr__(request, "payload", ExplodingMapping())
+
+    with pytest.raises(FirewallContractError):
+        request.to_dict()
+
+
+def test_serialization_revalidates_and_freezes_injected_changing_timezone():
+    changing_tz = OffsetChangesAfterValidation()
+    request = FirewallRequest("req", "TEST", T, {})
+    injected = datetime(2026, 11, 24, 12, 0, tzinfo=changing_tz)
+    object.__setattr__(request, "issued_at_utc", injected)
+
+    assert request.to_dict()["issued_at_utc"] == "2026-11-24T12:00:00Z"
+    assert changing_tz.calls == 1
+
+    changing_tz = OffsetChangesAfterValidation()
+    response = FirewallResponse("req", "REJECTED", "NO_AUTH", T)
+    injected = datetime(2026, 11, 24, 12, 0, tzinfo=changing_tz)
+    object.__setattr__(response, "responded_at_utc", injected)
+
+    assert response.to_dict()["responded_at_utc"] == "2026-11-24T12:00:00Z"
+    assert changing_tz.calls == 1
