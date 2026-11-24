@@ -231,3 +231,46 @@ def test_payload_exact_json_types_reject_container_subclasses():
 
     with pytest.raises(FirewallContractError):
         FirewallRequest("req", "TEST", T, {"items": StrangeList([1])})
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("schema_version", True),
+        ("schema_version", 1.0),
+        ("schema_version", 2),
+        ("protocol", PermissiveProtocol()),
+        ("request_id", ""),
+        ("message_type", ""),
+        ("issued_at_utc", object()),
+        ("issued_at_utc", datetime(2026, 11, 24, 12, 0)),
+    ],
+)
+def test_request_to_dict_revalidates_every_field_after_low_level_injection(field, value):
+    request = FirewallRequest("req", "TEST", T, {"safe": True})
+    object.__setattr__(request, field, value)
+
+    with pytest.raises(FirewallContractError):
+        request.to_dict()
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("schema_version", True),
+        ("schema_version", 1.0),
+        ("schema_version", 2),
+        ("protocol", PermissiveProtocol()),
+        ("request_id", ""),
+        ("status", ""),
+        ("reason_code", ""),
+        ("responded_at_utc", object()),
+        ("responded_at_utc", datetime(2026, 11, 24, 12, 0)),
+    ],
+)
+def test_response_to_dict_revalidates_every_field_after_low_level_injection(field, value):
+    response = FirewallResponse("req", "REJECTED", "NO_AUTH", T)
+    object.__setattr__(response, field, value)
+
+    with pytest.raises(FirewallContractError):
+        response.to_dict()
