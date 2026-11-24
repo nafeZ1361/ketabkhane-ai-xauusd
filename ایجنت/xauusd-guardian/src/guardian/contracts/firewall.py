@@ -48,6 +48,19 @@ def _require_exact_keys(data: Mapping[Any, Any], expected: set[str]) -> None:
         raise FirewallContractError(f"unknown fields: {sorted(unknown)}")
 
 
+def _parse_utc_datetime(name: str, value: Any) -> datetime:
+    if type(value) is not str:
+        raise FirewallContractError(f"{name} must be an ISO-8601 string")
+    # datetime.fromisoformat accepts any one-character separator; the contract
+    # intentionally permits only the ISO date/time designator (T or t).
+    if len(value) < 20 or value[10] not in ("T", "t"):
+        raise FirewallContractError(f"{name} must use ISO-8601 date-time syntax")
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, OverflowError) as exc:
+        raise FirewallContractError(f"invalid {name}") from exc
+
+
 def _require_nonempty_str(name: str, value: Any) -> str:
     if type(value) is not str or not value.strip():
         raise FirewallContractError(f"{name} must be a non-empty string")
@@ -214,13 +227,7 @@ class FirewallRequest:
         _require_schema_protocol(data["schema_version"], data["protocol"])
         request_id = _require_nonempty_str("request_id", data["request_id"])
         message_type = _require_nonempty_str("message_type", data["message_type"])
-        issued = data["issued_at_utc"]
-        if type(issued) is not str:
-            raise FirewallContractError("issued_at_utc must be an ISO-8601 string")
-        try:
-            parsed = datetime.fromisoformat(issued.replace("Z", "+00:00"))
-        except (ValueError, OverflowError) as exc:
-            raise FirewallContractError("invalid issued_at_utc") from exc
+        parsed = _parse_utc_datetime("issued_at_utc", data["issued_at_utc"])
         return cls(
             request_id=request_id,
             message_type=message_type,
@@ -297,13 +304,7 @@ class FirewallResponse:
             "protocol": data["protocol"],
             "schema_version": data["schema_version"],
         }
-        timestamp = data["responded_at_utc"]
-        if type(timestamp) is not str:
-            raise FirewallContractError("responded_at_utc must be an ISO-8601 string")
-        try:
-            values["responded_at_utc"] = datetime.fromisoformat(
-                timestamp.replace("Z", "+00:00")
-            )
-        except (ValueError, OverflowError) as exc:
-            raise FirewallContractError("invalid responded_at_utc") from exc
+        values["responded_at_utc"] = _parse_utc_datetime(
+            "responded_at_utc", data["responded_at_utc"]
+        )
         return cls(**values)

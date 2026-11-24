@@ -376,3 +376,33 @@ def test_serialization_revalidates_and_freezes_injected_changing_timezone():
 
     assert response.to_dict()["responded_at_utc"] == "2026-11-24T12:00:00Z"
     assert changing_tz.calls == 1
+
+
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "2026-11-24X12:00:00Z",
+        "2026-11-24 12:00:00Z",
+    ],
+)
+def test_request_parser_rejects_non_iso_datetime_separators(timestamp):
+    data = valid_request()
+    data["issued_at_utc"] = timestamp
+
+    with pytest.raises(FirewallContractError, match="ISO-8601"):
+        FirewallRequest.from_dict(data)
+
+
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "2026-11-24X12:00:01Z",
+        "2026-11-24 12:00:01Z",
+    ],
+)
+def test_response_parser_rejects_non_iso_datetime_separators(timestamp):
+    data = valid_response()
+    data["responded_at_utc"] = timestamp
+
+    with pytest.raises(FirewallContractError, match="ISO-8601"):
+        FirewallResponse.from_dict(data)
