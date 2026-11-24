@@ -147,7 +147,7 @@ class FirewallRequest:
             "request_id": self.request_id,
             "message_type": self.message_type,
             "issued_at_utc": self.issued_at_utc.isoformat().replace("+00:00", "Z"),
-            "payload": _thaw_json(self.payload),
+            "payload": _thaw_json(_validated_payload(self.payload)),
         }
 
     @classmethod
