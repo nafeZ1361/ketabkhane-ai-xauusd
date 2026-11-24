@@ -50,3 +50,13 @@ Unauthorized and malformed requests; unknown fields/versions; replayed, duplicat
 
 ## Deferred / out of scope
 Phase 6–11 detailed criteria are not invented here and require their own pre-registered plans. PHASE2-CLOCK-RECHECK-1 and D-019 remain separately tracked. No live execution test is part of project completion.
+
+## F1 external Inspector evidence intake (2026-11-24)
+
+An owner-supplied report body states `PASS` for inspection ID `PHASE5-F1-INSPECTION-e48729c` on target commit `e48729cbd92df86b63d3941d67fdcb8635210bf9`. The report's declared SHA-256 is `f8b8ae53f70b1112fa36d5b2c822ffcd433ad0d86ee105891b3485e2d2d29854`.
+
+The evidence intake is registered at `evidence/external-inspector/PHASE5-F1-INSPECTION-e48729c-REGISTRATION.md`. This is a transcription/registration of information supplied in chat, **not the original report file**. Original report bytes and detached sidecar were unavailable; therefore the declared digest has not been recomputed. Raw `review-result.json`, pytest logs, compileall log, harness output and manifest files were not available for independent verification. Inspector identity and snapshot immutability are recorded as report claims, not re-executed by this registration.
+
+GitHub Actions on the claimed exact target were checked: PR workflow runs `45452649612` and `45452649554` both report SUCCESS. These runs corroborate CI status only and do not authenticate the external Inspector report.
+
+**Disposition:** F1 remains **INDEPENDENT ACCEPTANCE PENDING / 0 of 10** until an independent Inspector reviews this registration and determines whether the evidence-integrity limitations satisfy the acceptance policy. F2-F8 remain NOT STARTED; Phase 5 remains 0/100. No acceptance criteria are waived.
