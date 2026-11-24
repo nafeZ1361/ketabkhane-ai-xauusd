@@ -1,6 +1,6 @@
 # PHASE 5 — FIREWALL
 
-Status: **PRE-REGISTERED / BLOCKED ON D-008** (2026-11-21)
+Status: **PRE-REGISTERED / ENTRY READY — ALL FIVE ENTRY GATES INDEPENDENTLY VERIFIED** (2026-11-23)
 Decision: D-028. Weights are frozen before implementation.
 
 ## Mission
@@ -29,7 +29,9 @@ Completion is weighted accepted work / 100. A gate earns weight only after indep
 4. Redaction cannot be disabled by API or config; negative tests cover both paths.
 5. Scope and authority of nested AGENTS.md files are unambiguous.
 
-Until every entry gate is proven, Phase 5 implementation gates F1–F8 remain NOT STARTED. No workaround or inherited system package may be treated as closing D-008.
+> Gate 2 status (2026-11-23): AP-7 independent PASS recorded (report `47a9e1f6...`); hermetic Python 3.11.8, pinned hashes, offline install, 377/0/0 and compileall are verified. Current D-008 preflight evidence (`preflight-20261123T194424Z.json`, SHA-256 `1d80668eeb25b3c9e08c55c87391eb2e3e6707ec82a9141f3e0ac066d50a72bc`) passed 9/9 checks. Independent GuardianInspector review returned PASS (`REVIEW-REPORT.md`, SHA-256 `ced929a1...b9f2`; result `fa07fc49...5d5d`). Gate 2 is MET.
+
+All five Phase 5 entry gates are now independently verified. Phase 5 implementation gates F1–F8 remain NOT STARTED and earn zero completion weight until each is implemented, tested and independently accepted. No workaround or inherited system package may be treated as closing D-008.
 
 ## Security and scope constraints
 - DEMO remains disabled; A-05 is absent. Activation requires A-05 plus separate explicit owner authorization.
@@ -48,3 +50,13 @@ Unauthorized and malformed requests; unknown fields/versions; replayed, duplicat
 
 ## Deferred / out of scope
 Phase 6–11 detailed criteria are not invented here and require their own pre-registered plans. PHASE2-CLOCK-RECHECK-1 and D-019 remain separately tracked. No live execution test is part of project completion.
+
+## F1 external Inspector evidence intake (2026-11-24)
+
+An owner-supplied report body states `PASS` for inspection ID `PHASE5-F1-INSPECTION-e48729c` on target commit `e48729cbd92df86b63d3941d67fdcb8635210bf9`. The report's declared SHA-256 is `f8b8ae53f70b1112fa36d5b2c822ffcd433ad0d86ee105891b3485e2d2d29854`.
+
+The evidence intake is registered at `evidence/external-inspector/PHASE5-F1-INSPECTION-e48729c-REGISTRATION.md`. This is a transcription/registration of information supplied in chat, **not the original report file**. Original report bytes and detached sidecar were unavailable; therefore the declared digest has not been recomputed. Raw `review-result.json`, pytest logs, compileall log, harness output and manifest files were not available for independent verification. Inspector identity and snapshot immutability are recorded as report claims, not re-executed by this registration.
+
+GitHub Actions on the claimed exact target were checked: PR workflow runs `45452649612` and `45452649554` both report SUCCESS. These runs corroborate CI status only and do not authenticate the external Inspector report.
+
+**Disposition:** F1 remains **INDEPENDENT ACCEPTANCE PENDING / 0 of 10** until an independent Inspector reviews this registration and determines whether the evidence-integrity limitations satisfy the acceptance policy. F2-F8 remain NOT STARTED; Phase 5 remains 0/100. No acceptance criteria are waived.

@@ -1,0 +1,62 @@
+PHASE5_F1_DEVELOPER_REMEDIATION_ROUND2
+Generated: 2026-11-24T17:47Z (GitHub Actions run timestamps)
+Repository: nafeZ1361/ketabkhane-ai-xauusd
+Branch: work/guardian-phase5-entry-20261123
+Code HEAD: b546d402b3768ce7901723e4c2238ac21506e802
+Parent: 4dbd827ed30b2e23cba8bb121729a67f24643301
+
+Changed source/test paths:
+  ایجنت/xauusd-guardian/src/guardian/contracts/firewall.py
+  ایجنت/xauusd-guardian/tests/unit/test_firewall_contracts.py
+
+F1 findings closed:
+  F1-A / mutable timezone:
+    Read an untrusted tzinfo.utcoffset() once; require exact timedelta(0);
+    replace the original tzinfo with datetime.timezone.utc on Request and Response
+    construction. Serialization revalidates and snapshots injected datetime state
+    before formatting. Regression tests cover a tzinfo that changes its answer later.
+  F1-B / arbitrary Mapping:
+    Copy top-level request/response and payload Mapping values through guarded
+    materialization. Raw mapping exceptions become FirewallContractError.
+  F1-C / non-string field keys:
+    Reject non-exact-str top-level keys before set/sort operations; avoids raw
+    TypeError when unknown keys have mixed types.
+  F1-D / timestamp type:
+    Require exact built-in str for timestamp inputs and convert parser errors
+    to FirewallContractError.
+  F1-E / permissive fromisoformat separator:
+    datetime.fromisoformat accepts any one-character separator (including X).
+    New _parse_utc_datetime requires extended ISO date-time syntax with T/t,
+    rejects X and space, and is shared by Request and Response parsers.
+
+GitHub Actions:
+  guardian-ci push run 45452257779; job 138652205237; Python 3.11.9:
+    python -m pytest -q -> 443 dots at 100%; job SUCCESS.
+    python -m compileall -q src scripts tests -> step SUCCESS; job SUCCESS.
+  guardian-ci pull_request run 45452270675; job 138652252079; Python 3.11.9:
+    python -m pytest -q -> 443 dots at 100%; job SUCCESS.
+    python -m compileall -q src scripts tests -> step SUCCESS; job SUCCESS.
+  CI — Test & Evidence Gate run 45452270245:
+    Python 3.10.22 job 138652248655: 120 passed, 0 failed, 0 errors;
+      coverage 95.77%; quality and encoding gates succeeded.
+    Python 3.12.16 job 138652249031: 120 passed, 0 failed, 0 errors;
+      coverage 95.77%; quality and encoding gates succeeded.
+    Evidence artifacts uploaded by both jobs.
+
+Developer-side probes (not substitutes for project tests):
+  - Old repeated tzinfo access could serialize +01:00 after passing UTC checks;
+    one-read snapshot canonicalized to UTC.
+  - dict(hostile_mapping) reproduced RuntimeError; sorting mixed str/int keys
+    reproduced TypeError.
+  - datetime.fromisoformat accepted '2026-11-24X12:00:00Z'; new parser rejects it.
+
+Verification limits:
+  No full test suite was executed inside the owner's local Windows worktree in this turn.
+  GitHub Actions ran the suites on its Windows runners. This is not GuardianInspector review.
+
+Scope:
+  No MT5, order construction/submission, account data, credentials, ACL, dependencies,
+  migrations, DEMO activation, or LIVE trading changes.
+  F1 remains 0/10 accepted points pending fresh independent read-only GuardianInspector
+  PASS on the final frozen commit. F2-F8 remain unstarted. PR #8 remains Draft/unmerged.
+Verdict: DEVELOPER_REMEDIATION_COMPLETE; INDEPENDENT_ACCEPTANCE_PENDING.

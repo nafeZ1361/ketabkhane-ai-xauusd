@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-21 (Phase 5 plan D-028 pre-registered; entry blocked on D-008)
+Last updated: 2026-11-24 (external F1 Inspector report intake registered; integrity limitations disclosed; independent acceptance pending)
 
 ## Phase status
 
@@ -13,13 +13,14 @@ Last updated: 2026-11-21 (Phase 5 plan D-028 pre-registered; entry blocked on D-
 | 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
 | 4 Risk | **ACCEPTED (2026-11-21, D-024)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests. S7 closed by an inspector run under the `GuardianInspector` token (write-denied snapshot; six/six probes DENIED; ACL check 247 objects / 0 problems) on commit `15a210a` (snapshot manifest `e939719f…56ca1`, 124 files; worktree == commit): junit **331 / 0 / 0** (46 migration + 2 pragma + 29 risk cases), `wal`+`synchronous=2`, storage probes green, independent black-box contract probe 31/31 (S1–S5 + cap), syntax gate green. Verdict `PASS` with disclosed residuals (R1/R2 in D-024). See `artifacts/phase4-inspection-20261121T1720Z.md` and `artifacts/inspector-run-20261121T164943/` |
 | 4b Monte Carlo | **ACCEPTED (2026-11-21, D-027; D-026 S11 PASS)** | `MONTE_CARLO.md`; `domain/risk/montecarlo.py` + `scripts/montecarlo.py` + 30 tests; suite **361/0/0**; independent S11 PASS on commit `701a4dd`; snapshot SHA-256 `0eadf45e…`; Inspector evidence SHA-256 `7735b6a5…`; registration: `DECISIONS_LOG.md` D-027. |
-| 5 Firewall | **PRE-REGISTERED / BLOCKED** | D-028; F1–F8 frozen at 100 points in PHASE5_PLAN.md; entry blocked until D-008 is hermetically closed and prerequisite redaction/scope checks are evidenced |
+| 5 Firewall | **ENTRY READY — F1 DEVELOPER REMEDIATION COMPLETE; EXTERNAL INSPECTOR EVIDENCE RECEIVED; ACCEPTANCE PENDING** | D-028; frozen F1-F8 weights remain 100. F1 code/test commit `b546d402b3768ce7901723e4c2238ac21506e802`; final inspected target claimed by owner-supplied external report: `e48729cbd92df86b63d3941d67fdcb8635210bf9`. Evidence intake registered at `evidence/external-inspector/PHASE5-F1-INSPECTION-e48729c-REGISTRATION.md`; declared report SHA-256 `f8b8ae53f70b1112fa36d5b2c822ffcd433ad0d86ee105891b3485e2d2d29854` is recorded but not recomputed because original bytes/sidecar were unavailable. Report claims separate GuardianInspector identity, 66 focused tests, 443 full tests, 102/102 harness PASS, and exact-head CI; raw JSON/logs and inspector identity were not independently re-verified. GitHub exact-head CI runs `45452649612` and `45452649554` verified SUCCESS. F1 remains **0/10 accepted points** pending independent review of this evidence intake and evidence-integrity limitations. F2-F8 remain NOT STARTED; Phase 5 accepted completion remains 0/100. PR #8 remains Draft/unmerged. Residuals unchanged: D-4 OPEN/ADVISORY, D-2 owner-accepted, D-3 preserved/unused, D-019 DEFERRED, PHASE2-CLOCK-RECHECK-1 OPEN. No MT5/order/account/LIVE action. |
 | 6 Backtest | NOT STARTED | |
 | 7 Monitoring | NOT STARTED | |
 | 8 Integration | NOT STARTED | |
 | 9 Independent audit | NOT STARTED | |
 | 10 Remediation | NOT STARTED | |
-| 11 DEMO readiness | NOT STARTED | order submission not authorized |
+| 11 DEMO readiness | PRE-REGISTERED / WAITING FOR PHASE 10 | Readiness only; no order activity in Phase 11. A-09 governs a separate post-acceptance Phase 12 test |
+| 12 DEMO execution validation | **PRE-REGISTERED / BLOCKED** | D-030 / A-09: one 4h30m autonomous DEMO test after Phase 11 independent PASS; A-04 and risk-sizing/account-data gate still unresolved |
 
 ## Approvals held
 
@@ -33,7 +34,8 @@ Last updated: 2026-11-21 (Phase 5 plan D-028 pre-registered; entry blocked on D-
 ## Open approvals
 
 - (none for Phase 2 — A-08 granted; A-04/A-05 below remain closed)- A-04 balance/equity access — NOT REQUESTED (synthetic fixtures only)
-- A-05 DEMO-level order checks / DEMO execution — NOT REQUESTED
+- A-05 DEMO-level order checks / DEMO execution — NOT GRANTED (historical; Phase 12 one-time scope is separately authorized by A-09)
+- A-09 post-completion Phase 12 autonomous DEMO validation — GRANTED, conditional on Phase 11 independent PASS; one use only
 - D-003 symbol policy amendment `spot_metal_usd_v2` — **PENDING**
 
 ## Blockers
@@ -256,3 +258,39 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 | Engineering evidence | Source report records offline install with unreachable index, clean `pip check`, 361 tests passed, and `compileall` exit 0 |
 | Residual | Read-only attribute is not an ACL boundary; wheelhouse binaries are external to Git |
 | Integration status | **CANDIDATE — fresh independent inspection of this integrated snapshot required; no inherited PASS** |
+
+## D-008 independent inspection and administrative follow-ups (2026-11-23)
+
+- Inspected code snapshot: `integration/d008-offline-closure-20261122` at `cc106b557586e3e4cd867897c642ae7dc7d3fd16`.
+- Independent Inspector verdict: **PASS**. Report SHA-256: `029d9e9546514b4c058786c950abb542ef117a1361ae8fbe4f5318714b17079c`.
+- Mirrored agent-log files: byte-identical; both SHA-256 `3ead974ca6109d9754e3c3fe3195f801fb60950036c475d0fc3534abdc2c474a`.
+- D-1: **APPLIED / INDEPENDENTLY VERIFIED** on the PR #8 verification worktree: Windows ReadOnly bit set on WHEELHOUSE.sha256 and requirements-hashed.lock; hashes unchanged and write-open denied. This is an operational attribute only, not ACL protection.
+- D-2: **OWNER ACCEPTED — NON-BLOCKING FOLLOW-UP** (2026-11-23). No ACL modification authorized or performed. Future snapshots must be created under an Owner-only root/path with restrictive inheritance and independently verified effective access.
+- D-3: **VERIFIED / UNUSED / PRESERVED**. External lock SHA-256 `404f36ed4512d1ac97c4b5d4a64f3bff152b07a3e3754224e734c28670126b8c`, mismatching the committed lock SHA-256 `ed42dbdc2c65bb1393c1313e9ffdc897badb615d41e41e337ab8109db1b81970`. It remains unchanged.
+- D-4: Inspector supplied full suite result **374 / 0 / 0** and builder verification evidence; the prior developer omission is disclosed, not hidden.
+- Administrative D-008 status: **ACCEPTED WITH DISCLOSED D-2/D-4 RESIDUALS; AP-7 INDEPENDENT INSPECTION SATISFIED**. AP-7 PASS on exact PR #8 head `177cf62...` (report `47a9e1f6...`; Inspector SID `...-1004`, logon ID `S-1-5-5-0-1350151026`, session 25; 377/0/0; manifest `34ac...` before=after). D-4 remains **OPEN/ADVISORY** and non-blocking; D-2 old-root exposure remains owner-accepted; no ACL remediation is claimed. Phase 5 entry remains subject to the separate formal gates; current preflight evidence is the outstanding gate-2 component.
+- The current work branch received the AP-7 independent inspection on exact head `177cf62...` (PASS; report `47a9e1f6...`). This acceptance record is documentation-only.
+
+## Phase 5 entry remediation on work branch (2026-11-23)
+
+- Work branch: `work/guardian-phase5-entry-20261123`
+- Latest CI-verified commit: `20de160a487247b86e3414108bf064ac113191d8`
+- Redaction fix: `src/guardian/observability/logging_setup.py` now scrubs arbitrarily nested dict/list/tuple values, financial fields (including `margin*`), credential-like keys and embedded strings; formatter redacts structured `run_id` as well as the message.
+- Regression tests added/expanded in `tests/unit/test_logging_redaction.py`; Windows GitHub Actions run `45175590370` completed SUCCESS. Pytest progress: 377/377; compileall step completed successfully.
+- Nested `AGENTS.md` authority/precedence clarified: repository-root baseline applies repository-wide; nested Guardian instructions add stricter subtree rules; stricter rule wins on conflict.
+- **AP-7 acceptance:** independent read-only Inspector PASS on the frozen work-branch snapshot at `177cf62...` (SID `...-1004`; logon ID `S-1-5-5-0-1350151026`; session 25; report `47a9e1f6...`; 377/0/0; manifest `34ac...` before=after). Redaction/config/API/nested-data and AGENTS scope verified. D-4 remains OPEN/ADVISORY. **Phase 5 entry remains BLOCKED on current preflight evidence**; no F1-F8 work started.
+- No MT5 order code, DEMO activation, new dependency, account-field access, or LIVE functionality was added.
+
+
+## AP-7 acceptance and Phase 5 entry evaluation (2026-11-23)
+
+| Gate (PHASE5_PLAN.md) | Status | Evidence |
+|---|---|---|
+| 1. Phase 4/4b acceptance records | **MET** | D-024 report `539a38e7...f51b` and raw evidence `b51fda69...e4f5`/`855f2cb2...5041` verified; D-027 primary `7735b6a5...8c28` and JUnit `91bb5ab6...986a` verified. Records committed; raw artifacts local/gitignored, traced by hash. |
+| 2. D-008 closure (hermetic, hashes, offline, suite, preflight) | **PARTIAL / BLOCKING** | AP-7 verifies Python 3.11.8 hermetic, 8 pinned wheels, offline install, `pip check`, `builder --verify`, **377/0/0**, `compileall`. **Preflight evidence for the current target is absent**; only Phase 2-era preflight JSONs exist. |
+| 3. D-028 owner-approved scope/weights | **MET** | D-028 frozen F1-F8 = 100; plan is `PHASE5_PLAN.md`. |
+| 4. Redaction cannot be disabled; negative tests | **MET** | AP-7 content checks: formatter/API no off-switch, config forced true; redaction tests pass in 377/0/0. |
+| 5. Nested AGENTS scope/authority | **MET** | AP-7 content check passes; nested authority/precedence is explicit. |
+
+- CI at `177cf62...`: runs `45214875542`, `45214875514`, `45214859520` all SUCCESS; check-runs `test`, `test (3.10)`, `test (3.12)`, `test` all success. CI is corroborating; the AP-7 local suite is authoritative.
+**Phase 5 verdict: `PHASE5_ENTRY_BLOCKED`** on missing current preflight evidence. F1-F8 remain NOT STARTED (0/100). No merge, Phase 5 implementation, DEMO activation, order construction/submission or trading.

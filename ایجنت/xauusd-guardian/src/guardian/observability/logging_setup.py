@@ -17,7 +17,12 @@ REDACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 SENSITIVE_ACCOUNT_FIELDS = frozenset(
-    {"balance", "equity", "margin", "margin_free", "margin_level", "profit", "credit"}
+    {
+        "balance", "equity", "margin", "margin_free", "margin_level", "profit", "credit",
+        "login", "login_id", "account", "account_id", "account_number",
+        "password", "passwd", "pwd", "token", "secret", "api_key", "apikey",
+        "authorization", "bearer",
+    }
 )
 
 
@@ -46,7 +51,7 @@ class RedactingJsonFormatter(logging.Formatter):
             "message": message,
         }
         if record.__dict__.get("run_id"):
-            payload["run_id"] = record.__dict__["run_id"]
+            payload["run_id"] = redact(str(record.__dict__["run_id"]))
         return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
 
@@ -62,19 +67,32 @@ def setup_logging(level: str = "INFO", *, stream: Any = None) -> logging.Logger:
     return logger
 
 
+def _scrub_value(value: Any) -> Any:
+    """Recursively scrub nested mappings, containers and embedded text."""
+    if isinstance(value, dict):
+        cleaned: dict[Any, Any] = {}
+        for key, nested in value.items():
+            if isinstance(key, str):
+                field = key.casefold().replace("-", "_")
+                credential_field = any(
+                    marker in field
+                    for marker in ("token", "secret", "password", "passwd", "api_key", "apikey", "authorization", "bearer")
+                )
+                if field in SENSITIVE_ACCOUNT_FIELDS or field.startswith("margin") or credential_field:
+                    continue
+            cleaned[key] = _scrub_value(nested)
+        return cleaned
+    if isinstance(value, list):
+        return [_scrub_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_scrub_value(item) for item in value)
+    if isinstance(value, str):
+        return redact(value)
+    return value
+
+
 def scrub_mapping(data: dict[str, Any]) -> dict[str, Any]:
-    """Recursively drop sensitive account fields from mappings and sequences."""
-    cleaned: dict[str, Any] = {}
-    for key, value in data.items():
-        if key.lower() in SENSITIVE_ACCOUNT_FIELDS:
-            continue
-        if isinstance(value, dict):
-            cleaned[key] = scrub_mapping(value)
-        elif isinstance(value, list):
-            cleaned[key] = [
-                scrub_mapping(item) if isinstance(item, dict) else item
-                for item in value
-            ]
-        else:
-            cleaned[key] = value
-    return cleaned
+    """Recursively drop sensitive account fields from all nested containers."""
+    if not isinstance(data, dict):
+        raise TypeError("data must be a dict")
+    return _scrub_value(data)

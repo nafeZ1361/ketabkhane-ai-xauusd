@@ -67,3 +67,60 @@ def test_logger_does_not_propagate_to_root():
     logger = setup_logging("INFO", stream=io.StringIO())
     assert logger.propagate is False
     assert logging.getLogger("guardian") is logger
+
+def test_scrub_mapping_recurses_through_nested_lists_tuples_margin_and_credentials():
+    cleaned = scrub_mapping({
+        "envelope": [
+            [
+                {
+                    "BALANCE": 1000.0,
+                    "margin_used": 250.0,
+                    "symbol": "XAUUSD.",
+                    "note": "login=99887766",
+                }
+            ],
+            (
+                {
+                    "equity": 900.0,
+                    "margin_initial": 100.0,
+                    "session_token": "top-secret",
+                    "direction": "BUY",
+                },
+            ),
+        ],
+        "trade_mode": "DEMO",
+    })
+    assert cleaned == {
+        "envelope": [
+            [
+                {
+                    "symbol": "XAUUSD.",
+                    "note": "login=<redacted>",
+                }
+            ],
+            (
+                {
+                    "direction": "BUY",
+                },
+            ),
+        ],
+        "trade_mode": "DEMO",
+    }
+
+
+def test_scrub_mapping_does_not_fail_on_non_string_mapping_keys():
+    cleaned = scrub_mapping({
+        1: {"balance": 1000.0, "safe": "kept"},
+    })
+    assert cleaned == {1: {"safe": "kept"}}
+
+def test_formatter_redacts_structured_run_id():
+    stream = io.StringIO()
+    logger = setup_logging("INFO", stream=stream)
+    logger.info("run started", extra={"run_id": "login=99887766 token=hidden"})
+    payload = json.loads(stream.getvalue().strip())
+    assert "99887766" not in payload["run_id"]
+    assert "hidden" not in payload["run_id"]
+    assert "login=<redacted>" in payload["run_id"]
+    assert "token=<redacted>" in payload["run_id"]
+
