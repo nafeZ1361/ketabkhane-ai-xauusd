@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from types import MappingProxyType
 from typing import Any, Mapping, TypeAlias
 
 FIREWALL_SCHEMA_VERSION = 1
 FIREWALL_PROTOCOL = "xauusd-guardian.firewall.v1"
+MAX_JSON_NESTING_DEPTH = 64
 
 JsonScalar: TypeAlias = str | int | float | bool | None
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
@@ -37,6 +39,14 @@ def _require_nonempty_str(name: str, value: Any) -> str:
     return value
 
 
+def _require_schema_protocol(schema_version: Any, protocol: Any) -> None:
+    # Exact checks are intentional: bool is an int subclass and 1.0 == 1.
+    if type(schema_version) is not int or schema_version != FIREWALL_SCHEMA_VERSION:
+        raise FirewallContractError(f"unsupported schema_version: {schema_version!r}")
+    if type(protocol) is not str or protocol != FIREWALL_PROTOCOL:
+        raise FirewallContractError(f"unsupported protocol: {protocol!r}")
+
+
 def _require_utc_datetime(name: str, value: Any) -> datetime:
     if not isinstance(value, datetime):
         raise FirewallContractError(f"{name} must be a datetime")
@@ -47,19 +57,66 @@ def _require_utc_datetime(name: str, value: Any) -> datetime:
     return value
 
 
-def _validate_json(value: Any, path: str = "payload") -> JsonValue:
-    if value is None or isinstance(value, (str, bool, int, float)):
-        if isinstance(value, float) and (value != value or value in (float("inf"), float("-inf"))):
+def _validate_json(value: Any, path: str = "payload", depth: int = 0) -> JsonValue:
+    if depth > MAX_JSON_NESTING_DEPTH:
+        raise FirewallContractError(
+            f"{path} exceeds maximum JSON nesting depth "
+            f"({MAX_JSON_NESTING_DEPTH})"
+        )
+    value_type = type(value)
+    if value is None or value_type in (str, bool, int):
+        return value
+    if value_type is float:
+        if value != value or value in (float("inf"), float("-inf")):
             raise FirewallContractError(f"{path} contains non-finite float")
         return value
-    if isinstance(value, list):
-        return [_validate_json(item, f"{path}[{i}]") for i, item in enumerate(value)]
-    if isinstance(value, dict):
-        for key in value:
-            if not isinstance(key, str) or not key:
+    if value_type is list:
+        return [
+            _validate_json(item, f"{path}[{i}]", depth + 1)
+            for i, item in enumerate(value)
+        ]
+    if value_type is dict:
+        result: dict[str, JsonValue] = {}
+        for key, item in value.items():
+            if type(key) is not str or not key:
                 raise FirewallContractError(f"{path} contains an invalid object key")
-        return {key: _validate_json(item, f"{path}.{key}") for key, item in value.items()}
-    raise FirewallContractError(f"{path} contains unsupported type: {type(value).__name__}")
+            result[key] = _validate_json(item, f"{path}.{key}", depth + 1)
+        return result
+    raise FirewallContractError(
+        f"{path} contains unsupported type: {value_type.__name__}"
+    )
+
+
+def _freeze_json(value: JsonValue) -> Any:
+    """Return a recursively immutable representation of validated JSON."""
+    if type(value) is dict:
+        return MappingProxyType(
+            {key: _freeze_json(item) for key, item in value.items()}
+        )
+    if type(value) is list:
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _thaw_json(value: Any) -> JsonValue:
+    """Return a fresh, mutable JSON-compatible copy for serialization."""
+    if isinstance(value, Mapping):
+        return {key: _thaw_json(item) for key, item in value.items()}
+    if type(value) is tuple:
+        return [_thaw_json(item) for item in value]
+    return value
+
+
+def _validated_payload(payload: Any) -> Mapping[str, Any]:
+    if not isinstance(payload, Mapping):
+        raise FirewallContractError("payload must be a mapping")
+    try:
+        validated = _validate_json(dict(payload))
+    except RecursionError as exc:
+        raise FirewallContractError("payload exceeds safe nesting depth") from exc
+    if type(validated) is not dict:
+        raise FirewallContractError("payload must be a JSON object")
+    return _freeze_json(validated)
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,18 +134,11 @@ class FirewallRequest:
     protocol: str = FIREWALL_PROTOCOL
 
     def __post_init__(self) -> None:
-        if self.schema_version != FIREWALL_SCHEMA_VERSION:
-            raise FirewallContractError(
-                f"unsupported schema_version: {self.schema_version!r}"
-            )
-        if self.protocol != FIREWALL_PROTOCOL:
-            raise FirewallContractError(f"unsupported protocol: {self.protocol!r}")
+        _require_schema_protocol(self.schema_version, self.protocol)
         _require_nonempty_str("request_id", self.request_id)
         _require_nonempty_str("message_type", self.message_type)
         _require_utc_datetime("issued_at_utc", self.issued_at_utc)
-        if not isinstance(self.payload, Mapping):
-            raise FirewallContractError("payload must be a mapping")
-        object.__setattr__(self, "payload", _validate_json(dict(self.payload)))
+        object.__setattr__(self, "payload", _validated_payload(self.payload))
 
     def to_dict(self) -> dict[str, JsonValue]:
         return {
@@ -97,7 +147,7 @@ class FirewallRequest:
             "request_id": self.request_id,
             "message_type": self.message_type,
             "issued_at_utc": self.issued_at_utc.isoformat().replace("+00:00", "Z"),
-            "payload": dict(self.payload),
+            "payload": _thaw_json(self.payload),
         }
 
     @classmethod
@@ -113,10 +163,7 @@ class FirewallRequest:
             "payload",
         }
         _require_exact_keys(data, expected)
-        version = data["schema_version"]
-        if type(version) is not int:
-            raise FirewallContractError("schema_version must be an integer")
-        protocol = data["protocol"]
+        _require_schema_protocol(data["schema_version"], data["protocol"])
         request_id = _require_nonempty_str("request_id", data["request_id"])
         message_type = _require_nonempty_str("message_type", data["message_type"])
         issued = data["issued_at_utc"]
@@ -126,16 +173,13 @@ class FirewallRequest:
             parsed = datetime.fromisoformat(issued.replace("Z", "+00:00"))
         except ValueError as exc:
             raise FirewallContractError("invalid issued_at_utc") from exc
-        payload = data["payload"]
-        if not isinstance(payload, Mapping):
-            raise FirewallContractError("payload must be an object")
         return cls(
             request_id=request_id,
             message_type=message_type,
             issued_at_utc=parsed,
-            payload=payload,
-            schema_version=version,
-            protocol=protocol,
+            payload=data["payload"],
+            schema_version=data["schema_version"],
+            protocol=data["protocol"],
         )
 
 
@@ -151,12 +195,7 @@ class FirewallResponse:
     protocol: str = FIREWALL_PROTOCOL
 
     def __post_init__(self) -> None:
-        if self.schema_version != FIREWALL_SCHEMA_VERSION:
-            raise FirewallContractError(
-                f"unsupported schema_version: {self.schema_version!r}"
-            )
-        if self.protocol != FIREWALL_PROTOCOL:
-            raise FirewallContractError(f"unsupported protocol: {self.protocol!r}")
+        _require_schema_protocol(self.schema_version, self.protocol)
         for name, value in (
             ("request_id", self.request_id),
             ("status", self.status),
@@ -188,21 +227,21 @@ class FirewallResponse:
             "responded_at_utc",
         }
         _require_exact_keys(data, expected)
-        version = data["schema_version"]
-        if type(version) is not int:
-            raise FirewallContractError("schema_version must be an integer")
+        _require_schema_protocol(data["schema_version"], data["protocol"])
         values = {
             "request_id": _require_nonempty_str("request_id", data["request_id"]),
             "status": _require_nonempty_str("status", data["status"]),
             "reason_code": _require_nonempty_str("reason_code", data["reason_code"]),
             "protocol": data["protocol"],
-            "schema_version": version,
+            "schema_version": data["schema_version"],
         }
         timestamp = data["responded_at_utc"]
         if not isinstance(timestamp, str):
             raise FirewallContractError("responded_at_utc must be an ISO-8601 string")
         try:
-            values["responded_at_utc"] = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            values["responded_at_utc"] = datetime.fromisoformat(
+                timestamp.replace("Z", "+00:00")
+            )
         except ValueError as exc:
             raise FirewallContractError("invalid responded_at_utc") from exc
         return cls(**values)
