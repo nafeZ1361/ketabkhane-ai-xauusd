@@ -34,7 +34,7 @@ def _require_exact_keys(data: Mapping[str, Any], expected: set[str]) -> None:
 
 
 def _require_nonempty_str(name: str, value: Any) -> str:
-    if not isinstance(value, str) or not value.strip():
+    if type(value) is not str or not value.strip():
         raise FirewallContractError(f"{name} must be a non-empty string")
     return value
 
@@ -42,19 +42,32 @@ def _require_nonempty_str(name: str, value: Any) -> str:
 def _require_schema_protocol(schema_version: Any, protocol: Any) -> None:
     # Exact checks are intentional: bool is an int subclass and 1.0 == 1.
     if type(schema_version) is not int or schema_version != FIREWALL_SCHEMA_VERSION:
-        raise FirewallContractError(f"unsupported schema_version: {schema_version!r}")
+        raise FirewallContractError("unsupported schema_version")
     if type(protocol) is not str or protocol != FIREWALL_PROTOCOL:
-        raise FirewallContractError(f"unsupported protocol: {protocol!r}")
+        raise FirewallContractError("unsupported protocol")
 
 
 def _require_utc_datetime(name: str, value: Any) -> datetime:
-    if not isinstance(value, datetime):
+    if type(value) is not datetime:
         raise FirewallContractError(f"{name} must be a datetime")
-    if value.tzinfo is None or value.utcoffset() is None:
-        raise FirewallContractError(f"{name} must be timezone-aware")
-    if value.utcoffset() != timezone.utc.utcoffset(value):
-        raise FirewallContractError(f"{name} must use UTC")
+    try:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise FirewallContractError(f"{name} must be timezone-aware")
+        if value.utcoffset() != timezone.utc.utcoffset(value):
+            raise FirewallContractError(f"{name} must use UTC")
+    except FirewallContractError:
+        raise
+    except Exception as exc:
+        raise FirewallContractError(f"{name} has invalid timezone data") from exc
     return value
+
+
+def _serialize_utc_datetime(name: str, value: Any) -> str:
+    validated = _require_utc_datetime(name, value)
+    try:
+        return validated.isoformat().replace("+00:00", "Z")
+    except Exception as exc:
+        raise FirewallContractError(f"{name} cannot be serialized") from exc
 
 
 def _validate_json(value: Any, path: str = "payload", depth: int = 0) -> JsonValue:
@@ -142,17 +155,25 @@ class FirewallRequest:
 
     def to_dict(self) -> dict[str, JsonValue]:
         try:
+            _require_schema_protocol(self.schema_version, self.protocol)
+            request_id = _require_nonempty_str("request_id", self.request_id)
+            message_type = _require_nonempty_str("message_type", self.message_type)
+            issued_at_utc = _serialize_utc_datetime(
+                "issued_at_utc", self.issued_at_utc
+            )
             payload_copy = _validate_json(_thaw_json(self.payload))
-        except RecursionError as exc:
-            raise FirewallContractError("payload exceeds safe nesting depth") from exc
-        if type(payload_copy) is not dict:
-            raise FirewallContractError("payload must be a JSON object")
+            if type(payload_copy) is not dict:
+                raise FirewallContractError("payload must be a JSON object")
+        except FirewallContractError:
+            raise
+        except Exception as exc:
+            raise FirewallContractError("request contains invalid contract state") from exc
         return {
-            "schema_version": self.schema_version,
-            "protocol": self.protocol,
-            "request_id": self.request_id,
-            "message_type": self.message_type,
-            "issued_at_utc": self.issued_at_utc.isoformat().replace("+00:00", "Z"),
+            "schema_version": FIREWALL_SCHEMA_VERSION,
+            "protocol": FIREWALL_PROTOCOL,
+            "request_id": request_id,
+            "message_type": message_type,
+            "issued_at_utc": issued_at_utc,
             "payload": payload_copy,
         }
 
@@ -211,13 +232,25 @@ class FirewallResponse:
         _require_utc_datetime("responded_at_utc", self.responded_at_utc)
 
     def to_dict(self) -> dict[str, JsonValue]:
+        try:
+            _require_schema_protocol(self.schema_version, self.protocol)
+            request_id = _require_nonempty_str("request_id", self.request_id)
+            status = _require_nonempty_str("status", self.status)
+            reason_code = _require_nonempty_str("reason_code", self.reason_code)
+            responded_at_utc = _serialize_utc_datetime(
+                "responded_at_utc", self.responded_at_utc
+            )
+        except FirewallContractError:
+            raise
+        except Exception as exc:
+            raise FirewallContractError("response contains invalid contract state") from exc
         return {
-            "schema_version": self.schema_version,
-            "protocol": self.protocol,
-            "request_id": self.request_id,
-            "status": self.status,
-            "reason_code": self.reason_code,
-            "responded_at_utc": self.responded_at_utc.isoformat().replace("+00:00", "Z"),
+            "schema_version": FIREWALL_SCHEMA_VERSION,
+            "protocol": FIREWALL_PROTOCOL,
+            "request_id": request_id,
+            "status": status,
+            "reason_code": reason_code,
+            "responded_at_utc": responded_at_utc,
         }
 
     @classmethod
