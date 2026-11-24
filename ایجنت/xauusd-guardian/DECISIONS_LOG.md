@@ -509,3 +509,12 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - **Residuals preserved.** D-4 remains OPEN/ADVISORY and non-blocking; D-2 remains owner-accepted with no ACL remediation; D-3 remains preserved/unused; D-019 remains DEFERRED; `PHASE2-CLOCK-RECHECK-1` remains OPEN. A-04/A-05 status and safety boundaries are unchanged.
 - **Scope.** This decision is documentation-only. F1-F8 remain NOT STARTED (0/100). No merge, Phase 5 implementation, DEMO activation, order construction/submission, LIVE trading, or authorization expansion is permitted by this record.
 - **Consequence.** `PHASE5_PLAN.md` may now record Gate 2 as MET from the current evidence. A fresh independent inspection of the exact post-D-032 commit is still required before merge or Phase 5 implementation.
+
+## Phase 5 F1 — External Inspector evidence intake (2026-11-24; administrative record, not a numbered decision)
+
+- The owner supplied the body of report `PHASE5-F1-INSPECTION-e48729c`, which states verdict **PASS** for target `e48729cbd92df86b63d3941d67fdcb8635210bf9`, and supplied the declared report SHA-256 `f8b8ae53f70b1112fa36d5b2c822ffcd433ad0d86ee105891b3485e2d2d29854`.
+- Registration: `evidence/external-inspector/PHASE5-F1-INSPECTION-e48729c-REGISTRATION.md`.
+- **Integrity limitation:** original report bytes and detached sidecar were not provided as files; the declared digest could not be recomputed. Raw result JSON, test logs, compileall log, harness output and manifest were not independently checked. Inspector identity and frozen-snapshot claims are recorded as claims from the supplied report, not independently re-executed.
+- GitHub Actions exact-target PR runs `45452649612` and `45452649554` were queried and both returned SUCCESS. CI status does not authenticate the report.
+- **No acceptance decision is made here.** F1 remains **0/10 / INDEPENDENT ACCEPTANCE PENDING**; F2-F8 remain NOT STARTED; Phase 5 remains 0/100. Independent review of the registered evidence and its limitations is still required.
+- PR #8 remains Draft and unmerged. No source/test/dependency/approval/trading change, order activity, or authorization expansion is made by this intake.
