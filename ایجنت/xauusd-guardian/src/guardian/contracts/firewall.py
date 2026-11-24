@@ -141,13 +141,19 @@ class FirewallRequest:
         object.__setattr__(self, "payload", _validated_payload(self.payload))
 
     def to_dict(self) -> dict[str, JsonValue]:
+        try:
+            payload_copy = _validate_json(_thaw_json(self.payload))
+        except RecursionError as exc:
+            raise FirewallContractError("payload exceeds safe nesting depth") from exc
+        if type(payload_copy) is not dict:
+            raise FirewallContractError("payload must be a JSON object")
         return {
             "schema_version": self.schema_version,
             "protocol": self.protocol,
             "request_id": self.request_id,
             "message_type": self.message_type,
             "issued_at_utc": self.issued_at_utc.isoformat().replace("+00:00", "Z"),
-            "payload": _thaw_json(_validated_payload(self.payload)),
+            "payload": payload_copy,
         }
 
     @classmethod
