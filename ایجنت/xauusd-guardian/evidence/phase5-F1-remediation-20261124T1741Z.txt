@@ -1,0 +1,61 @@
+PHASE5_F1_DEVELOPER_REMEDIATION
+Generated: 2026-11-24T17:41Z (GitHub Actions run timestamps)
+Repository: nafeZ1361/ketabkhane-ai-xauusd
+Branch: work/guardian-phase5-entry-20261123
+HEAD: 081e0303ef605a918b6c9104efa34fee8b17a5e8
+Parent: e0e7565535f3e80c1e28d8fe752b8c5397d11147
+
+Changed paths:
+  ایجنت/xauusd-guardian/src/guardian/contracts/firewall.py
+  ایجنت/xauusd-guardian/tests/unit/test_firewall_contracts.py
+
+Findings addressed:
+  1. A stateful tzinfo could return UTC during validation and a non-zero offset during
+     isoformat(), allowing non-UTC output to escape the serialization contract.
+  2. Untrusted Mapping implementations could raise raw exceptions during dict conversion.
+  3. Mixed non-string/ string unknown field names could raise TypeError during sorted().
+  4. from_dict accepted str subclasses for ISO timestamps rather than exact built-in str.
+
+Remediation:
+  - Read tzinfo.utcoffset() once; require exact timedelta(0); replace the timezone with
+    datetime.timezone.utc before storing or serializing.
+  - Apply the same normalization on FirewallRequest and FirewallResponse construction
+    and on serialization revalidation after low-level state injection.
+  - Copy Mapping inputs under exception handling before field or payload validation.
+  - Reject non-string top-level field names before set comparison/sorting.
+  - Require exact str timestamps; convert parser ValueError/OverflowError to
+    FirewallContractError.
+  - Add regression tests for changing tzinfo, hostile Mapping, mixed field keys,
+    and post-construction low-level injections.
+
+Developer-side reproduction (not a full project test):
+  - A Python tzinfo probe returned zero offset for four validation reads and +01:00
+    thereafter. The prior call pattern serialized 2026-11-24T12:00:00+01:00;
+    a one-read snapshot serialized with UTC and invoked the hostile tzinfo once.
+  - A Mapping probe produced raw RuntimeError from dict(mapping).
+  - Sorting unknown keys containing both str and int produced raw TypeError.
+
+GitHub Actions:
+  guardian-ci run 45451231751; job 138648549294; Python 3.11.9.
+  Command: python -m pytest -q
+  Output: 439 progress dots, 100%; job conclusion SUCCESS.
+  Command: python -m compileall -q src scripts tests
+  Step completed; job conclusion SUCCESS (exit 0).
+  CI — Test & Evidence Gate run 45451244959:
+    Python 3.10.22 job 138648608678: 120 passed, 0 failed, 0 errors;
+      coverage 95.77%; quality gate, encoding guard and evidence upload succeeded.
+    Python 3.12.16 job 138648608214: 120 passed, 0 failed, 0 errors;
+      coverage 95.77%; quality gate, encoding guard and evidence upload succeeded.
+  Artifacts: py3.10 id 14947812624; py3.12 id 14949035414.
+
+Verification limits:
+  This turn did not execute the suite inside the owner's local Windows worktree.
+  The full project test evidence above is from GitHub Actions, not GuardianInspector.
+
+Scope:
+  No MT5 integration, order construction/submission, account access, credentials, ACL,
+  dependency, migration, or live-trading changes.
+  No state/acceptance record grants F1 PASS. F1 earns 0/10 until a genuinely independent,
+  read-only GuardianInspector PASS on the exact frozen commit.
+  F2-F8 remain unstarted. PR #8 remains Draft and unmerged.
+Verdict: DEVELOPER_REMEDIATION_COMMITTED; INDEPENDENT_ACCEPTANCE_PENDING.
