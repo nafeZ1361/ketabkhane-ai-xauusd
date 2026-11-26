@@ -3,6 +3,7 @@
 Status: **IMPLEMENTED / CI PASS / INDEPENDENT INSPECTION PENDING**
 Weight: **12 points; currently 0/12 accepted**
 Implementation branch: `work/guardian-phase5-f2-policy-20261127`
+Hardened candidate: `c35705ab1a3ee8bfc184eea3864402f98499da00`
 
 ## Scope
 
@@ -28,12 +29,14 @@ read approval files, broker state, account data, environment variables, or the n
 
 ## Verification
 
-GitHub Actions `guardian-ci` on exact implementation commit
-`54ecf9de7fe7944e90435a76415d3900ef3d69fa` completed SUCCESS:
+Initial CI run on `54ecf9de7fe7944e90435a76415d3900ef3d69fa` completed SUCCESS (468 tests), then a security hardening change added mandatory request re-serialization/re-parsing before authorization and three adversarial mutation tests.
+
+GitHub Actions `guardian-ci` on the hardened candidate
+`c35705ab1a3ee8bfc184eea3864402f98499da00` completed SUCCESS:
 - Python 3.11.9 hosted runner; dependency installation succeeded.
-- Full Guardian suite: **468 tests passed**, no failures (pytest exit 0).
+- Full Guardian suite: **471 tests passed**, no failures (pytest exit 0).
 - `python -m compileall -q src scripts tests`: exit 0.
-- Workflow: https://github.com/nafeZ1361/ketabkhane-ai-xauusd/actions/runs/45895035484
+- Workflow: https://github.com/nafeZ1361/ketabkhane-ai-xauusd/actions/runs/45895338899
 
 This is developer/CI regression evidence only. It is **not** the independent Inspector
 verdict and earns no F2 points.
