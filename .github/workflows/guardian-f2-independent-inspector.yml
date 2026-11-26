@@ -387,7 +387,7 @@ jobs:
             schema = "guardian-f2-run-summary/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $archiveHash
-            inspector_harness_commit = "e2e2577ea898db1326c9bde0713f3b42dad705f7"
+            inspector_harness_commit = "0297a23415b15824f176067d355ba2c09aa95788"
             focused_exit = $env:FOCUSED_EXIT
             focused_junit = $focusedCounts
             full_exit = $env:FULL_EXIT
