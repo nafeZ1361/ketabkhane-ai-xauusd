@@ -15,7 +15,7 @@ F4 is infrastructure only. F2 remains authoritative and denies all execution/ord
 
 - Windows is the supported runtime for this gate; unsupported platforms fail closed.
 - Launch the exact configured Python interpreter and fixed worker module/script. No shell, no user-controlled executable, arguments, import path, working directory, or environment overlay.
-- Require the parent to run with a verified non-elevated Windows token: `TokenElevation=0`, Medium integrity (RID 8192), Administrators SID absent or deny-only, and at most one privilege. Launch the worker with the same non-elevated identity; never elevate or fall back to an elevated process. Refuse startup if the parent token fails these checks. This is not a separate restricted-SID/AppContainer filesystem sandbox; filesystem access remains limited by the invoking user's DACL. The worker source is fixed and statically inspected to exclude filesystem/network APIs.
+- Require the parent to run with a verified non-elevated Windows token: `TokenElevation=0`, Medium integrity (RID 8192), Administrators SID absent or deny-only, and only `SeChangeNotifyPrivilege` may be enabled (all other privileges must be disabled). Launch the worker with the same non-elevated identity; never elevate or fall back to an elevated process. Refuse startup if the parent token fails these checks. This is not a separate restricted-SID/AppContainer filesystem sandbox; filesystem access remains limited by the invoking user's DACL. The worker source is fixed and statically inspected to exclude filesystem/network APIs.
 - Place the worker in a Windows Job Object with kill-on-close, active-process limit 1, and explicit process-memory and CPU-time limits. Job assignment failure terminates the child and fails closed.
 - Inherit only the dedicated IPC handles. Close unrelated handles; do not pass secrets in argv or environment. Use a minimal deterministic environment and a dedicated empty working directory.
 - Enforce a startup timeout, per-request timeout, bounded frame sizes, bounded response sizes, and deterministic termination/reaping on timeout, malformed output, protocol error, or parent shutdown.
@@ -35,7 +35,7 @@ F4 is infrastructure only. F2 remains authoritative and denies all execution/ord
 
 ## 4. Required tests and adversarial probes
 
-1. Worker token: child is non-elevated; Medium integrity is verified; Administrators SID is absent or deny-only; privilege set is reduced; Job Object limits and assignment/kill-on-close are effective.
+1. Worker token: child is non-elevated; Medium integrity is verified; Administrators SID is absent or deny-only; only `SeChangeNotifyPrivilege` may be enabled; all other privileges are disabled; Job Object limits and assignment/kill-on-close are effective.
 2. Process launch: exact interpreter/module, no shell, minimal environment, only intended handles inherited; unsupported OS and restriction failure deny without fallback.
 3. Lifecycle: startup/request timeout, malformed output, worker crash, parent shutdown, kill/reap and no orphan child.
 4. Frame parser: length bounds, truncation, invalid UTF-8, duplicate JSON keys, nesting/size limits, unknown fields/version/type, NaN/Infinity, malformed canonical envelope.
