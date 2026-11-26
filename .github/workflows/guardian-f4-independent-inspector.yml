@@ -117,7 +117,7 @@ jobs:
             Where-Object { $_.FullName -match "[\\/]src[\\/]guardian[\\/]firewall[\\/]worker_host\.py$" })
           if ($contracts.Count -ne 1) {
             Get-ChildItem -Path $root -Recurse | Select-Object -First 40 -ExpandProperty FullName
-            throw "Expected exactly one F4 risk module; found $($contracts.Count)"
+            throw "Expected exactly one F4 worker host module; found $($contracts.Count)"
           }
           $snapshot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $contracts[0].FullName)))
           "SNAPSHOT_ROOT=$snapshot" >> $env:GITHUB_ENV
@@ -205,7 +205,7 @@ jobs:
           [System.Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
           $password = [Convert]::ToBase64String($randomBytes) + "aA1!"
           $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-          New-LocalUser -Name $account -Password $securePassword -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires -Description "Ephemeral least-privilege Guardian F2 Inspector" | Out-Null
+          New-LocalUser -Name $account -Password $securePassword -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires -Description "Ephemeral least-privilege Guardian F4 Inspector" | Out-Null
           $users = @(Get-LocalGroupMember -Group "Users" | ForEach-Object { $_.SID.Value })
           $sid = (Get-LocalUser -Name $account).SID.Value
           $runnerSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
@@ -309,7 +309,7 @@ jobs:
         run: |
           $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
           $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
-          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "focused-pytest.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "pytest", "-o", "addopts=--strict-markers", "-q", "tests/unit/test_firewall_worker_host.py", "--junitxml=focused-junit.xml")
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "focused-pytest.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "pytest", "-o", "addopts=--strict-markers", "-q", "tests/unit/test_firewall_ipc.py", "tests/unit/test_firewall_worker.py", "tests/security/test_firewall_worker_host.py", "--junitxml=focused-junit.xml")
           $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "focused-pytest.log.exit-code.txt"))
           if (Test-Path (Join-Path $env:INSPECTOR_WORK "focused-junit.xml")) { Copy-Item (Join-Path $env:INSPECTOR_WORK "focused-junit.xml") (Join-Path $env:EVIDENCE_ROOT "focused-junit.xml") }
           "FOCUSED_EXIT=$exitCode" >> $env:GITHUB_ENV
@@ -401,7 +401,7 @@ jobs:
             frozen_archive_stable = $frozenStable
             workflow_verdict = "BLOCK"
           }
-          if ($env:IDENTITY_EXIT -eq "0" -and $env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $env:INSPECTOR_EXIT -eq "0" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0) {
+          if ($env:IDENTITY_EXIT -eq "0" -and $env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $env:INSPECTOR_EXIT -eq "0" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $focusedCounts.skipped -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0 -and $fullCounts.skipped -eq 0) {
             $summary.workflow_verdict = "PASS"
           }
           $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
