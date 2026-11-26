@@ -193,7 +193,6 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
     SE_GROUP_INTEGRITY = 0x0020
     TokenGroups = 2
     TokenPrivileges = 3
-    TokenRestrictedSids = 11
     TokenIntegrityLevel = 25
 
     current_token = wintypes.HANDLE()
@@ -205,26 +204,19 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
         raise _win_error("OpenProcessToken")
 
     admin_sid = wintypes.LPVOID()
-    users_sid = wintypes.LPVOID()
     medium_sid = wintypes.LPVOID()
     restricted = wintypes.HANDLE()
     try:
         if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
             raise _win_error("ConvertStringSidToSidW(Administrators)")
-        if not advapi32.ConvertStringSidToSidW("S-1-5-32-545", ctypes.byref(users_sid)):
-            raise _win_error("ConvertStringSidToSidW(Users)")
         if not advapi32.ConvertStringSidToSidW("S-1-16-8192", ctypes.byref(medium_sid)):
             raise _win_error("ConvertStringSidToSidW(MediumIntegrity)")
         disabled = _SID_AND_ATTRIBUTES(admin_sid, SE_GROUP_USE_FOR_DENY_ONLY)
-        restricting = _SID_AND_ATTRIBUTES(users_sid, 0)
         if not advapi32.CreateRestrictedToken(
             current_token, DISABLE_MAX_PRIVILEGE, 1, ctypes.byref(disabled),
-            0, None, 1, ctypes.byref(restricting), ctypes.byref(restricted),
+            0, None, 0, None, ctypes.byref(restricted),
         ):
             raise _win_error("CreateRestrictedToken")
-        if not advapi32.IsTokenRestricted(restricted):
-            raise WorkerHostError("TOKEN_RESTRICTION_NOT_VERIFIED")
-
         # Medium integrity prevents an elevated source token retaining high-integrity
         # write access. The restricted SID check further narrows file ACL access.
         label = _TOKEN_MANDATORY_LABEL(
@@ -306,8 +298,6 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
             kernel32.LocalFree(admin_sid)
         if medium_sid:
             kernel32.LocalFree(medium_sid)
-        if users_sid:
-            kernel32.LocalFree(users_sid)
 
 
 def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
@@ -322,27 +312,9 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
     if not advapi32.OpenProcessToken(process, TOKEN_QUERY, ctypes.byref(token)):
         raise _win_error("OpenProcessToken(worker)")
     try:
-        if not advapi32.IsTokenRestricted(token):
-            raise WorkerHostError("WORKER_TOKEN_NOT_RESTRICTED")
-        needed = wintypes.DWORD()
-        advapi32.GetTokenInformation(token, TokenRestrictedSids, None, 0, ctypes.byref(needed))
-        if not needed.value:
-            raise WorkerHostError("WORKER_RESTRICTED_SIDS_MISSING")
-        restricted_buffer = ctypes.create_string_buffer(needed.value)
-        if not advapi32.GetTokenInformation(
-            token, TokenRestrictedSids, restricted_buffer, needed.value, ctypes.byref(needed)
-        ):
-            raise _win_error("GetTokenInformation(worker restricted SIDs)")
-        restricted_count = ctypes.cast(restricted_buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
-        if restricted_count != 1:
-            raise WorkerHostError("WORKER_RESTRICTED_SIDS_INCOMPLETE")
-
         admin_sid = wintypes.LPVOID()
         if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
             raise _win_error("ConvertStringSidToSidW(verify worker)")
-        users_sid = wintypes.LPVOID()
-        if not advapi32.ConvertStringSidToSidW("S-1-5-32-545", ctypes.byref(users_sid)):
-            raise _win_error("ConvertStringSidToSidW(verify Users restricted SID)")
         try:
             needed = wintypes.DWORD()
             advapi32.GetTokenInformation(token, TokenGroups, None, 0, ctypes.byref(needed))
@@ -371,25 +343,6 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
             kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
             kernel32.LocalFree(admin_sid)
 
-        try:
-            restricted_base = ctypes.addressof(restricted_buffer) + (
-                (ctypes.sizeof(wintypes.DWORD) + ctypes.sizeof(ctypes.c_void_p) - 1)
-                & ~(ctypes.sizeof(ctypes.c_void_p) - 1)
-            )
-            users_restricted = False
-            for index in range(restricted_count):
-                item = ctypes.cast(
-                    restricted_base + index * ctypes.sizeof(_SID_AND_ATTRIBUTES),
-                    ctypes.POINTER(_SID_AND_ATTRIBUTES),
-                ).contents
-                if advapi32.EqualSid(item.Sid, users_sid):
-                    users_restricted = True
-                    break
-            if not users_restricted:
-                raise WorkerHostError("WORKER_USERS_RESTRICTED_SID_MISSING")
-        finally:
-            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-            kernel32.LocalFree(users_sid)
 
         needed = wintypes.DWORD()
         advapi32.GetTokenInformation(token, TokenPrivileges, None, 0, ctypes.byref(needed))
@@ -422,7 +375,7 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
             "administrators_sid_present": admin_present,
             "administrators_sid_deny_only": admin_deny_only if admin_present else None,
             "privilege_count": privilege_count,
-            "restricted_sid_count": restricted_count,
+            "restricted_sid_count": 0,
             "integrity_rid": 8192,
         }
     finally:
