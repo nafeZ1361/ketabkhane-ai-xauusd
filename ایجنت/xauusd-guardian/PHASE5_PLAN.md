@@ -134,3 +134,8 @@ compileall exit 0. F2 remains 0/12 pending independent inspection.
 F2 is accepted at **12/12**. F3–F8 remain NOT STARTED. This acceptance does not authorize
 DEMO execution, order construction/submission, MT5 connectivity, LIVE trading, approval
 changes, or merge. PR #8 remains Draft and unmerged.
+
+
+## F3 pre-registration — D-038 (2026-11-27)
+
+F3 is pre-registered in `PHASE5_F3_RISK_PLAN.md` before implementation. Scope is a pure firewall-boundary validator that recomputes the Phase 4 maximum size from explicit Decimal inputs and a separately supplied RiskSpec, then denies any proposed size outside that bound, lot step, minimum or maximum. The validator is not execution authorization; F2 remains unchanged and denies all execution/order operations. No account equity read, MT5, broker access, order construction/submission, DEMO activation, LIVE path, approval change or Phase 4 rule change is authorized. F3 earns 12/12 only after exact-snapshot independent Inspector PASS and complete evidence verification. Branch: `work/guardian-phase5-f3-risk-20261127`, based on accepted F2 HEAD `841ab0c3b03bbfb3258603aee95774919db69429`.
