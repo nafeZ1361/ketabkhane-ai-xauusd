@@ -268,9 +268,10 @@ jobs:
           frozen = pathlib.Path(sys.argv[2])
           work = pathlib.Path(sys.argv[3])
           temp = pathlib.Path(sys.argv[4])
+          evidence = pathlib.Path(sys.argv[5])
           print("INSPECTOR_USER=" + getpass.getuser())
           print(subprocess.run(["whoami", "/user"], capture_output=True, text=True, check=True).stdout)
-          for label, root in (("HARNESS", harness), ("FROZEN", frozen)):
+          for label, root in (("HARNESS", harness), ("FROZEN", frozen), ("EVIDENCE", evidence)):
               probe = root / ".guardian_inspector_write_probe"
               try:
                   probe.write_text("forbidden", encoding="utf-8")
@@ -286,11 +287,11 @@ jobs:
               probe.unlink()
               print(label + "_WRITE_ALLOWED")
           '@
-          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "identity-acl-probe.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-c", $probe, (Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector"), $env:FROZEN_ROOT, $env:INSPECTOR_WORK, $env:INSPECTOR_TEMP)
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "identity-acl-probe.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-c", $probe, (Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector"), $env:FROZEN_ROOT, $env:INSPECTOR_WORK, $env:INSPECTOR_TEMP, $env:EVIDENCE_ROOT)
           $code = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log.exit-code.txt"))
           "IDENTITY_EXIT=$code" >> $env:GITHUB_ENV
           $probeText = Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log") -Raw
-          if ($code -ne 0 -or $probeText -notmatch "HARNESS_WRITE_DENIED" -or $probeText -notmatch "FROZEN_WRITE_DENIED" -or $probeText -notmatch "WORK_WRITE_ALLOWED" -or $probeText -notmatch "TEMP_WRITE_ALLOWED" -or $probeText -notmatch "GuardianF1Inspector") {
+          if ($code -ne 0 -or $probeText -notmatch "HARNESS_WRITE_DENIED" -or $probeText -notmatch "FROZEN_WRITE_DENIED" -or $probeText -notmatch "EVIDENCE_WRITE_DENIED" -or $probeText -notmatch "WORK_WRITE_ALLOWED" -or $probeText -notmatch "TEMP_WRITE_ALLOWED" -or $probeText -notmatch "GuardianF1Inspector" -or $probeText -notmatch [regex]::Escape($env:INSPECTOR_SID)) {
             throw "Inspector identity/ACL negative-control probe failed"
           }
 
