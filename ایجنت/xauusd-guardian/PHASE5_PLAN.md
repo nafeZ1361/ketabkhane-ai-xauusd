@@ -98,3 +98,15 @@ inspection. F2 remains **IMPLEMENTED / INDEPENDENT INSPECTION PENDING / 0 of 12*
 See `PHASE5_F2_POLICY_PLAN.md` for the frozen behavior and independent acceptance
 requirements. No approval record, execution capability, MT5 call, order API, or
 financial account access was added.
+
+
+### F2 hardening addendum — 2026-11-27
+
+Before independent inspection, the policy was hardened to re-serialize and re-parse
+the typed request before making an authorization decision. This closes the low-level
+frozen-dataclass mutation gap; three adversarial tests cover injected schema version,
+privileged message type, and non-JSON payload.
+
+Hardened candidate: `c35705ab1a3ee8bfc184eea3864402f98499da00`.
+GitHub Actions run `45895338899` completed SUCCESS: **471** full-suite tests passed;
+compileall exit 0. F2 remains 0/12 pending independent inspection.
