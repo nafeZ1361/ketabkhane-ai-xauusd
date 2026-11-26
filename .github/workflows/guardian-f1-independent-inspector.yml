@@ -92,13 +92,18 @@ jobs:
           $expected = "${{ needs.freeze.outputs.archive_sha256 }}"
           if ($actual -ne $expected) { throw "Frozen artifact digest mismatch: $actual != $expected" }
           $root = Join-Path $env:RUNNER_TEMP "guardian-f1-frozen"
+          $evidence = Join-Path $env:RUNNER_TEMP "guardian-f1-evidence"
           New-Item -ItemType Directory -Path $root -Force | Out-Null
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
           tar -xf $archive -C $root
           if ($LASTEXITCODE -ne 0) { throw "Snapshot extraction failed: $LASTEXITCODE" }
-          $snapshot = Join-Path $root "ایجنت\xauusd-guardian"
-          if (-not (Test-Path (Join-Path $snapshot "src\guardian\contracts\firewall.py"))) {
-            throw "Expected F1 contract module is missing from frozen snapshot"
+          $contracts = @(Get-ChildItem -Path $root -Filter "firewall.py" -File -Recurse |
+            Where-Object { $_.FullName -match "[\\/]src[\\/]guardian[\\/]contracts[\\/]firewall\.py$" })
+          if ($contracts.Count -ne 1) {
+            Get-ChildItem -Path $root -Recurse | Select-Object -First 40 -ExpandProperty FullName
+            throw "Expected exactly one F1 contract module; found $($contracts.Count)"
           }
+          $snapshot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $contracts[0].FullName)))
           "SNAPSHOT_ROOT=$snapshot" >> $env:GITHUB_ENV
           "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV
           "FROZEN_ROOT=$root" >> $env:GITHUB_ENV
@@ -232,9 +237,15 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $archiveHash = (Get-FileHash -Algorithm SHA256 $env:ARCHIVE_PATH).Hash.ToLowerInvariant()
+          $evidence = Join-Path $env:RUNNER_TEMP "guardian-f1-evidence"
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          $archiveHash = ""
           $expectedHash = "${{ needs.freeze.outputs.archive_sha256 }}"
-          if ($archiveHash -ne $expectedHash) { throw "Frozen archive changed during inspection" }
+          $frozenStable = $false
+          if ($env:ARCHIVE_PATH -and (Test-Path $env:ARCHIVE_PATH)) {
+            $archiveHash = (Get-FileHash -Algorithm SHA256 $env:ARCHIVE_PATH).Hash.ToLowerInvariant()
+            $frozenStable = ($archiveHash -eq $expectedHash)
+          }
           $summary = [ordered]@{
             schema = "guardian-f1-run-summary/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
@@ -243,7 +254,7 @@ jobs:
             full_exit = $env:FULL_EXIT
             compile_exit = $env:COMPILE_EXIT
             inspector_exit = $env:INSPECTOR_EXIT
-            frozen_archive_stable = ($archiveHash -eq $expectedHash)
+            frozen_archive_stable = $frozenStable
             workflow_verdict = "BLOCK"
           }
           if ($env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $env:INSPECTOR_EXIT -eq "0" -and $summary.frozen_archive_stable) {
