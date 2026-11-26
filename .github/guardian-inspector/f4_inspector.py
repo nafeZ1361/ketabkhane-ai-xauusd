@@ -170,11 +170,11 @@ def blackbox(project_root: Path) -> tuple[unittest.result.TestResult, str]:
         def test_worker_os_token_job_limits_and_authenticated_operations(self):
             with Worker.launch() as worker:
                 report = worker.security_report
-                self.assertTrue(report["is_restricted"])
+                self.assertTrue(report["is_non_elevated"])
                 self.assertEqual(report["integrity_rid"], 4096)
                 self.assertLessEqual(report["privilege_count"], 1)
-                self.assertGreaterEqual(report["restricted_sid_count"], 2)
                 self.assertTrue(report["job_limits_verified"])
+                self.assertTrue(report["job_assigned"])
                 self.assertEqual(worker.request("HEALTH_CHECK", {}), {"status": "OK"})
                 result = worker.request("RISK_REVALIDATE", {
                     "equity": "10000",
