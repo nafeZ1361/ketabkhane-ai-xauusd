@@ -8,7 +8,7 @@ Scope: Replace the local Windows GuardianInspector account/session requirement f
 
 The owner authorized design and execution of a GitHub-native alternative to the local Inspector setup. The alternative changes the proof mechanism, not F1's technical contract requirements or its 10-point weight.
 
-The new Inspector means an independent CI execution context, not a separate human reviewer or a second local Windows SID. Its independence is based on a separate ephemeral Windows runner/job, an immutable source artifact, a separately pinned harness commit, read-only GitHub token permissions, and no shared writable workspace with the freeze job.
+The new Inspector is an independent CI execution context and an ephemeral standard Windows local account on the Inspector runner. It has a distinct SID and logon token from runneradmin, is verified not to belong to Administrators, and receives read-only access to the pinned harness, frozen source snapshot, and evidence directory. It receives modify access only to the separate test copy and temporary directory. This is not a second account on the owner's computer or an external human reviewer.
 
 ## 2. Architecture
 
@@ -23,7 +23,11 @@ The new Inspector means an independent CI execution context, not a separate huma
    - Runs as a separate job on a fresh windows-latest runner.
    - Downloads the frozen archive and verifies its SHA-256 against the freeze-job output.
    - Extracts a frozen snapshot and creates a separate writable test copy. Tests execute only against the copy; the frozen snapshot is not the test working directory.
-   - Checks out the Inspector harness from immutable commit 203783d4909956f5b22b02a097eaa03766fc63b6 as an immutable commit in the implementation branch history. The workflow checks out this exact immutable commit, not the mutable branch tip or candidate working tree.
+   - Checks out the Inspector harness from immutable commit bb1b9e45d0813aabf796a9c1896c89479649c553 as an immutable commit in the implementation branch history. The workflow checks out this exact immutable commit, not the mutable branch tip or candidate working tree.
+   - Creates a fresh standard local GuardianF1Inspector account with a unique random password and records its SID; verifies it is not an administrator.
+   - Runs identity and write-boundary probes: writes to the harness, frozen snapshot, and evidence directory must be denied; writes to the test copy and temporary directory must succeed.
+   - Applies explicit NTFS ACLs: harness/frozen/evidence read-only or inaccessible; test copy/temp writable by the Inspector SID. The pinned harness and frozen snapshot are not writable by the target process.
+   - Executes pytest, compileall, and the black-box harness under that standard account using a minimal environment. GITHUB_WORKSPACE, RUNNER_TEMP, GITHUB_ENV, GITHUB_TOKEN, ACTIONS_RUNTIME_TOKEN, and cache credentials are not inherited by target processes.
    - Uses contents: read and actions: read; checkout credentials are not persisted. No repository secrets or write token are passed to target tests.
    - Does not commit, push, merge, change refs, or modify repository settings.
 
@@ -53,6 +57,8 @@ The new Inspector means an independent CI execution context, not a separate huma
 F1 earns 10/10 only when all are true on one exact target commit:
 
 - Both freeze and Inspector jobs succeed.
+- The Inspector account SID is recorded, is not an administrator, and differs from the runneradmin identity.
+- Write attempts to harness, frozen snapshot, and evidence paths fail; writes to the separate test copy and temp directory succeed.
 - The Inspector verifies the exact source archive SHA-256.
 - Frozen snapshot manifest before/after is identical and the archive digest remains unchanged.
 - The eight wheel files match WHEELHOUSE.sha256 exactly; offline install and pip check succeed.
@@ -65,9 +71,9 @@ Any missing check, changed manifest, missing artifact, or mismatched hash means 
 
 ## 4. Security properties and limitations
 
-**Established by this design:** separate ephemeral runner/job; no shared working directory; frozen artifact hash; separate writable test copy; separately pinned Inspector harness; read-only repository token permissions; no persisted checkout credentials; no secrets supplied to target tests; no CI write/merge capability.
+**Established by this design:** separate ephemeral freeze and Inspector runners; exact frozen artifact hash; separate writable test copy; separately pinned Inspector harness; distinct standard Windows SID/logon token on the Inspector runner; non-administrator verification; ACL-enforced read-only harness/frozen snapshot/evidence; explicit write-denial and write-allowance probes; minimal child-process environment; read-only repository token permissions; no persisted checkout credentials; no secrets supplied to target tests; no CI write/merge capability.
 
-**Not established:** a distinct local Windows account SID, a local interactive logon session, NTFS effective-access ACLs, or an external human reviewer's identity. The hosted runner's Windows service identity is not represented as equivalent to GuardianInspector. The Inspector job executes target code in a hosted runner with no secrets and no repository write token; this does not prove network isolation of the hosted runner.
+**Not established:** a distinct GuardianInspector SID or interactive session on the owner's local Windows machine, local-machine NTFS ACLs, an external human reviewer's identity, or network isolation of the hosted runner. The ephemeral runner SID and ACLs are valid only for that workflow run and are not represented as the owner's local Windows account.
 
 The workflow and harness are version-controlled. A repository administrator can change workflow configuration or the pinned harness reference; the run is therefore reproducible and isolated, not cryptographically independent of repository administration. Any later change to the workflow, harness pin, lock files, or acceptance checks requires a new inspection run.
 
@@ -81,3 +87,6 @@ The workflow and harness are version-controlled. A repository administrator can 
 
 
 The Inspector evidence artifact includes JUnit XML for focused and full-suite runs. The run summary records exact test, failure, error, and skipped counts; an exit code alone is not sufficient for acceptance.
+
+
+The runner-side GuardianF1Inspector SID is ephemeral and removed after evidence upload. The original local Windows account/interactive-session procedure is not claimed as completed on the owner's machine.
