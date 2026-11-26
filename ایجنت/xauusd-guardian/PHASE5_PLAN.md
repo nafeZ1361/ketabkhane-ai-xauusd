@@ -78,3 +78,23 @@ The hosted runner is not claimed to be a separate human reviewer, a distinct loc
 Acceptance details: non-admin Inspector SID distinct from runner; all five ACL probes passed; eight hash-pinned wheels verified and installed offline; pip check clean; focused **66/0/0**, full suite **443/0/0**, compileall exit 0; black-box **11/11**, static findings **0**, mutation control detected the mutant, frozen manifest **253 files unchanged**. Full raw evidence and limitations are recorded in `PHASE5_F1_GITHUB_INSPECTOR_PLAN.md`.
 
 **Phase 5 completion is now 10/100. F2–F8 remain NOT STARTED.** This acceptance does not authorize merge, DEMO activation, order construction/submission, or LIVE trading. D-033 limitations remain: hosted CI execution is not an external human review or proof of local Windows ACLs.
+
+
+## F2 implementation record — 2026-11-27
+
+Candidate implementation: `work/guardian-phase5-f2-policy-20261127`, commit
+`54ecf9de7fe7944e90435a76415d3900ef3d69fa`.
+
+The central pure policy is in `src/guardian/firewall/policy.py`; focused tests are in
+`tests/unit/test_firewall_policy.py`. The only permitted operation is an empty
+`POLICY_STATUS` request in exact Phase-5 / DEMO context. Execution/order operations,
+LIVE operations, account financial reads, unknown operations, malformed context and
+unexpected status payloads fail closed. A-09 remains Phase-12-only and does not
+authorize Phase-5 execution.
+
+GitHub Actions `guardian-ci` run `45895035484` completed SUCCESS: 468 full-suite
+tests passed and compileall exited 0. This is CI regression evidence, not independent
+inspection. F2 remains **IMPLEMENTED / INDEPENDENT INSPECTION PENDING / 0 of 12**.
+See `PHASE5_F2_POLICY_PLAN.md` for the frozen behavior and independent acceptance
+requirements. No approval record, execution capability, MT5 call, order API, or
+financial account access was added.
