@@ -108,6 +108,58 @@ class _JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
     ]
 
 
+def _configure_apis(kernel32: Any, advapi32: Any) -> None:
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.LocalFree.argtypes = [wintypes.LPVOID]
+    kernel32.LocalFree.restype = wintypes.LPVOID
+    kernel32.CreateJobObjectW.argtypes = [wintypes.LPVOID, wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.QueryInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.QueryInformationJobObject.restype = wintypes.BOOL
+    kernel32.CreatePipe.argtypes = [ctypes.POINTER(wintypes.HANDLE), ctypes.POINTER(wintypes.HANDLE), ctypes.POINTER(_SECURITY_ATTRIBUTES), wintypes.DWORD]
+    kernel32.CreatePipe.restype = wintypes.BOOL
+    kernel32.SetHandleInformation.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD]
+    kernel32.SetHandleInformation.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.ResumeThread.argtypes = [wintypes.HANDLE]
+    kernel32.ResumeThread.restype = wintypes.DWORD
+    kernel32.WriteFile.argtypes = [wintypes.HANDLE, wintypes.LPCVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
+    kernel32.WriteFile.restype = wintypes.BOOL
+    kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.TerminateProcess.restype = wintypes.BOOL
+    advapi32.OpenProcessToken.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
+    advapi32.OpenProcessToken.restype = wintypes.BOOL
+    advapi32.ConvertStringSidToSidW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.LPVOID)]
+    advapi32.ConvertStringSidToSidW.restype = wintypes.BOOL
+    advapi32.CreateRestrictedToken.argtypes = [
+        wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD,
+        ctypes.POINTER(_SID_AND_ATTRIBUTES), wintypes.DWORD, wintypes.LPVOID,
+        wintypes.DWORD, wintypes.LPVOID, ctypes.POINTER(wintypes.HANDLE),
+    ]
+    advapi32.CreateRestrictedToken.restype = wintypes.BOOL
+    advapi32.GetTokenInformation.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    advapi32.GetTokenInformation.restype = wintypes.BOOL
+    advapi32.EqualSid.argtypes = [wintypes.LPVOID, wintypes.LPVOID]
+    advapi32.EqualSid.restype = wintypes.BOOL
+    advapi32.CreateProcessAsUserW.argtypes = [
+        wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.LPVOID,
+        wintypes.LPVOID, wintypes.BOOL, wintypes.DWORD, wintypes.LPVOID,
+        wintypes.LPCWSTR, ctypes.POINTER(_STARTUPINFOW),
+        ctypes.POINTER(_PROCESS_INFORMATION),
+    ]
+    advapi32.CreateProcessAsUserW.restype = wintypes.BOOL
+
+
 def _win_error(operation: str) -> WorkerHostError:
     return WorkerHostError(f"{operation} failed (winerror={ctypes.get_last_error()})")
 
@@ -225,6 +277,25 @@ def _create_job(kernel32: Any) -> Any:
     ):
         _close_handle(kernel32, job)
         raise _win_error("SetInformationJobObject")
+    verified = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+    returned = wintypes.DWORD()
+    if not kernel32.QueryInformationJobObject(
+        job, 9, ctypes.byref(verified), ctypes.sizeof(verified), ctypes.byref(returned)
+    ):
+        _close_handle(kernel32, job)
+        raise _win_error("QueryInformationJobObject")
+    required_flags = (
+        JOB_OBJECT_LIMIT_PROCESS_TIME | JOB_OBJECT_LIMIT_ACTIVE_PROCESS
+        | JOB_OBJECT_LIMIT_PROCESS_MEMORY | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    )
+    if (
+        verified.BasicLimitInformation.LimitFlags & required_flags != required_flags
+        or verified.BasicLimitInformation.ActiveProcessLimit != 1
+        or verified.ProcessMemoryLimit != 128 * 1024 * 1024
+        or verified.BasicLimitInformation.PerProcessUserTimeLimit != 30 * 10_000_000
+    ):
+        _close_handle(kernel32, job)
+        raise WorkerHostError("JOB_OBJECT_LIMITS_NOT_VERIFIED")
     return job
 
 
@@ -283,6 +354,7 @@ class RestrictedWorker:
 
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+        _configure_apis(kernel32, advapi32)
         self._kernel32 = kernel32
         self._temp = tempfile.TemporaryDirectory(prefix="guardian-worker-")
         key = secrets.token_bytes(32)
@@ -329,10 +401,16 @@ class RestrictedWorker:
             command_line = ctypes.create_unicode_buffer(subprocess.list2cmdline(arguments))
             system_root = os.environ.get("SystemRoot", r"C:\Windows")
             temp_path = self._temp.name
-            env_text = (
-                f"SystemRoot={system_root}\0WINDIR={system_root}\0"
-                f"TEMP={temp_path}\0TMP={temp_path}\0\0"
-            )
+            environment_values = {
+                "SystemRoot": system_root,
+                "WINDIR": system_root,
+                "TEMP": temp_path,
+                "TMP": temp_path,
+            }
+            env_text = "\0".join(
+                f"{key}={value}"
+                for key, value in sorted(environment_values.items(), key=lambda item: item[0].casefold())
+            ) + "\0\0"
             environment = ctypes.create_unicode_buffer(env_text)
             CREATE_SUSPENDED = 0x00000004
             CREATE_UNICODE_ENVIRONMENT = 0x00000400
