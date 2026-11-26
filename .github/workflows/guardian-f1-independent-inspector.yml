@@ -1,6 +1,7 @@
 name: Guardian F1 Independent Inspector
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - work/guardian-f1-independent-ci-20261126
