@@ -550,3 +550,12 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - **Regression evidence:** GitHub Actions `guardian-ci` run `45895035484` SUCCESS; 468 full-suite tests passed; compileall exit 0. Python hosted runner was 3.11.9. This CI run is not an independent Inspector review.
 - **Disposition:** F2 is **IMPLEMENTED / INDEPENDENT INSPECTION PENDING / 0 of 12**. No points are earned until a read-only Inspector independently passes the frozen candidate and evidence. Acceptance criteria are in `PHASE5_F2_POLICY_PLAN.md`.
 - **Safety:** no approval file changed; no order construction/submission, MT5 execution, DEMO activation, LIVE mode, account financial-field access, PR merge, or changes outside the Guardian project.
+
+
+## D-036 — F2 policy request-state revalidation hardening (2026-11-27)
+
+- **Finding:** prior to independent inspection, a security review identified that a frozen `FirewallRequest` could be altered through low-level object mutation after construction. Authorization must not trust constructor-time validation alone.
+- **Correction:** `authorize_request` now serializes and reparses the exact request before inspecting its operation or payload; every validation exception maps to DENY. Three adversarial tests cover schema-version injection, privileged-operation injection, and non-JSON payload injection.
+- **Exact candidate:** `c35705ab1a3ee8bfc184eea3864402f98499da00`.
+- **Evidence:** GitHub Actions run `45895338899` SUCCESS; full suite **471 passed**, compileall exit 0.
+- **Disposition:** hardening is implementation evidence only. F2 remains **0/12 / INDEPENDENT INSPECTION PENDING**. No approval or execution scope is expanded.
