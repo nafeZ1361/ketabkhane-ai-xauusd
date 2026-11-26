@@ -1,0 +1,256 @@
+name: Guardian F1 Independent Inspector
+
+on:
+  push:
+    branches:
+      - work/guardian-f1-independent-ci-20261126
+    paths:
+      - "ایجنت/xauusd-guardian/**"
+      - ".github/guardian-inspector/**"
+      - ".github/workflows/guardian-f1-independent-inspector.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: guardian-f1-inspector-\${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  freeze:
+    name: Freeze exact Guardian source snapshot
+    runs-on: windows-latest
+    outputs:
+      archive_sha256: \${{ steps.freeze.outputs.archive_sha256 }}
+      target_commit: \${{ steps.freeze.outputs.target_commit }}
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create immutable source archive
+        id: freeze
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f1-source.tar"
+          git archive --format=tar --output="$archive" $env:GITHUB_SHA -- "ایجنت/xauusd-guardian"
+          if ($LASTEXITCODE -ne 0) { throw "git archive failed: $LASTEXITCODE" }
+          $digest = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          "archive_sha256=$digest" >> $env:GITHUB_OUTPUT
+          "target_commit=$env:GITHUB_SHA" >> $env:GITHUB_OUTPUT
+          "Frozen commit: $env:GITHUB_SHA"
+          "Archive SHA-256: $digest"
+
+      - name: Upload frozen source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: guardian-f1-frozen-source
+          path: \${{ runner.temp }}/guardian-f1-source.tar
+          if-no-files-found: error
+          retention-days: 7
+
+  inspect:
+    name: Independent F1 inspection on isolated runner
+    needs: freeze
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout inspector harness at exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download frozen source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: guardian-f1-frozen-source
+          path: \${{ runner.temp }}/guardian-f1-artifact
+
+      - name: Verify archive and extract frozen snapshot
+        id: snapshot
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f1-artifact\guardian-f1-source.tar"
+          $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          $expected = "\${{ needs.freeze.outputs.archive_sha256 }}"
+          if ($actual -ne $expected) { throw "Frozen artifact digest mismatch: $actual != $expected" }
+          $root = Join-Path $env:RUNNER_TEMP "guardian-f1-frozen"
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          tar -xf $archive -C $root
+          if ($LASTEXITCODE -ne 0) { throw "Snapshot extraction failed: $LASTEXITCODE" }
+          $snapshot = Join-Path $root "ایجنت\xauusd-guardian"
+          if (-not (Test-Path (Join-Path $snapshot "src\guardian\contracts\firewall.py"))) {
+            throw "Expected F1 contract module is missing from frozen snapshot"
+          }
+          "SNAPSHOT_ROOT=$snapshot" >> $env:GITHUB_ENV
+          "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV
+          "FROZEN_ROOT=$root" >> $env:GITHUB_ENV
+          "Verified archive SHA-256: $actual"
+
+      - name: Set up exact Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.8"
+          architecture: "x64"
+
+      - name: Prepare independent writable test copy
+        shell: pwsh
+        run: |
+          $work = Join-Path $env:RUNNER_TEMP "guardian-f1-inspector-work"
+          Copy-Item -Path $env:SNAPSHOT_ROOT -Destination $work -Recurse
+          New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP "guardian-f1-evidence") -Force | Out-Null
+          "INSPECTOR_WORK=$work" >> $env:GITHUB_ENV
+          "EVIDENCE_ROOT=$(Join-Path $env:RUNNER_TEMP 'guardian-f1-evidence')" >> $env:GITHUB_ENV
+          python -m venv (Join-Path $work ".venv")
+          if ($LASTEXITCODE -ne 0) { throw "venv creation failed: $LASTEXITCODE" }
+
+      - name: Build hash-verified wheelhouse
+        id: wheelhouse
+        shell: pwsh
+        run: |
+          $wheelhouse = Join-Path $env:RUNNER_TEMP "guardian-f1-wheelhouse"
+          New-Item -ItemType Directory -Path $wheelhouse -Force | Out-Null
+          Push-Location $env:INSPECTOR_WORK
+          try {
+            python -m pip download --disable-pip-version-check --require-hashes -r requirements-hashed.lock -d $wheelhouse 2>&1 |
+              Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "pip-download.log")
+            if ($LASTEXITCODE -ne 0) { throw "Hash-locked wheel download failed: $LASTEXITCODE" }
+            $expected = @{}
+            foreach ($line in Get-Content "WHEELHOUSE.sha256") {
+              if ($line.Trim()) {
+                $parts = $line.Trim() -split "\s+", 2
+                if ($parts.Count -ne 2) { throw "Malformed WHEELHOUSE.sha256 line: $line" }
+                $expected[$parts[1]] = $parts[0].ToLowerInvariant()
+              }
+            }
+            $actualFiles = @(Get-ChildItem -Path $wheelhouse -File)
+            if ($actualFiles.Count -ne $expected.Count) {
+              throw "Wheel count mismatch: expected $($expected.Count), found $($actualFiles.Count)"
+            }
+            foreach ($name in $expected.Keys) {
+              $file = Join-Path $wheelhouse $name
+              if (-not (Test-Path $file)) { throw "Missing pinned wheel: $name" }
+              $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
+              if ($hash -ne $expected[$name]) { throw "Wheel hash mismatch: $name" }
+            }
+            "Verified exact wheel set: $($expected.Count)/$($expected.Count)"
+          }
+          finally { Pop-Location }
+          "WHEELHOUSE=$wheelhouse" >> $env:GITHUB_ENV
+
+      - name: Install dependencies offline into isolated venv
+        shell: pwsh
+        run: |
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          Push-Location $env:INSPECTOR_WORK
+          try {
+            & $python -m pip install --disable-pip-version-check --no-index --find-links $env:WHEELHOUSE --require-hashes -r requirements-hashed.lock 2>&1 |
+              Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "pip-install-offline.log")
+            if ($LASTEXITCODE -ne 0) { throw "Offline install failed: $LASTEXITCODE" }
+            & $python -m pip check 2>&1 | Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "pip-check.log")
+            if ($LASTEXITCODE -ne 0) { throw "pip check failed: $LASTEXITCODE" }
+            & $python -c "import sys; print(sys.version); print(sys.prefix); print(sys.base_prefix)"
+            if ($LASTEXITCODE -ne 0) { throw "Python identity check failed: $LASTEXITCODE" }
+          }
+          finally { Pop-Location }
+
+      - name: Independent focused contract tests
+        id: focused
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          Push-Location $env:INSPECTOR_WORK
+          try {
+            & $python -m pytest tests/unit/test_firewall_contracts.py -q 2>&1 |
+              Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "focused-pytest.log")
+            "FOCUSED_EXIT=$LASTEXITCODE" >> $env:GITHUB_ENV
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          finally { Pop-Location }
+
+      - name: Independent full regression suite
+        id: full
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          Push-Location $env:INSPECTOR_WORK
+          try {
+            & $python -m pytest -q 2>&1 |
+              Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "full-pytest.log")
+            "FULL_EXIT=$LASTEXITCODE" >> $env:GITHUB_ENV
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          finally { Pop-Location }
+
+      - name: Compile source, scripts and tests
+        id: compile
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          Push-Location $env:INSPECTOR_WORK
+          try {
+            & $python -m compileall -q src scripts tests 2>&1 |
+              Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "compileall.log")
+            "COMPILE_EXIT=$LASTEXITCODE" >> $env:GITHUB_ENV
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          finally { Pop-Location }
+
+      - name: Run independent black-box, static and mutation inspection
+        id: inspector
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          $harness = Join-Path $env:GITHUB_WORKSPACE ".github\guardian-inspector\f1_inspector.py"
+          & $python $harness --project-root $env:INSPECTOR_WORK --frozen-root $env:SNAPSHOT_ROOT --output (Join-Path $env:EVIDENCE_ROOT "inspector-result.json") 2>&1 |
+            Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "inspector.log")
+          "INSPECTOR_EXIT=$LASTEXITCODE" >> $env:GITHUB_ENV
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify frozen source remained unchanged and write verdict
+        if: always()
+        shell: pwsh
+        run: |
+          $archiveHash = (Get-FileHash -Algorithm SHA256 $env:ARCHIVE_PATH).Hash.ToLowerInvariant()
+          $expectedHash = "\${{ needs.freeze.outputs.archive_sha256 }}"
+          if ($archiveHash -ne $expectedHash) { throw "Frozen archive changed during inspection" }
+          $summary = [ordered]@{
+            schema = "guardian-f1-run-summary/v1"
+            target_commit = "\${{ needs.freeze.outputs.target_commit }}"
+            archive_sha256 = $archiveHash
+            focused_exit = $env:FOCUSED_EXIT
+            full_exit = $env:FULL_EXIT
+            compile_exit = $env:COMPILE_EXIT
+            inspector_exit = $env:INSPECTOR_EXIT
+            frozen_archive_stable = ($archiveHash -eq $expectedHash)
+            workflow_verdict = "BLOCK"
+          }
+          if ($env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $env:INSPECTOR_EXIT -eq "0" -and $summary.frozen_archive_stable) {
+            $summary.workflow_verdict = "PASS"
+          }
+          $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
+          Get-ChildItem $env:EVIDENCE_ROOT -File | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
+            Set-Content -Encoding ascii (Join-Path $env:EVIDENCE_ROOT "SHA256SUMS.txt")
+          if ($summary.workflow_verdict -ne "PASS") { throw "Independent F1 inspection verdict: BLOCK" }
+
+      - name: Upload raw Inspector evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guardian-f1-inspector-evidence
+          path: \${{ runner.temp }}/guardian-f1-evidence/
+          if-no-files-found: warn
+          retention-days: 30
