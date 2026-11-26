@@ -218,7 +218,7 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
         ):
             raise _win_error("CreateRestrictedToken")
         # Medium integrity prevents an elevated source token retaining high-integrity
-        # write access. The restricted SID check further narrows file ACL access.
+        # write access; privileges are separately disabled and verified.
         label = _TOKEN_MANDATORY_LABEL(
             _SID_AND_ATTRIBUTES(medium_sid, SE_GROUP_INTEGRITY)
         )
@@ -534,11 +534,18 @@ class RestrictedWorker:
             command_line = ctypes.create_unicode_buffer(subprocess.list2cmdline(arguments))
             system_root = os.environ.get("SystemRoot", r"C:\Windows")
             temp_path = self._temp.name
+            python_dir = str(Path(sys.executable).resolve().parent)
             environment_values = {
                 "SystemRoot": system_root,
                 "WINDIR": system_root,
                 "TEMP": temp_path,
                 "TMP": temp_path,
+                "PATH": os.pathsep.join((
+                    python_dir,
+                    str(Path(python_dir) / "DLLs"),
+                    str(Path(system_root) / "System32"),
+                    system_root,
+                )),
             }
             env_text = "\0".join(
                 f"{key}={value}"
