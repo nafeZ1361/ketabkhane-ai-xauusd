@@ -73,8 +73,12 @@ class _TOKEN_MANDATORY_LABEL(ctypes.Structure):
     _fields_ = [("Label", _SID_AND_ATTRIBUTES)]
 
 
+class _LUID(ctypes.Structure):
+    _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+
+
 class _LUID_AND_ATTRIBUTES(ctypes.Structure):
-    _fields_ = [("Luid", ctypes.c_longlong), ("Attributes", wintypes.DWORD)]
+    _fields_ = [("Luid", _LUID), ("Attributes", wintypes.DWORD)]
 
 
 class _JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
@@ -160,6 +164,8 @@ def _configure_apis(kernel32: Any, advapi32: Any) -> None:
     advapi32.GetSidSubAuthorityCount.restype = ctypes.POINTER(ctypes.c_ubyte)
     advapi32.GetSidSubAuthority.argtypes = [wintypes.LPVOID, wintypes.DWORD]
     advapi32.GetSidSubAuthority.restype = ctypes.POINTER(wintypes.DWORD)
+    advapi32.LookupPrivilegeValueW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, ctypes.POINTER(_LUID)]
+    advapi32.LookupPrivilegeValueW.restype = wintypes.BOOL
     advapi32.EqualSid.argtypes = [wintypes.LPVOID, wintypes.LPVOID]
     advapi32.EqualSid.restype = wintypes.BOOL
     kernel32.CreateProcessW.argtypes = [
@@ -240,8 +246,23 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
         if not advapi32.GetTokenInformation(token, TokenPrivileges, buffer, needed.value, ctypes.byref(needed)):
             raise _win_error("GetTokenInformation(worker privileges)")
         privilege_count = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
-        if privilege_count > 1:
-            raise WorkerHostError("WORKER_TOKEN_PRIVILEGES_NOT_REDUCED")
+        change_notify = _LUID()
+        if not advapi32.LookupPrivilegeValueW(None, "SeChangeNotifyPrivilege", ctypes.byref(change_notify)):
+            raise _win_error("LookupPrivilegeValueW(SeChangeNotifyPrivilege)")
+        enabled_privileges: list[str] = []
+        privilege_base = ctypes.addressof(buffer) + ctypes.sizeof(wintypes.DWORD)
+        for index in range(privilege_count):
+            item = ctypes.cast(
+                privilege_base + index * ctypes.sizeof(_LUID_AND_ATTRIBUTES),
+                ctypes.POINTER(_LUID_AND_ATTRIBUTES),
+            ).contents
+            if item.Attributes & 0x00000002:  # SE_PRIVILEGE_ENABLED
+                if (
+                    item.Luid.LowPart != change_notify.LowPart
+                    or item.Luid.HighPart != change_notify.HighPart
+                ):
+                    raise WorkerHostError("WORKER_UNEXPECTED_ENABLED_PRIVILEGE")
+                enabled_privileges.append("SeChangeNotifyPrivilege")
 
         needed = wintypes.DWORD()
         advapi32.GetTokenInformation(token, TokenIntegrityLevel, None, 0, ctypes.byref(needed))
@@ -263,6 +284,7 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
             "administrators_sid_present": admin_present,
             "administrators_sid_deny_only": admin_deny_only if admin_present else None,
             "privilege_count": privilege_count,
+            "enabled_privileges": enabled_privileges,
             "integrity_rid": 8192,
         }
     finally:
