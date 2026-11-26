@@ -299,6 +299,88 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
             kernel32.LocalFree(low_sid)
 
 
+def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
+    TOKEN_QUERY = 0x0008
+    TokenGroups = 2
+    TokenPrivileges = 3
+    TokenIntegrityLevel = 25
+    SE_GROUP_USE_FOR_DENY_ONLY = 0x0010
+
+    token = wintypes.HANDLE()
+    if not advapi32.OpenProcessToken(process, TOKEN_QUERY, ctypes.byref(token)):
+        raise _win_error("OpenProcessToken(worker)")
+    try:
+        if not advapi32.IsTokenRestricted(token):
+            raise WorkerHostError("WORKER_TOKEN_NOT_RESTRICTED")
+
+        admin_sid = wintypes.LPVOID()
+        if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
+            raise _win_error("ConvertStringSidToSidW(verify worker)")
+        try:
+            needed = wintypes.DWORD()
+            advapi32.GetTokenInformation(token, TokenGroups, None, 0, ctypes.byref(needed))
+            if not needed.value:
+                raise _win_error("GetTokenInformation(worker groups size)")
+            buffer = ctypes.create_string_buffer(needed.value)
+            if not advapi32.GetTokenInformation(token, TokenGroups, buffer, needed.value, ctypes.byref(needed)):
+                raise _win_error("GetTokenInformation(worker groups)")
+            count = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
+            admin_present = False
+            admin_deny_only = False
+            base = ctypes.addressof(buffer) + ctypes.sizeof(wintypes.DWORD)
+            for index in range(count):
+                item = ctypes.cast(
+                    base + index * ctypes.sizeof(_SID_AND_ATTRIBUTES),
+                    ctypes.POINTER(_SID_AND_ATTRIBUTES),
+                ).contents
+                if advapi32.EqualSid(item.Sid, admin_sid):
+                    admin_present = True
+                    admin_deny_only = bool(item.Attributes & SE_GROUP_USE_FOR_DENY_ONLY)
+                    break
+            if admin_present and not admin_deny_only:
+                raise WorkerHostError("WORKER_ADMINISTRATORS_SID_NOT_DENY_ONLY")
+        finally:
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.LocalFree(admin_sid)
+
+        needed = wintypes.DWORD()
+        advapi32.GetTokenInformation(token, TokenPrivileges, None, 0, ctypes.byref(needed))
+        if not needed.value:
+            raise _win_error("GetTokenInformation(worker privileges size)")
+        buffer = ctypes.create_string_buffer(needed.value)
+        if not advapi32.GetTokenInformation(token, TokenPrivileges, buffer, needed.value, ctypes.byref(needed)):
+            raise _win_error("GetTokenInformation(worker privileges)")
+        privilege_count = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
+        if privilege_count > 1:
+            raise WorkerHostError("WORKER_TOKEN_PRIVILEGES_NOT_REDUCED")
+
+        needed = wintypes.DWORD()
+        advapi32.GetTokenInformation(token, TokenIntegrityLevel, None, 0, ctypes.byref(needed))
+        if not needed.value:
+            raise _win_error("GetTokenInformation(worker integrity size)")
+        buffer = ctypes.create_string_buffer(needed.value)
+        if not advapi32.GetTokenInformation(token, TokenIntegrityLevel, buffer, needed.value, ctypes.byref(needed)):
+            raise _win_error("GetTokenInformation(worker integrity)")
+        label = ctypes.cast(buffer, ctypes.POINTER(_TOKEN_MANDATORY_LABEL)).contents
+        count_ptr = advapi32.GetSidSubAuthorityCount(label.Label.Sid)
+        if not count_ptr or count_ptr.contents.value == 0:
+            raise WorkerHostError("WORKER_TOKEN_INTEGRITY_INVALID")
+        rid_ptr = advapi32.GetSidSubAuthority(label.Label.Sid, count_ptr.contents.value - 1)
+        if not rid_ptr or rid_ptr.contents.value != 4096:
+            raise WorkerHostError("WORKER_TOKEN_NOT_LOW_INTEGRITY")
+
+        return {
+            "is_restricted": True,
+            "administrators_sid_present": admin_present,
+            "administrators_sid_deny_only": admin_deny_only if admin_present else None,
+            "privilege_count": privilege_count,
+            "integrity_rid": 4096,
+        }
+    finally:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CloseHandle(token)
+
+
 def _create_job(kernel32: Any) -> Any:
     JOB_OBJECT_LIMIT_PROCESS_TIME = 0x00000002
     JOB_OBJECT_LIMIT_ACTIVE_PROCESS = 0x00000008
@@ -381,6 +463,7 @@ class RestrictedWorker:
         self._stderr_reader = None
         self._temp = None
         self._codec = None
+        self._security_report = None
         self._closed = False
         self._poisoned = False
 
@@ -471,6 +554,7 @@ class RestrictedWorker:
 
             self._process = process_info.hProcess
             self._thread = process_info.hThread
+            self._security_report = _inspect_process_token(advapi32, self._process)
             if not kernel32.AssignProcessToJobObject(self._job, self._process):
                 raise _win_error("AssignProcessToJobObject")
 
@@ -569,6 +653,12 @@ class RestrictedWorker:
             return self._codec.decode(item)
         except IPCProtocolError as exc:
             raise WorkerHostError("WORKER_AUTHENTICATION_OR_PROTOCOL_FAILURE") from exc
+
+    @property
+    def security_report(self) -> dict[str, Any]:
+        if self._security_report is None:
+            raise WorkerHostError("WORKER_SECURITY_NOT_VERIFIED")
+        return dict(self._security_report)
 
     def request(self, message_type: str, payload: dict[str, Any]) -> dict[str, Any]:
         if self._closed or self._poisoned or self._stdin is None:
