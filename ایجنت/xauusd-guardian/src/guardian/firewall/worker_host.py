@@ -500,6 +500,7 @@ class RestrictedWorker:
         self._temp = None
         self._codec = None
         self._security_report = None
+        self._job_limits_verified = False
         self._closed = False
         self._poisoned = False
 
@@ -535,6 +536,7 @@ class RestrictedWorker:
         try:
             self._token = _restricted_token(advapi32, kernel32)
             self._job = _create_job(kernel32)
+            self._job_limits_verified = True
 
             child_stdin_read, child_stdin_write = _pipe(kernel32)
             child_stdout_read, child_stdout_write = _pipe(kernel32)
@@ -591,6 +593,7 @@ class RestrictedWorker:
             self._process = process_info.hProcess
             self._thread = process_info.hThread
             self._security_report = _inspect_process_token(advapi32, self._process)
+            self._security_report["job_limits_verified"] = bool(self._job_limits_verified)
             if not kernel32.AssignProcessToJobObject(self._job, self._process):
                 raise _win_error("AssignProcessToJobObject")
 
