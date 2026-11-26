@@ -3,7 +3,7 @@
 
 > **F1 checkpoint addendum — 2026-11-26:** The latest owner-supplied local remediation report records `INDEPENDENCE_NOT_ESTABLISHED`, F1 **0/10**, Phase 5 **0/100**, and F2–F8 **NOT STARTED**. This is a reported local checkpoint, not a new independent inspection and not independently reproducible from the GitHub snapshot. The candidate worktree and its uncommitted one-file patch are distinct from PR #8 head `58878fd86af837f37a4c6e1947d1d6f94eee64ff`; do not transfer test results or acceptance between them. See `PHASE5_F1_INSPECTOR_UNBLOCK_PLAN.md` for the local reinspection preconditions and `AI_WORK_PROTOCOL.md` for role/evidence rules. No local account, ACL, trading, or order-path action is claimed.
 
-Last updated: 2026-11-24 (external F1 Inspector report intake registered; integrity limitations disclosed; independent acceptance pending)
+Last updated: 2026-11-26 (F1 independence blocker and local reinspection prerequisites recorded; acceptance remains pending)
 
 ## Phase status
 
