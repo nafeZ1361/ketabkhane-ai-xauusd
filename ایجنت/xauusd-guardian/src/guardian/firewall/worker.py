@@ -81,12 +81,14 @@ def _read_key(handle_value: int) -> bytes:
             chunks.extend(part)
         if os.read(fd, 1):
             raise IPCProtocolError("SESSION_KEY_PIPE_OVERSIZED")
-        return bytes(chunks)
+        return bytearray(chunks)
     finally:
         os.close(fd)
 
 
 def worker_main(key_handle: int, session_id: str) -> int:
+    codec = None
+    key = bytearray()
     try:
         key = _read_key(key_handle)
         codec = AuthenticatedCodec(
@@ -95,6 +97,9 @@ def worker_main(key_handle: int, session_id: str) -> int:
             send_direction="worker_to_parent",
             receive_direction="parent_to_worker",
         )
+        for index in range(len(key)):
+            key[index] = 0
+        key.clear()
         write_frame(
             sys.stdout.buffer,
             codec.encode("READY", "startup", {"status": "READY"}),
@@ -119,3 +124,9 @@ def worker_main(key_handle: int, session_id: str) -> int:
     except Exception:
         # Never serialize exception text, stack traces, payloads, or secrets to IPC.
         return 3
+    finally:
+        for index in range(len(key)):
+            key[index] = 0
+        key.clear()
+        if codec is not None:
+            codec.destroy()
