@@ -216,7 +216,7 @@ jobs:
           }
           $probe = @'
           import json, os, pathlib, subprocess, traceback
-          target = pathlib.Path(os.environ["INSPECTOR_WORK"]) / ".venv" / "Scripts" / "python.exe"
+          target = pathlib.Path(r"__TARGET_PYTHON__")
           result = {"target": str(target), "exists": target.exists(), "is_file": target.is_file(), "access_execute": os.access(str(target), os.X_OK)}
           try:
               child = subprocess.run([str(target), "-c", "import sys; print(sys.executable)"], capture_output=True, text=True, timeout=20, check=False)
@@ -225,6 +225,7 @@ jobs:
               result.update({"exception_type": type(exc).__name__, "exception": repr(exc), "errno": getattr(exc, "errno", None), "winerror": getattr(exc, "winerror", None), "filename": getattr(exc, "filename", None), "traceback": traceback.format_exc()})
           print(json.dumps(result, sort_keys=True, indent=2))
           '@
+          $probe = $probe.Replace("__TARGET_PYTHON__", (Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"))
           $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
           $basePython = (Get-Command python).Source
           & $helper -Python $basePython -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "restricted-python-launch-probe.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-c",$probe)
