@@ -383,9 +383,16 @@ jobs:
           }
           $focusedCounts = Get-JunitCounts (Join-Path $env:EVIDENCE_ROOT "focused-junit.xml")
           $fullCounts = Get-JunitCounts (Join-Path $env:EVIDENCE_ROOT "full-junit.xml")
-          $inspectorExitPath = Join-Path $env:EVIDENCE_ROOT "inspector.log.exit-code.txt"
-          $inspectorExit = $null
-          if (Test-Path $inspectorExitPath) { $inspectorExit = [int]((Get-Content -Raw $inspectorExitPath).Trim()) }
+          $readExit = {
+            param([string]$path)
+            if (Test-Path $path) { return [int]((Get-Content -Raw $path).Trim()) }
+            return $null
+          }
+          $focusedExit = & $readExit (Join-Path $env:EVIDENCE_ROOT "focused-pytest.log.exit-code.txt")
+          $fullExit = & $readExit (Join-Path $env:EVIDENCE_ROOT "full-pytest.log.exit-code.txt")
+          $compileExit = & $readExit (Join-Path $env:EVIDENCE_ROOT "compileall.log.exit-code.txt")
+          $identityExit = & $readExit (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log.exit-code.txt")
+          $inspectorExit = & $readExit (Join-Path $env:EVIDENCE_ROOT "inspector.log.exit-code.txt")
           $inspectorVerdict = ""
           $inspectorResultPath = Join-Path $env:EVIDENCE_ROOT "inspector-result.json"
           if (Test-Path $inspectorResultPath) {
@@ -396,21 +403,21 @@ jobs:
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $archiveHash
             inspector_harness_commit = "72dc238a45bb62e3f98a2fb25a2373a071f78039"
-            focused_exit = $env:FOCUSED_EXIT
+            focused_exit = $focusedExit
             focused_junit = $focusedCounts
-            full_exit = $env:FULL_EXIT
+            full_exit = $fullExit
             full_junit = $fullCounts
-            compile_exit = $env:COMPILE_EXIT
+            compile_exit = $compileExit
             inspector_exit = $inspectorExit
             inspector_verdict = $inspectorVerdict
-            identity_exit = $env:IDENTITY_EXIT
+            identity_exit = $identityExit
             inspector_account = $env:INSPECTOR_ACCOUNT
             inspector_sid = $env:INSPECTOR_SID
             runner_sid = $env:INSPECTOR_RUNNER_SID
             frozen_archive_stable = $frozenStable
             workflow_verdict = "BLOCK"
           }
-          if ($env:IDENTITY_EXIT -eq "0" -and $env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $inspectorExit -eq 0 -and $inspectorVerdict -eq "PASS" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $focusedCounts.skipped -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0 -and $fullCounts.skipped -eq 0) {
+          if ($identityExit -eq 0 -and $focusedExit -eq 0 -and $fullExit -eq 0 -and $compileExit -eq 0 -and $inspectorExit -eq 0 -and $inspectorVerdict -eq "PASS" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $focusedCounts.skipped -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0 -and $fullCounts.skipped -eq 0) {
             $summary.workflow_verdict = "PASS"
           }
           $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
