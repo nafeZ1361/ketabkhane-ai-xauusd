@@ -64,8 +64,8 @@ class _SID_AND_ATTRIBUTES(ctypes.Structure):
     _fields_ = [("Sid", wintypes.LPVOID), ("Attributes", wintypes.DWORD)]
 
 
-class _TOKEN_ELEVATION(ctypes.Structure):
-    _fields_ = [("TokenIsElevated", wintypes.DWORD)]
+class _TOKEN_MANDATORY_LABEL(ctypes.Structure):
+    _fields_ = [("Label", _SID_AND_ATTRIBUTES)]
 
 
 class _LUID_AND_ATTRIBUTES(ctypes.Structure):
@@ -149,6 +149,16 @@ def _configure_apis(kernel32: Any, advapi32: Any) -> None:
         ctypes.POINTER(wintypes.DWORD),
     ]
     advapi32.GetTokenInformation.restype = wintypes.BOOL
+    advapi32.SetTokenInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
+    advapi32.SetTokenInformation.restype = wintypes.BOOL
+    advapi32.IsTokenRestricted.argtypes = [wintypes.HANDLE]
+    advapi32.IsTokenRestricted.restype = wintypes.BOOL
+    advapi32.GetLengthSid.argtypes = [wintypes.LPVOID]
+    advapi32.GetLengthSid.restype = wintypes.DWORD
+    advapi32.GetSidSubAuthorityCount.argtypes = [wintypes.LPVOID]
+    advapi32.GetSidSubAuthorityCount.restype = ctypes.POINTER(ctypes.c_ubyte)
+    advapi32.GetSidSubAuthority.argtypes = [wintypes.LPVOID, wintypes.DWORD]
+    advapi32.GetSidSubAuthority.restype = ctypes.POINTER(wintypes.DWORD)
     advapi32.EqualSid.argtypes = [wintypes.LPVOID, wintypes.LPVOID]
     advapi32.EqualSid.restype = wintypes.BOOL
     advapi32.CreateProcessAsUserW.argtypes = [
@@ -177,9 +187,10 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
     TOKEN_ADJUST_SESSIONID = 0x0100
     DISABLE_MAX_PRIVILEGE = 0x0001
     SE_GROUP_USE_FOR_DENY_ONLY = 0x0010
+    SE_GROUP_INTEGRITY = 0x0020
     TokenGroups = 2
     TokenPrivileges = 3
-    TokenElevation = 20
+    TokenIntegrityLevel = 25
 
     current_token = wintypes.HANDLE()
     access = (
@@ -190,26 +201,32 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
         raise _win_error("OpenProcessToken")
 
     admin_sid = wintypes.LPVOID()
+    low_sid = wintypes.LPVOID()
     restricted = wintypes.HANDLE()
     try:
         if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
-            raise _win_error("ConvertStringSidToSidW")
+            raise _win_error("ConvertStringSidToSidW(Administrators)")
+        if not advapi32.ConvertStringSidToSidW("S-1-16-4096", ctypes.byref(low_sid)):
+            raise _win_error("ConvertStringSidToSidW(LowIntegrity)")
         disabled = _SID_AND_ATTRIBUTES(admin_sid, SE_GROUP_USE_FOR_DENY_ONLY)
         if not advapi32.CreateRestrictedToken(
             current_token, DISABLE_MAX_PRIVILEGE, 1, ctypes.byref(disabled),
             0, None, 0, None, ctypes.byref(restricted),
         ):
             raise _win_error("CreateRestrictedToken")
+        if not advapi32.IsTokenRestricted(restricted):
+            raise WorkerHostError("TOKEN_RESTRICTION_NOT_VERIFIED")
 
-        elevation = _TOKEN_ELEVATION()
-        returned = wintypes.DWORD()
-        if not advapi32.GetTokenInformation(
-            restricted, TokenElevation, ctypes.byref(elevation),
-            ctypes.sizeof(elevation), ctypes.byref(returned),
+        # A low mandatory integrity label prevents writes to medium/high-integrity
+        # objects even if the source user token was elevated.
+        label = _TOKEN_MANDATORY_LABEL(
+            _SID_AND_ATTRIBUTES(low_sid, SE_GROUP_INTEGRITY)
+        )
+        label_size = ctypes.sizeof(label) + advapi32.GetLengthSid(low_sid)
+        if not advapi32.SetTokenInformation(
+            restricted, TokenIntegrityLevel, ctypes.byref(label), label_size
         ):
-            raise _win_error("GetTokenInformation(TokenElevation)")
-        if elevation.TokenIsElevated != 0:
-            raise WorkerHostError("RESTRICTED_TOKEN_STILL_ELEVATED")
+            raise _win_error("SetTokenInformation(TokenIntegrityLevel)")
 
         needed = wintypes.DWORD()
         advapi32.GetTokenInformation(restricted, TokenGroups, None, 0, ctypes.byref(needed))
@@ -217,11 +234,12 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
             raise _win_error("GetTokenInformation(TokenGroups size)")
         group_buffer = ctypes.create_string_buffer(needed.value)
         if not advapi32.GetTokenInformation(
-            restricted, TokenGroups, group_buffer, needed, ctypes.byref(needed)
+            restricted, TokenGroups, group_buffer, needed.value, ctypes.byref(needed)
         ):
             raise _win_error("GetTokenInformation(TokenGroups)")
         count = ctypes.cast(group_buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
         admin_is_deny_only = False
+        admin_present = False
         base = ctypes.addressof(group_buffer) + ctypes.sizeof(wintypes.DWORD)
         for index in range(count):
             item = ctypes.cast(
@@ -229,9 +247,10 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
                 ctypes.POINTER(_SID_AND_ATTRIBUTES),
             ).contents
             if advapi32.EqualSid(item.Sid, admin_sid):
+                admin_present = True
                 admin_is_deny_only = bool(item.Attributes & SE_GROUP_USE_FOR_DENY_ONLY)
                 break
-        if not admin_is_deny_only:
+        if admin_present and not admin_is_deny_only:
             raise WorkerHostError("ADMINISTRATORS_SID_NOT_DENY_ONLY")
 
         needed = wintypes.DWORD()
@@ -240,12 +259,34 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
             raise _win_error("GetTokenInformation(TokenPrivileges size)")
         privilege_buffer = ctypes.create_string_buffer(needed.value)
         if not advapi32.GetTokenInformation(
-            restricted, TokenPrivileges, privilege_buffer, needed, ctypes.byref(needed)
+            restricted, TokenPrivileges, privilege_buffer, needed.value, ctypes.byref(needed)
         ):
             raise _win_error("GetTokenInformation(TokenPrivileges)")
         privilege_count = ctypes.cast(privilege_buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
         if privilege_count > 1:
             raise WorkerHostError("RESTRICTED_TOKEN_HAS_UNEXPECTED_PRIVILEGES")
+
+        needed = wintypes.DWORD()
+        advapi32.GetTokenInformation(restricted, TokenIntegrityLevel, None, 0, ctypes.byref(needed))
+        if not needed.value:
+            raise _win_error("GetTokenInformation(TokenIntegrityLevel size)")
+        integrity_buffer = ctypes.create_string_buffer(needed.value)
+        if not advapi32.GetTokenInformation(
+            restricted, TokenIntegrityLevel, integrity_buffer, needed.value, ctypes.byref(needed)
+        ):
+            raise _win_error("GetTokenInformation(TokenIntegrityLevel)")
+        integrity = ctypes.cast(
+            integrity_buffer, ctypes.POINTER(_TOKEN_MANDATORY_LABEL)
+        ).contents
+        count_ptr = advapi32.GetSidSubAuthorityCount(integrity.Label.Sid)
+        if not count_ptr or count_ptr.contents.value == 0:
+            raise WorkerHostError("TOKEN_INTEGRITY_LABEL_INVALID")
+        rid_ptr = advapi32.GetSidSubAuthority(
+            integrity.Label.Sid, count_ptr.contents.value - 1
+        )
+        if not rid_ptr or rid_ptr.contents.value != 4096:
+            raise WorkerHostError("TOKEN_INTEGRITY_NOT_LOW")
+
         return restricted
     except Exception:
         _close_handle(kernel32, restricted)
@@ -254,6 +295,8 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
         _close_handle(kernel32, current_token)
         if admin_sid:
             kernel32.LocalFree(admin_sid)
+        if low_sid:
+            kernel32.LocalFree(low_sid)
 
 
 def _create_job(kernel32: Any) -> Any:
