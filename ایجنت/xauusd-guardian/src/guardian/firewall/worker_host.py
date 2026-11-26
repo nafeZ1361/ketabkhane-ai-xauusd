@@ -1,7 +1,7 @@
-"""Windows-only restricted worker host for F4.
+"""Windows-only non-elevated worker host for F4.
 
-No unrestricted subprocess fallback exists. Failure to create and verify the
-restricted primary token or Job Object prevents worker startup.
+Worker startup is refused unless both parent and child have a verified
+non-elevated token and the child is contained by the configured Job Object.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from guardian.firewall.ipc import (
 
 
 class WorkerHostError(RuntimeError):
-    """The restricted worker could not be started or safely used."""
+    """The non-elevated worker could not be started or safely used."""
 
 
 class _SECURITY_ATTRIBUTES(ctypes.Structure):
@@ -63,6 +63,10 @@ class _PROCESS_INFORMATION(ctypes.Structure):
 
 class _SID_AND_ATTRIBUTES(ctypes.Structure):
     _fields_ = [("Sid", wintypes.LPVOID), ("Attributes", wintypes.DWORD)]
+
+
+class _TOKEN_ELEVATION(ctypes.Structure):
+    _fields_ = [("TokenIsElevated", wintypes.DWORD)]
 
 
 class _TOKEN_MANDATORY_LABEL(ctypes.Structure):
