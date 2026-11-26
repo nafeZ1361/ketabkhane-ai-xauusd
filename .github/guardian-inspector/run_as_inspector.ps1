@@ -43,11 +43,11 @@ try:
     pathlib.Path(config["stdout"]).write_bytes(result.stdout)
     pathlib.Path(config["stderr"]).write_bytes(result.stderr)
     pathlib.Path(config["exit"]).write_text(str(result.returncode), encoding="ascii")
-    raise SystemExit(result.returncode)
-except BaseException as exc:
+except Exception as exc:
     pathlib.Path(config["stderr"]).write_text(repr(exc), encoding="utf-8")
     pathlib.Path(config["exit"]).write_text("125", encoding="ascii")
     raise
+sys.exit(result.returncode)
 '@
 $launcher | Set-Content -Path $launcherPath -Encoding utf8
 $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
