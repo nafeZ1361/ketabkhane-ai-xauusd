@@ -23,10 +23,14 @@ def manifest(root: Path) -> dict[str, str]:
 
 
 def load_policy(project_root: Path):
+    import importlib
     import sys
     source = str(project_root / "src")
-    if source not in sys.path:
-        sys.path.insert(0, source)
+    for name in tuple(sys.modules):
+        if name == "guardian" or name.startswith("guardian."):
+            del sys.modules[name]
+    sys.path.insert(0, source)
+    importlib.invalidate_caches()
     from guardian.contracts.firewall import FirewallRequest
     from guardian.firewall.policy import PolicyContext, authorize_request
     return FirewallRequest, PolicyContext, authorize_request
@@ -162,8 +166,8 @@ def static_boundary(project_root: Path) -> list[str]:
 def mutation_control(project_root: Path) -> dict:
     source = project_root / "src" / "guardian" / "firewall" / "policy.py"
     original = source.read_text(encoding="utf-8")
-    anchor = "if operation in _EXECUTION_OPERATIONS:"
-    mutant = "if False and operation in _EXECUTION_OPERATIONS:"
+    anchor = 'if operation in _EXECUTION_OPERATIONS:\n        return PolicyDecision(False, "DEMO_EXECUTION_DISABLED_IN_PHASE_5")'
+    mutant = 'if operation in _EXECUTION_OPERATIONS:\n        return PolicyDecision(True, "MUTANT_ALLOW_EXECUTION")'
     if original.count(anchor) != 1:
         return {"status": "BLOCK", "reason": "execution-denial mutation anchor missing/ambiguous"}
     with tempfile.TemporaryDirectory(prefix="guardian-f2-mutant-") as temp:
