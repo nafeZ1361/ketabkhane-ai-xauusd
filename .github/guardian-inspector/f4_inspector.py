@@ -302,10 +302,10 @@ def main() -> int:
             "if False:",
         ),
         mutation_control(
-            project, "Low-integrity process restriction disabled",
+            project, "Worker Job Object assignment disabled",
             "src/guardian/firewall/worker_host.py",
-            "if not advapi32.SetTokenInformation(",
-            "if False and not advapi32.SetTokenInformation(",
+            "assigned = kernel32.AssignProcessToJobObject(self._job, self._process)",
+            "assigned = False",
         ),
     ]
 
