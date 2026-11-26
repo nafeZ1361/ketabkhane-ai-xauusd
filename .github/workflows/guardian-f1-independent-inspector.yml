@@ -21,12 +21,13 @@ jobs:
   freeze:
     name: Freeze exact Guardian source snapshot
     runs-on: windows-latest
+    timeout-minutes: 10
     outputs:
       archive_sha256: ${{ steps.freeze.outputs.archive_sha256 }}
       target_commit: ${{ steps.freeze.outputs.target_commit }}
     steps:
       - name: Checkout exact triggering commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -46,7 +47,7 @@ jobs:
           "Archive SHA-256: $digest"
 
       - name: Upload frozen source artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: guardian-f1-frozen-source
           path: ${{ runner.temp }}/guardian-f1-source.tar
@@ -57,28 +58,29 @@ jobs:
     name: Independent F1 inspection on isolated runner
     needs: freeze
     runs-on: windows-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: read
     steps:
       - name: Checkout inspector harness at exact triggering commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Download frozen source artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: guardian-f1-frozen-source
           path: ${{ runner.temp }}/guardian-f1-artifact
 
       - name: Checkout pinned independent Inspector harness
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: 5ee7e9c49f0ba8e3dec11dea2c82c5fe22da8148
+          ref: 203783d4909956f5b22b02a097eaa03766fc63b6
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -110,7 +112,7 @@ jobs:
           "Verified archive SHA-256: $actual"
 
       - name: Set up exact Python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11.8"
           architecture: "x64"
@@ -156,6 +158,7 @@ jobs:
               if ($hash -ne $expected[$name]) { throw "Wheel hash mismatch: $name" }
             }
             "Verified exact wheel set: $($expected.Count)/$($expected.Count)"
+            Get-Content "WHEELHOUSE.sha256" | Set-Content -Encoding ascii (Join-Path $env:EVIDENCE_ROOT "wheelhouse-verified.txt")
           }
           finally { Pop-Location }
           "WHEELHOUSE=$wheelhouse" >> $env:GITHUB_ENV
@@ -171,7 +174,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Offline install failed: $LASTEXITCODE" }
             & $python -m pip check 2>&1 | Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "pip-check.log")
             if ($LASTEXITCODE -ne 0) { throw "pip check failed: $LASTEXITCODE" }
-            & $python -c "import sys; print(sys.version); print(sys.prefix); print(sys.base_prefix)"
+            & $python -c "import sys; print(sys.version); print(sys.prefix); print(sys.base_prefix)" 2>&1 | Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "python-identity.log")
             if ($LASTEXITCODE -ne 0) { throw "Python identity check failed: $LASTEXITCODE" }
           }
           finally { Pop-Location }
@@ -250,6 +253,7 @@ jobs:
             schema = "guardian-f1-run-summary/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $archiveHash
+            inspector_harness_commit = "203783d4909956f5b22b02a097eaa03766fc63b6"
             focused_exit = $env:FOCUSED_EXIT
             full_exit = $env:FULL_EXIT
             compile_exit = $env:COMPILE_EXIT
@@ -268,7 +272,7 @@ jobs:
 
       - name: Upload raw Inspector evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: guardian-f1-inspector-evidence
           path: ${{ runner.temp }}/guardian-f1-evidence/
