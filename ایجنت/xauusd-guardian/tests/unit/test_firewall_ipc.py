@@ -195,3 +195,23 @@ def test_tag_is_direction_domain_separated():
     envelope["direction"] = "worker_to_parent"
     with pytest.raises(IPCProtocolError):
         worker.decode(canonical_json({**unsigned, "direction": "worker_to_parent"}))
+
+
+def test_destroy_zeroizes_ephemeral_session_key():
+    codec = AuthenticatedCodec(
+        key=bytearray(b"z" * 32),
+        session_id="ef" * 32,
+        send_direction="parent_to_worker",
+        receive_direction="worker_to_parent",
+    )
+    key_reference = codec._key
+    codec.destroy()
+    assert key_reference == bytearray()
+    assert codec._session_id == ""
+    with pytest.raises(IPCProtocolError, match="INVALID_SESSION_KEY"):
+        AuthenticatedCodec(
+            key=codec._key,
+            session_id="ef" * 32,
+            send_direction="parent_to_worker",
+            receive_direction="worker_to_parent",
+        )
