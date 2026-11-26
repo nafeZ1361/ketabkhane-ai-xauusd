@@ -94,7 +94,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf48b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: 1743b17b080217f6f9bd541e7707b38c4f7f5db5
+          ref: a47f5abda7f72691c8953670cc13aee327e3a892
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -387,7 +387,7 @@ jobs:
             schema = "guardian-f4-run-summary/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $archiveHash
-            inspector_harness_commit = "1743b17b080217f6f9bd541e7707b38c4f7f5db5"
+            inspector_harness_commit = "a47f5abda7f72691c8953670cc13aee327e3a892"
             focused_exit = $env:FOCUSED_EXIT
             focused_junit = $focusedCounts
             full_exit = $env:FULL_EXIT
