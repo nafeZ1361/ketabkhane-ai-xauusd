@@ -141,12 +141,6 @@ def _configure_apis(kernel32: Any, advapi32: Any) -> None:
     advapi32.OpenProcessToken.restype = wintypes.BOOL
     advapi32.ConvertStringSidToSidW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.LPVOID)]
     advapi32.ConvertStringSidToSidW.restype = wintypes.BOOL
-    advapi32.CreateRestrictedToken.argtypes = [
-        wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD,
-        ctypes.POINTER(_SID_AND_ATTRIBUTES), wintypes.DWORD, wintypes.LPVOID,
-        wintypes.DWORD, wintypes.LPVOID, ctypes.POINTER(wintypes.HANDLE),
-    ]
-    advapi32.CreateRestrictedToken.restype = wintypes.BOOL
     advapi32.GetTokenInformation.argtypes = [
         wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD,
         ctypes.POINTER(wintypes.DWORD),
@@ -164,19 +158,12 @@ def _configure_apis(kernel32: Any, advapi32: Any) -> None:
     advapi32.GetSidSubAuthority.restype = ctypes.POINTER(wintypes.DWORD)
     advapi32.EqualSid.argtypes = [wintypes.LPVOID, wintypes.LPVOID]
     advapi32.EqualSid.restype = wintypes.BOOL
-    advapi32.CreateProcessAsUserW.argtypes = [
-        wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.LPVOID,
-        wintypes.LPVOID, wintypes.BOOL, wintypes.DWORD, wintypes.LPVOID,
-        wintypes.LPCWSTR, ctypes.POINTER(_STARTUPINFOW),
-        ctypes.POINTER(_PROCESS_INFORMATION),
-    ]
-    advapi32.CreateProcessAsUserW.restype = wintypes.BOOL
-    advapi32.CreateProcessWithTokenW.argtypes = [
-        wintypes.HANDLE, wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPWSTR,
-        wintypes.DWORD, wintypes.LPVOID, wintypes.LPCWSTR,
+    kernel32.CreateProcessW.argtypes = [
+        wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.LPVOID, wintypes.LPVOID,
+        wintypes.BOOL, wintypes.DWORD, wintypes.LPVOID, wintypes.LPCWSTR,
         ctypes.POINTER(_STARTUPINFOW), ctypes.POINTER(_PROCESS_INFORMATION),
     ]
-    advapi32.CreateProcessWithTokenW.restype = wintypes.BOOL
+    kernel32.CreateProcessW.restype = wintypes.BOOL
 
 
 def _win_error(operation: str) -> WorkerHostError:
@@ -188,136 +175,27 @@ def _close_handle(kernel32: Any, handle: Any) -> None:
         kernel32.CloseHandle(handle)
 
 
-def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
-    TOKEN_ASSIGN_PRIMARY = 0x0001
-    TOKEN_DUPLICATE = 0x0002
-    TOKEN_QUERY = 0x0008
-    TOKEN_ADJUST_DEFAULT = 0x0080
-    TOKEN_ADJUST_SESSIONID = 0x0100
-    DISABLE_MAX_PRIVILEGE = 0x0001
-    SE_GROUP_USE_FOR_DENY_ONLY = 0x0010
-    SE_GROUP_INTEGRITY = 0x0020
-    TokenGroups = 2
-    TokenPrivileges = 3
-    TokenIntegrityLevel = 25
-
-    current_token = wintypes.HANDLE()
-    access = (
-        TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY
-        | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID
-    )
-    if not advapi32.OpenProcessToken(kernel32.GetCurrentProcess(), access, ctypes.byref(current_token)):
-        raise _win_error("OpenProcessToken")
-
-    admin_sid = wintypes.LPVOID()
-    medium_sid = wintypes.LPVOID()
-    restricted = wintypes.HANDLE()
-    try:
-        if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
-            raise _win_error("ConvertStringSidToSidW(Administrators)")
-        if not advapi32.ConvertStringSidToSidW("S-1-16-8192", ctypes.byref(medium_sid)):
-            raise _win_error("ConvertStringSidToSidW(MediumIntegrity)")
-        disabled = _SID_AND_ATTRIBUTES(admin_sid, SE_GROUP_USE_FOR_DENY_ONLY)
-        if not advapi32.CreateRestrictedToken(
-            current_token, DISABLE_MAX_PRIVILEGE, 1, ctypes.byref(disabled),
-            0, None, 0, None, ctypes.byref(restricted),
-        ):
-            raise _win_error("CreateRestrictedToken")
-        # Medium integrity prevents an elevated source token retaining high-integrity
-        # write access; privileges are separately disabled and verified.
-        label = _TOKEN_MANDATORY_LABEL(
-            _SID_AND_ATTRIBUTES(medium_sid, SE_GROUP_INTEGRITY)
-        )
-        label_size = ctypes.sizeof(label) + advapi32.GetLengthSid(medium_sid)
-        if not advapi32.SetTokenInformation(
-            restricted, TokenIntegrityLevel, ctypes.byref(label), label_size
-        ):
-            raise _win_error("SetTokenInformation(TokenIntegrityLevel)")
-
-        needed = wintypes.DWORD()
-        advapi32.GetTokenInformation(restricted, TokenGroups, None, 0, ctypes.byref(needed))
-        if not needed.value:
-            raise _win_error("GetTokenInformation(TokenGroups size)")
-        group_buffer = ctypes.create_string_buffer(needed.value)
-        if not advapi32.GetTokenInformation(
-            restricted, TokenGroups, group_buffer, needed.value, ctypes.byref(needed)
-        ):
-            raise _win_error("GetTokenInformation(TokenGroups)")
-        count = ctypes.cast(group_buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
-        admin_is_deny_only = False
-        admin_present = False
-        group_offset = (ctypes.sizeof(wintypes.DWORD) + ctypes.sizeof(ctypes.c_void_p) - 1) & ~(ctypes.sizeof(ctypes.c_void_p) - 1)
-        base = ctypes.addressof(group_buffer) + group_offset
-        for index in range(count):
-            item = ctypes.cast(
-                base + index * ctypes.sizeof(_SID_AND_ATTRIBUTES),
-                ctypes.POINTER(_SID_AND_ATTRIBUTES),
-            ).contents
-            if advapi32.EqualSid(item.Sid, admin_sid):
-                admin_present = True
-                admin_is_deny_only = bool(item.Attributes & SE_GROUP_USE_FOR_DENY_ONLY)
-                break
-        if admin_present and not admin_is_deny_only:
-            raise WorkerHostError("ADMINISTRATORS_SID_NOT_DENY_ONLY")
-
-        needed = wintypes.DWORD()
-        advapi32.GetTokenInformation(restricted, TokenPrivileges, None, 0, ctypes.byref(needed))
-        if not needed.value:
-            raise _win_error("GetTokenInformation(TokenPrivileges size)")
-        privilege_buffer = ctypes.create_string_buffer(needed.value)
-        if not advapi32.GetTokenInformation(
-            restricted, TokenPrivileges, privilege_buffer, needed.value, ctypes.byref(needed)
-        ):
-            raise _win_error("GetTokenInformation(TokenPrivileges)")
-        privilege_count = ctypes.cast(privilege_buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
-        if privilege_count > 1:
-            raise WorkerHostError("RESTRICTED_TOKEN_HAS_UNEXPECTED_PRIVILEGES")
-
-        needed = wintypes.DWORD()
-        advapi32.GetTokenInformation(restricted, TokenIntegrityLevel, None, 0, ctypes.byref(needed))
-        if not needed.value:
-            raise _win_error("GetTokenInformation(TokenIntegrityLevel size)")
-        integrity_buffer = ctypes.create_string_buffer(needed.value)
-        if not advapi32.GetTokenInformation(
-            restricted, TokenIntegrityLevel, integrity_buffer, needed.value, ctypes.byref(needed)
-        ):
-            raise _win_error("GetTokenInformation(TokenIntegrityLevel)")
-        integrity = ctypes.cast(
-            integrity_buffer, ctypes.POINTER(_TOKEN_MANDATORY_LABEL)
-        ).contents
-        count_ptr = advapi32.GetSidSubAuthorityCount(integrity.Label.Sid)
-        if not count_ptr or count_ptr.contents.value == 0:
-            raise WorkerHostError("TOKEN_INTEGRITY_LABEL_INVALID")
-        rid_ptr = advapi32.GetSidSubAuthority(
-            integrity.Label.Sid, count_ptr.contents.value - 1
-        )
-        if not rid_ptr or rid_ptr.contents.value != 8192:
-            raise WorkerHostError("TOKEN_INTEGRITY_NOT_MEDIUM")
-
-        return restricted
-    except Exception:
-        _close_handle(kernel32, restricted)
-        raise
-    finally:
-        _close_handle(kernel32, current_token)
-        if admin_sid:
-            kernel32.LocalFree(admin_sid)
-        if medium_sid:
-            kernel32.LocalFree(medium_sid)
-
-
 def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
     TOKEN_QUERY = 0x0008
     TokenGroups = 2
     TokenPrivileges = 3
-    TokenRestrictedSids = 11
     TokenIntegrityLevel = 25
+    TokenElevation = 20
     SE_GROUP_USE_FOR_DENY_ONLY = 0x0010
 
     token = wintypes.HANDLE()
     if not advapi32.OpenProcessToken(process, TOKEN_QUERY, ctypes.byref(token)):
         raise _win_error("OpenProcessToken(worker)")
     try:
+        elevation = _TOKEN_ELEVATION()
+        returned = wintypes.DWORD()
+        if not advapi32.GetTokenInformation(
+            token, TokenElevation, ctypes.byref(elevation),
+            ctypes.sizeof(elevation), ctypes.byref(returned),
+        ):
+            raise _win_error("GetTokenInformation(worker elevation)")
+        if elevation.TokenIsElevated != 0:
+            raise WorkerHostError("WORKER_TOKEN_IS_ELEVATED")
         admin_sid = wintypes.LPVOID()
         if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
             raise _win_error("ConvertStringSidToSidW(verify worker)")
@@ -377,11 +255,10 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
             raise WorkerHostError("WORKER_TOKEN_NOT_MEDIUM_INTEGRITY")
 
         return {
-            "is_restricted": True,
+            "is_non_elevated": True,
             "administrators_sid_present": admin_present,
             "administrators_sid_deny_only": admin_deny_only if admin_present else None,
             "privilege_count": privilege_count,
-            "restricted_sid_count": 0,
             "integrity_rid": 8192,
         }
     finally:
@@ -451,6 +328,20 @@ def _non_inheritable(kernel32: Any, handle: Any) -> None:
         raise _win_error("SetHandleInformation")
 
 
+def parent_token_suitable() -> bool:
+    """True only for a non-elevated, medium-integrity, privilege-reduced caller."""
+    if os.name != "nt":
+        return False
+    try:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+        _configure_apis(kernel32, advapi32)
+        _inspect_process_token(advapi32, kernel32.GetCurrentProcess())
+        return True
+    except Exception:
+        return False
+
+
 class RestrictedWorker:
     """Synchronous parent API for one authenticated, restricted worker session."""
 
@@ -462,7 +353,6 @@ class RestrictedWorker:
         self._process = None
         self._thread = None
         self._job = None
-        self._token = None
         self._stdin = None
         self._stdout = None
         self._stderr = None
@@ -475,6 +365,7 @@ class RestrictedWorker:
         self._codec = None
         self._security_report = None
         self._job_limits_verified = False
+        self._job_assigned = False
         self._closed = False
         self._poisoned = False
 
@@ -509,7 +400,7 @@ class RestrictedWorker:
         key_read = key_write = None
         process_info = _PROCESS_INFORMATION()
         try:
-            self._token = _restricted_token(advapi32, kernel32)
+            _inspect_process_token(advapi32, kernel32.GetCurrentProcess())
             self._job = _create_job(kernel32)
             self._job_limits_verified = True
 
@@ -573,33 +464,21 @@ class RestrictedWorker:
             CREATE_NO_WINDOW = 0x08000000
             flags = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW
 
-            create_with_token = advapi32.CreateProcessWithTokenW
-            created = create_with_token(
-                self._token, 0, sys.executable, command_line, flags,
-                ctypes.cast(environment, wintypes.LPVOID),
+            if not kernel32.CreateProcessW(
+                sys.executable, command_line, None, None, True,
+                flags, ctypes.cast(environment, wintypes.LPVOID),
                 temp_path, ctypes.byref(startup), ctypes.byref(process_info),
-            )
-            with_token_error = None if created else ctypes.get_last_error()
-            if not created:
-                # Both APIs receive the exact same restricted primary token.
-                # There is deliberately no unrestricted fallback.
-                created = advapi32.CreateProcessAsUserW(
-                    self._token, sys.executable, command_line, None, None, True,
-                    flags, ctypes.cast(environment, wintypes.LPVOID),
-                    temp_path, ctypes.byref(startup), ctypes.byref(process_info),
-                )
-            if not created:
-                raise WorkerHostError(
-                    "RESTRICTED_PROCESS_CREATION_FAILED "
-                    f"with_token={with_token_error} as_user={ctypes.get_last_error()}"
-                )
+            ):
+                raise _win_error("CreateProcessW(non-elevated worker)")
 
             self._process = process_info.hProcess
             self._thread = process_info.hThread
             self._security_report = _inspect_process_token(advapi32, self._process)
             self._security_report["job_limits_verified"] = bool(self._job_limits_verified)
+            self._security_report["job_assigned"] = bool(self._job_assigned)
             if not kernel32.AssignProcessToJobObject(self._job, self._process):
                 raise _win_error("AssignProcessToJobObject")
+            self._job_assigned = True
 
             # The child is suspended, so the key pipe can be filled before Python runs.
             written = wintypes.DWORD()
@@ -667,8 +546,6 @@ class RestrictedWorker:
             key.clear()
             _close_handle(kernel32, self._thread)
             self._thread = None
-            _close_handle(kernel32, self._token)
-            self._token = None
 
     def _read_loop(self) -> None:
         try:
