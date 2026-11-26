@@ -528,3 +528,15 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - **Scope:** F1 only. F1 technical deliverables, frozen criteria, and 10-point weight are unchanged. No partial credit. F2-F8 remain NOT STARTED until F1 earns 10/10 under the new method.
 - **Limitations:** this is independent CI execution, not a separate human reviewer or local Windows account/ACL proof. Hosted-runner network isolation is not claimed. Workflow/harness changes require a new inspection. Repository administration remains within the trust boundary.
 - **Disposition:** method implementation is in progress; no F1 acceptance is recorded by this decision. The first successful run must be tied to its exact target commit and evidence artifact. PR #8 remains Draft/unmerged; no merge, trading, DEMO activation, or order activity is authorized.
+
+
+## D-034 — Accept Phase 5 F1 on isolated GitHub Actions evidence (2026-11-26)
+
+- **Decision:** F1 is **ACCEPTED / 10 of 10** on exact target commit `1cee6409d6bdf0355e80e7e93ba83e3d49efd1e5`, under the owner-approved D-033 inspection method.
+- **Run:** GitHub Actions run [45893671363](https://github.com/nafeZ1361/ketabkhane-ai-xauusd/actions/runs/45893671363); freeze job `140162833609` and Inspector job `140162929296` both SUCCESS. Source TAR SHA-256 `e5f3eb806c0bf4f598dd2c1ab752ccfaa7d89d2d584bdee97edff05ca0c62125`.
+- **Inspector harness:** immutable commit `9d0d8ed0bee62d7947a45cfab3c4b8c1aa03bec5`; workflow and launcher reviewed. Contents/actions permissions are read-only, checkout credentials are not persisted, and target child processes receive only an allowlisted environment without GitHub tokens or repository secrets.
+- **Identity and boundaries:** ephemeral standard non-admin `GuardianF1Inspector` SID `S-1-5-21-3414932011-3134797172-3625386099-1003`, distinct from runner SID `S-1-5-21-3414932011-3134797172-3625386099-500`; all five write probes passed; account removed after evidence upload.
+- **Reproducibility:** Python 3.11.8; all eight wheel hashes matched; offline installation and `pip check` passed. Focused tests **66/0/0**, full suite **443/0/0**, compileall exit 0. Black-box probes **11/11**, static findings **0**, mutation control detected the deliberate mutant, frozen manifest **253 files unchanged**.
+- **Evidence integrity:** evidence artifact ID `15152603251`, ZIP SHA-256 `4a821504395909a2d77db8943d347d3bed05d8a12f36efaff73f0648325322b4`; all 25 SHA256SUMS entries independently recomputed and matched. Frozen artifact ID `15152478189`, ZIP SHA-256 `fd0d3dbc18e216083f3c7fc72ae43f658e5763daba0d01269e4b28530900fd43`. Full record: `PHASE5_F1_GITHUB_INSPECTOR_PLAN.md`.
+- **Limitations preserved:** this is independent CI execution under D-033, not an external human reviewer or proof of a local GuardianInspector account/ACL on the owner's Windows machine. No network isolation of the hosted runner is claimed.
+- **Consequence:** Phase 5 is **10/100**. F2-F8 remain NOT STARTED. This decision does not authorize PR merge, DEMO activation, order construction/submission, account financial-field access, or LIVE trading. PR #8 remains Draft and unmerged.

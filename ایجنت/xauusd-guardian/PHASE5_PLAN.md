@@ -69,3 +69,12 @@ The owner approved replacing the local Windows GuardianInspector account/session
 The Inspector must run on a separate ephemeral Windows runner from the freeze job, consume the exact source archive artifact after SHA-256 verification, use the separately pinned harness commit, run from a distinct writable copy, verify the hash-locked wheelhouse and offline install, execute focused/full tests and compileall, run black-box/static/mutation checks, and upload raw evidence with recomputable hashes.
 
 The hosted runner is not claimed to be a separate human reviewer, a distinct local Windows SID, or proof of NTFS ACLs. No repository secrets or write token may be passed to target code. F1 remains 0/10 until one exact-run artifact is inspected and every acceptance condition in the new plan is verified. F2-F8 remain NOT STARTED.
+
+
+## F1 acceptance — D-034 (2026-11-26)
+
+**F1: ACCEPTED, 10/10.** Independent CI inspection passed on exact target commit `1cee6409d6bdf0355e80e7e93ba83e3d49efd1e5`, workflow run [45893671363](https://github.com/nafeZ1361/ketabkhane-ai-xauusd/actions/runs/45893671363). Both freeze and Inspector jobs succeeded. Frozen TAR SHA-256: `e5f3eb806c0bf4f598dd2c1ab752ccfaa7d89d2d584bdee97edff05ca0c62125`. Evidence artifact ID `15152603251`, ZIP SHA-256 `4a821504395909a2d77db8943d347d3bed05d8a12f36efaff73f0648325322b4`; all 25 sidecar entries were recomputed and matched. Pinned harness: `9d0d8ed0bee62d7947a45cfab3c4b8c1aa03bec5`.
+
+Acceptance details: non-admin Inspector SID distinct from runner; all five ACL probes passed; eight hash-pinned wheels verified and installed offline; pip check clean; focused **66/0/0**, full suite **443/0/0**, compileall exit 0; black-box **11/11**, static findings **0**, mutation control detected the mutant, frozen manifest **253 files unchanged**. Full raw evidence and limitations are recorded in `PHASE5_F1_GITHUB_INSPECTOR_PLAN.md`.
+
+**Phase 5 completion is now 10/100. F2–F8 remain NOT STARTED.** This acceptance does not authorize merge, DEMO activation, order construction/submission, or LIVE trading. D-033 limitations remain: hosted CI execution is not an external human review or proof of local Windows ACLs.

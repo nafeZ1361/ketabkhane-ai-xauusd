@@ -1,6 +1,6 @@
 # Phase 5 F1 — GitHub Actions Independent Inspector
 
-Status: **IMPLEMENTED — FIRST EXECUTION / EVIDENCE VALIDATION PENDING**
+Status: **ACCEPTED — F1 10/10 (2026-11-26; exact run 45893671363)**
 Owner authorization: 2026-11-26
 Scope: Replace the local Windows GuardianInspector account/session requirement for F1 only with an isolated GitHub Actions Inspector runtime. This does not authorize F2–F8, DEMO activation, order construction/submission, or LIVE trading.
 
@@ -22,8 +22,8 @@ The new Inspector is an independent CI execution context and an ephemeral standa
 2. **Inspector job**
    - Runs as a separate job on a fresh windows-latest runner.
    - Downloads the frozen archive and verifies its SHA-256 against the freeze-job output.
-   - Extracts a frozen snapshot and creates a separate writable test copy. Tests execute only against the copy; the frozen snapshot is not the test working directory.
-   - Checks out the Inspector harness from immutable commit 8d208e01a7937970bf4f47aba1ede2e60ce4b8b5 as an immutable commit in the implementation branch history. The workflow checks out this exact immutable commit, not the mutable branch tip or candidate working tree.
+   - Extracts a frozen snapshot and creates a separate writable test copy. Pytest and compileall execute against the separate writable test copy. Read-only black-box/static checks inspect the frozen snapshot; mutation probes write only to a disposable temporary copy.
+   - Checks out the Inspector harness from immutable commit 9d0d8ed0bee62d7947a45cfab3c4b8c1aa03bec5 as an immutable commit in the implementation branch history. The workflow checks out this exact immutable commit, not the mutable branch tip or candidate working tree.
    - Creates a fresh standard local GuardianF1Inspector account with a unique random password and records its SID; verifies it is not an administrator.
    - Runs identity and write-boundary probes: writes to the harness, frozen snapshot, and evidence directory must be denied; writes to the test copy and temporary directory must succeed.
    - Applies explicit NTFS ACLs: harness/frozen/evidence read-only or inaccessible; test copy/temp writable by the Inspector SID. The pinned harness and frozen snapshot are not writable by the target process.
@@ -90,3 +90,20 @@ The Inspector evidence artifact includes JUnit XML for focused and full-suite ru
 
 
 The runner-side GuardianF1Inspector SID is ephemeral and removed after evidence upload. The original local Windows account/interactive-session procedure is not claimed as completed on the owner's machine.
+
+
+## 6. Exact F1 acceptance record — 2026-11-26
+
+**Verdict: ACCEPTED — 10/10.** Exact target: `1cee6409d6bdf0355e80e7e93ba83e3d49efd1e5`.
+
+- Workflow run: [45893671363](https://github.com/nafeZ1361/ketabkhane-ai-xauusd/actions/runs/45893671363); freeze job `140162833609` and Inspector job `140162929296`: both SUCCESS.
+- Frozen source TAR SHA-256: `e5f3eb806c0bf4f598dd2c1ab752ccfaa7d89d2d584bdee97edff05ca0c62125`. Frozen artifact ID `15152478189`; downloaded ZIP SHA-256 `fd0d3dbc18e216083f3c7fc72ae43f658e5763daba0d01269e4b28530900fd43`.
+- Evidence artifact ID `15152603251`; downloaded ZIP SHA-256 `4a821504395909a2d77db8943d347d3bed05d8a12f36efaff73f0648325322b4`. Its SHA256SUMS sidecar covers 25 files; all 25 hashes were independently recomputed and matched. Sidecar SHA-256: `a58c07da1136f9e9db728e1327fb4c1c876b5e42a49cb884c630a72094283a84`.
+- Pinned Inspector harness: `9d0d8ed0bee62d7947a45cfab3c4b8c1aa03bec5`; workflow and launcher were reviewed at that immutable commit. Workflow permissions are `contents: read` and `actions: read`; checkout credentials are not persisted; the child process receives a minimal allowlisted environment, with no GitHub token, repository secret, or write credential.
+- Inspector identity: `GuardianF1Inspector`, SID `S-1-5-21-3414932011-3134797172-3625386099-1003`; runner SID `S-1-5-21-3414932011-3134797172-3625386099-500`. Distinct SID; non-administrator; ephemeral account removed after evidence upload. All five probes passed: harness/frozen/evidence writes denied; test-copy/temp writes allowed.
+- Hermetic environment: Python 3.11.8; exactly 8 wheel files matched `WHEELHOUSE.sha256`; install used `--no-index --require-hashes`; `pip check` reported no broken requirements.
+- Focused tests: **66 passed**. Full suite: **443 passed**. Both JUnit reports independently parse as zero failures, errors, or skips. `compileall`, identity, focused, full, and Inspector exit codes are all 0.
+- Black-box probes: **11/11 passed**; static boundary findings: **0**; deliberate schema-predicate mutant detected (expected non-zero mutant exit); frozen manifest: **253 files, identical before/after**; archive hash remained stable. Machine summary verdict: `PASS`.
+- Scope limitation remains explicit: this is the owner-approved independent CI execution context under D-033, not an external human reviewer, and does not establish a GuardianInspector account or ACL on the owner's local Windows machine.
+
+F1 earns its full **10/10**. F2–F8 remain NOT STARTED. No PR merge, DEMO activation, order construction/submission, or LIVE trading is authorized by this acceptance.
