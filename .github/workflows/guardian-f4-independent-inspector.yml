@@ -227,13 +227,19 @@ jobs:
         shell: pwsh
         run: |
           $hash = (Get-FileHash -Algorithm SHA256 $env:ARCHIVE_PATH).Hash.ToLowerInvariant()
+          $ok = "${{ steps.identity.outcome }}" -eq "success" -and
+                "${{ steps.focused.outcome }}" -eq "success" -and
+                "${{ steps.full.outcome }}" -eq "success" -and
+                "${{ steps.compile.outcome }}" -eq "success" -and
+                "${{ steps.inspector.outcome }}" -eq "success"
           [ordered]@{
             schema = "guardian-f4-independent-run/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $hash
             inspector_harness_commit = "75681014165316004d05b472d6d18e2ca159ea1d"
-            verdict = "PASS"
+            verdict = $(if ($ok) { "PASS" } else { "BLOCK" })
           } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
+          if (-not $ok) { throw "Independent F4 inspection verdict: BLOCK" }
 
       - name: Upload F4 evidence
         if: always()
