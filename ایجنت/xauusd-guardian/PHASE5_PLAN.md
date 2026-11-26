@@ -110,3 +110,27 @@ privileged message type, and non-JSON payload.
 Hardened candidate: `c35705ab1a3ee8bfc184eea3864402f98499da00`.
 GitHub Actions run `45895338899` completed SUCCESS: **471** full-suite tests passed;
 compileall exit 0. F2 remains 0/12 pending independent inspection.
+
+
+## D-037 — F2 independent acceptance — 2026-11-27
+
+**Verdict: ACCEPTED — F2 12/12. Phase 5 progress: 22/100 (F1 10/10 + F2 12/12).**
+
+- Exact inspected target: `a85bfc13ebb99ed034113540c7936ab57725341a`.
+- Independent workflow: [45896771516](https://github.com/nafeZ1361/ketabkhane-ai-xauusd/actions/runs/45896771516); Freeze job `140172493274`, Inspector job `140172600121`, both SUCCESS.
+- Immutable Inspector harness pin: `0297a23415b15824f176067d355ba2c09aa95788`.
+- Focused F2 JUnit: **28 passed / 0 failures / 0 errors / 0 skipped**.
+- Full Guardian JUnit: **471 passed / 0 failures / 0 errors / 0 skipped**; compileall exit 0.
+- Independent black-box: **15/15**; static policy findings: **0**; execution-permissive mutation detected with seven expected probe failures.
+- Frozen manifest: **256 files stable**; archive SHA-256 before/after identical:
+  `30ee63f9be0b2615ceb9cf6ddc1bb83a8d461b1003546c42a6dde6121a743222`.
+- Evidence artifact `15154865015`, ZIP SHA-256
+  `fc7cf9a5273bcfbfc3e3b2c69d5eda59e9aa64d74a507857d2964d879f5bf0c8`.
+  All 25 SHA256SUMS sidecar entries were independently recomputed and matched.
+- Inspector identity and ACL probes passed; eight hash-pinned wheels verified, offline installation and pip check passed; ephemeral Inspector account removed after upload.
+- Exact evidence, hashes, limitations, and scope are recorded in
+  `PHASE5_F2_POLICY_PLAN.md`.
+
+F2 is accepted at **12/12**. F3–F8 remain NOT STARTED. This acceptance does not authorize
+DEMO execution, order construction/submission, MT5 connectivity, LIVE trading, approval
+changes, or merge. PR #8 remains Draft and unmerged.
