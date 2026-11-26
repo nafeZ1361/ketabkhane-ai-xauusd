@@ -1,6 +1,6 @@
 # Phase 5 F3 — Independent Risk Revalidation at the Firewall Boundary
 
-Status: **PRE-REGISTERED / IMPLEMENTATION NOT YET VERIFIED**
+Status: **ACCEPTED — F3 12/12 (2026-11-27)**
 Weight: **12 points**
 Base: accepted F2 snapshot `a85bfc13ebb99ed034113540c7936ab57725341a` plus F2 acceptance-only documentation; branch `work/guardian-phase5-f3-risk-20261127`.
 
@@ -47,3 +47,23 @@ No acceptance points are awarded for implementation or ordinary CI alone. F3 ear
 - This gate validates arithmetic against the supplied specification; it does not prove that the caller's equity or specification is authentic. That requires a separately authorized, authenticated integration.
 - Hosted CI Inspector is an isolated execution context, not an external human reviewer or proof of local Windows ACLs.
 
+
+
+## 5. Exact F3 independent acceptance — D-039 (2026-11-27)
+
+**Verdict: ACCEPTED — F3 12/12. Phase 5 progress: 34/100 (F1 10 + F2 12 + F3 12).**
+
+- Exact inspected target: `3f02fc28cc8dfb3685d75e037588493cbbf998c6`.
+- Independent workflow: [45898985819](https://github.com/nafeZ1361/ketabkhane-ai-xauusd/actions/runs/45898985819); Freeze job `140179835997` and Inspector job `140179938236`, both SUCCESS.
+- Immutable Inspector harness pin: `0205030532305303941cdc58b05876182ec63fc0`.
+- Focused F3 JUnit: **35 passed / 0 failures / 0 errors / 0 skipped**.
+- Full Guardian JUnit: **506 passed / 0 failures / 0 errors / 0 skipped**; `compileall` exit 0.
+- Independent black-box probes: **10/10 passed**; static boundary findings: **0**; mutation control detected the deliberately permissive size/risk mutant with **1 expected failure / 0 errors**.
+- Frozen manifest: **259 files stable**; source TAR SHA-256 before/after: `a0b2c9b11d3b9bfddbfa198e9a998766cf14dba28a554ba8a62f6aa7ba2927e5`.
+- Frozen-source artifact ID `15155185554`; downloaded ZIP SHA-256 `ed95ec1df1e648da367f8d52c2c1b57da23c9b5592dedf9f34a5ac890666fa27`.
+- Evidence artifact ID `15154967843`; downloaded ZIP SHA-256 `00183d71ab05132de38cc4e5d93b95b1d0326bcafb59ad19234d41f8583c8f9c`. All **25** entries in `SHA256SUMS.txt` were independently recomputed and matched.
+- Inspector SID `S-1-5-21-2315611937-1800655502-2561009274-1003`, distinct from runner SID `S-1-5-21-2315611937-1800655502-2561009274-500`; non-admin verified. Harness/frozen/evidence writes denied; test-copy/temp writes allowed. Ephemeral Inspector account removed after upload.
+- Exactly eight wheel files matched `WHEELHOUSE.sha256`; hash-locked download, offline `--no-index --require-hashes` installation and `pip check` succeeded.
+- Exact workflow summary verdict: PASS. Raw evidence and logs are in the linked run artifact.
+
+**Limitations:** This is an owner-authorized isolated GitHub Actions Inspector context, not an external human reviewer and not proof of ACLs or Inspector identity on the owner's local Windows machine. F3 validates arithmetic against the separately supplied RiskSpec and explicit equity/stop inputs; it does not authenticate their provenance. A-04 remains absent. No account reads, MT5, broker connection, order construction/submission, DEMO activation or LIVE path was introduced. F2 remains unchanged and denies all execution/order operations. PR #8 remains Draft and unmerged.

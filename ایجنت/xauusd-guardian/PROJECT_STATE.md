@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-27 (F2 hardened candidate and CI regression run recorded; independent inspection pending)
+Last updated: 2026-11-27 (F3 independently accepted; Phase 5 progress 34/100)
 
 ## Phase status
 
@@ -13,7 +13,7 @@ Last updated: 2026-11-27 (F2 hardened candidate and CI regression run recorded; 
 | 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
 | 4 Risk | **ACCEPTED (2026-11-21, D-024)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests. S7 closed by an inspector run under the `GuardianInspector` token (write-denied snapshot; six/six probes DENIED; ACL check 247 objects / 0 problems) on commit `15a210a` (snapshot manifest `e939719f…56ca1`, 124 files; worktree == commit): junit **331 / 0 / 0** (46 migration + 2 pragma + 29 risk cases), `wal`+`synchronous=2`, storage probes green, independent black-box contract probe 31/31 (S1–S5 + cap), syntax gate green. Verdict `PASS` with disclosed residuals (R1/R2 in D-024). See `artifacts/phase4-inspection-20261121T1720Z.md` and `artifacts/inspector-run-20261121T164943/` |
 | 4b Monte Carlo | **ACCEPTED (2026-11-21, D-027; D-026 S11 PASS)** | `MONTE_CARLO.md`; `domain/risk/montecarlo.py` + `scripts/montecarlo.py` + 30 tests; suite **361/0/0**; independent S11 PASS on commit `701a4dd`; snapshot SHA-256 `0eadf45e…`; Inspector evidence SHA-256 `7735b6a5…`; registration: `DECISIONS_LOG.md` D-027. |
-| 5 Firewall | **F1 ACCEPTED — 10/10; F2 ACCEPTED — 12/12; Phase 5: 22/100** | D-034 / D-035 / D-036 / D-037. F2 accepted on exact target `a85bfc13ebb99ed034113540c7936ab57725341a`; independent workflow `45896771516` SUCCESS, focused 28 and full 471 passed, black-box 15/15, static findings 0, mutant detected, frozen 256-file manifest stable, 25 evidence hashes independently matched. Details: `PHASE5_F2_POLICY_PLAN.md`. F3-F8 NOT STARTED. PR #8 remains Draft/unmerged. No DEMO execution, MT5 order, account financial reads, or LIVE action. |
+| 5 Firewall | **F1 ACCEPTED — 10/10; F2 ACCEPTED — 12/12; F3 ACCEPTED — 12/12; Phase 5: 34/100** | D-034 / D-035 / D-036 / D-037 / D-039. F3 accepted on exact target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; independent workflow `45898985819` SUCCESS, focused 35 and full 506 passed, black-box 10/10, static findings 0, mutant detected, frozen 259-file manifest stable, 25 evidence hashes independently matched. Details: `PHASE5_F3_RISK_PLAN.md`. F4-F8 NOT STARTED. PR #8 remains Draft/unmerged. No DEMO execution, MT5 order, account financial reads, or LIVE action. |
 | 6 Backtest | NOT STARTED | |
 | 7 Monitoring | NOT STARTED | |
 | 8 Integration | NOT STARTED | |
@@ -307,3 +307,10 @@ F1 accepted **10/10** on target `1cee6409d6bdf0355e80e7e93ba83e3d49efd1e5`. Work
 - F3 acceptance contract pre-registered in `PHASE5_F3_RISK_PLAN.md`; D-038 recorded before implementation.
 - F3 implementation and independent inspection are **NOT YET VERIFIED**; no F3 points awarded.
 - F3–F8 remain open. PR #8 remains Draft/unmerged. No account reads, MT5, orders, DEMO activation or LIVE path.
+
+
+## Phase 5 F3 closure — 2026-11-27 (D-039)
+
+- F3 **ACCEPTED 12/12**; Phase 5 total **34/100** (F1 10 + F2 12 + F3 12).
+- Independent workflow `45898985819` inspected exact source target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; focused 35/0/0, full 506/0/0, compileall 0, black-box 10/10, static findings 0, mutation detected, frozen 259-file manifest stable.
+- F4–F8 remain NOT STARTED. PR #8 remains Draft/unmerged. No account reads, MT5, order construction/submission, DEMO activation or LIVE path.

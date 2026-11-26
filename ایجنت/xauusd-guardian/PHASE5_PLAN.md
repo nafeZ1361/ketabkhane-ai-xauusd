@@ -139,3 +139,10 @@ changes, or merge. PR #8 remains Draft and unmerged.
 ## F3 pre-registration — D-038 (2026-11-27)
 
 F3 is pre-registered in `PHASE5_F3_RISK_PLAN.md` before implementation. Scope is a pure firewall-boundary validator that recomputes the Phase 4 maximum size from explicit Decimal inputs and a separately supplied RiskSpec, then denies any proposed size outside that bound, lot step, minimum or maximum. The validator is not execution authorization; F2 remains unchanged and denies all execution/order operations. No account equity read, MT5, broker access, order construction/submission, DEMO activation, LIVE path, approval change or Phase 4 rule change is authorized. F3 earns 12/12 only after exact-snapshot independent Inspector PASS and complete evidence verification. Branch: `work/guardian-phase5-f3-risk-20261127`, based on accepted F2 HEAD `841ab0c3b03bbfb3258603aee95774919db69429`.
+
+
+## D-039 — F3 independent acceptance (2026-11-27)
+
+**F3: ACCEPTED, 12/12. Phase 5: 34/100.** Exact inspected target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; independent workflow `45898985819` SUCCESS (Freeze `140179835997`, Inspector `140179938236`); pinned harness `0205030532305303941cdc58b05876182ec63fc0`. Focused suite **35/0/0**, full suite **506/0/0**, compileall 0; independent black-box **10/10**, static findings **0**, mutation detected; frozen manifest **259 files stable**, source TAR SHA-256 `a0b2c9b11d3b9bfddbfa198e9a998766cf14dba28a554ba8a62f6aa7ba2927e5`. Evidence artifact `15154967843`, ZIP SHA-256 `00183d71ab05132de38cc4e5d93b95b1d0326bcafb59ad19234d41f8583c8f9c`; all 25 sidecar hashes independently matched. Full record and explicit limitations: `PHASE5_F3_RISK_PLAN.md`.
+
+F3 adds only pure risk arithmetic revalidation; it grants no execution capability. F4–F8 remain NOT STARTED. PR #8 remains Draft/unmerged. No A-04 data, MT5, order, DEMO activation or LIVE action.
