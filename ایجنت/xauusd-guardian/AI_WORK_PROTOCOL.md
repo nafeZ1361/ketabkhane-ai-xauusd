@@ -87,7 +87,7 @@ A report must separate:
 - verified remote facts;
 - owner-supplied local claims not yet reproduced;
 - actions performed in this session;
-- checks not exectable from GitHub;
+- checks not executable from GitHub;
 - blockers and next entry condition.
 
 Never convert a CI pass, a documentation update, or an Inspector report transcription into an independent inspection PASS.
