@@ -518,3 +518,13 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - GitHub Actions exact-target PR runs `45452649612` and `45452649554` were queried and both returned SUCCESS. CI status does not authenticate the report.
 - **No acceptance decision is made here.** F1 remains **0/10 / INDEPENDENT ACCEPTANCE PENDING**; F2-F8 remain NOT STARTED; Phase 5 remains 0/100. Independent review of the registered evidence and its limitations is still required.
 - PR #8 remains Draft and unmerged. No source/test/dependency/approval/trading change, order activity, or authorization expansion is made by this intake.
+
+
+## D-033 — Replace local F1 Inspector setup with isolated GitHub Actions Inspector (2026-11-26)
+
+- **Owner authorization:** the owner explicitly authorized design and execution of a GitHub-native alternative to the local Windows GuardianInspector setup.
+- **Decision:** for Phase 5 F1 only, the required independent inspection execution context may be a separate ephemeral GitHub-hosted Windows runner/job rather than a second local Windows SID and interactive logon. The new method is specified in PHASE5_F1_GITHUB_INSPECTOR_PLAN.md.
+- **Required controls:** exact-commit source archive; artifact SHA-256 verification; separate freeze and Inspector jobs/runners; separate writable test copy; separately pinned Inspector harness commit; contents/actions read-only token permissions; checkout credentials not persisted; no repository secrets passed to target tests; exact hash-verified wheelhouse and offline install; focused/full tests; compileall; independent black-box, static and mutation probes; raw evidence artifact and recomputed hashes.
+- **Scope:** F1 only. F1 technical deliverables, frozen criteria, and 10-point weight are unchanged. No partial credit. F2-F8 remain NOT STARTED until F1 earns 10/10 under the new method.
+- **Limitations:** this is independent CI execution, not a separate human reviewer or local Windows account/ACL proof. Hosted-runner network isolation is not claimed. Workflow/harness changes require a new inspection. Repository administration remains within the trust boundary.
+- **Disposition:** method implementation is in progress; no F1 acceptance is recorded by this decision. The first successful run must be tied to its exact target commit and evidence artifact. PR #8 remains Draft/unmerged; no merge, trading, DEMO activation, or order activity is authorized.

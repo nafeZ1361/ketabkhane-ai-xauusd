@@ -60,3 +60,12 @@ The evidence intake is registered at `evidence/external-inspector/PHASE5-F1-INSP
 GitHub Actions on the claimed exact target were checked: PR workflow runs `45452649612` and `45452649554` both report SUCCESS. These runs corroborate CI status only and do not authenticate the external Inspector report.
 
 **Disposition:** F1 remains **INDEPENDENT ACCEPTANCE PENDING / 0 of 10** until an independent Inspector reviews this registration and determines whether the evidence-integrity limitations satisfy the acceptance policy. F2-F8 remain NOT STARTED; Phase 5 remains 0/100. No acceptance criteria are waived.
+
+
+## F1 independent Inspector method addendum — D-033 (2026-11-26)
+
+The owner approved replacing the local Windows GuardianInspector account/session procedure for F1 with the isolated GitHub Actions method in PHASE5_F1_GITHUB_INSPECTOR_PLAN.md. This supersedes the local SID/session/NTFS-ACL execution mechanism for F1 only; it does not waive independent inspection or any F1 contract/test/evidence requirement.
+
+The Inspector must run on a separate ephemeral Windows runner from the freeze job, consume the exact source archive artifact after SHA-256 verification, use the separately pinned harness commit, run from a distinct writable copy, verify the hash-locked wheelhouse and offline install, execute focused/full tests and compileall, run black-box/static/mutation checks, and upload raw evidence with recomputable hashes.
+
+The hosted runner is not claimed to be a separate human reviewer, a distinct local Windows SID, or proof of NTFS ACLs. No repository secrets or write token may be passed to target code. F1 remains 0/10 until one exact-run artifact is inspected and every acceptance condition in the new plan is verified. F2-F8 remain NOT STARTED.
