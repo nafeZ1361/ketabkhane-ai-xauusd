@@ -226,16 +226,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Could not grant runner-temp traversal" }
 
           function Set-InspectorAcl([string]$path, [string]$rights) {
-            & icacls.exe $path /inheritance:r /grant:r "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:(OI)(CI)$rights" /T /C
+            & icacls.exe $path /inheritance:r /grant "BUILTIN\Administrators:F" "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:$rights" "${accountName}:(OI)(CI)$rights" /T /C
             if ($LASTEXITCODE -ne 0) { throw "ACL setup failed for $path" }
           }
           Set-InspectorAcl $harnessRoot "RX"
           Set-InspectorAcl $env:FROZEN_ROOT "RX"
           Set-InspectorAcl $env:INSPECTOR_WORK "M"
           Set-InspectorAcl $tempRoot "M"
-          & icacls.exe $profileRoot /inheritance:r /grant:r "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:(OI)(CI)M" /T /C
+          & icacls.exe $profileRoot /inheritance:r /grant "BUILTIN\Administrators:F" "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:M" "${accountName}:(OI)(CI)M" /T /C
           if ($LASTEXITCODE -ne 0) { throw "Inspector profile ACL setup failed" }
-          & icacls.exe $env:EVIDENCE_ROOT /inheritance:r /grant:r "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" /T /C
+          & icacls.exe $env:EVIDENCE_ROOT /inheritance:r /grant "BUILTIN\Administrators:F" "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" /T /C
           if ($LASTEXITCODE -ne 0) { throw "Evidence directory must remain inaccessible to target process" }
 
           $identity = [ordered]@{
