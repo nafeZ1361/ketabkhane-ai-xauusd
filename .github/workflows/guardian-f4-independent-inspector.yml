@@ -247,7 +247,7 @@ jobs:
             schema = "guardian-f4-independent-run/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $hash
-            inspector_harness_commit = "75681014165316004d05b472d6d18e2ca159ea1d"
+            inspector_harness_commit = "2650f0369c56aa30887880da37fbefa2f8ba726e"
             verdict = $(if ($ok) { "PASS" } else { "BLOCK" })
           } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
           if (-not $ok) { throw "Independent F4 inspection verdict: BLOCK" }
