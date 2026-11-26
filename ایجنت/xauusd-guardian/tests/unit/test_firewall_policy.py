@@ -96,3 +96,27 @@ def test_policy_is_pure_and_does_not_mutate_request():
     before = req.to_dict()
     authorize_request(req, context=CONTEXT)
     assert req.to_dict() == before
+
+
+def test_policy_revalidates_request_after_low_level_field_injection():
+    req = request("POLICY_STATUS")
+    object.__setattr__(req, "schema_version", True)
+    result = authorize_request(req, context=CONTEXT)
+    assert result.allowed is False
+    assert result.reason_code == "INVALID_REQUEST"
+
+
+def test_policy_rejects_injected_privileged_operation():
+    req = request("POLICY_STATUS")
+    object.__setattr__(req, "message_type", "ORDER_SEND")
+    result = authorize_request(req, context=CONTEXT)
+    assert result.allowed is False
+    assert result.reason_code == "DEMO_EXECUTION_DISABLED_IN_PHASE_5"
+
+
+def test_policy_rejects_injected_non_json_payload():
+    req = request("POLICY_STATUS")
+    object.__setattr__(req, "payload", {"unexpected": object()})
+    result = authorize_request(req, context=CONTEXT)
+    assert result.allowed is False
+    assert result.reason_code == "INVALID_REQUEST"
