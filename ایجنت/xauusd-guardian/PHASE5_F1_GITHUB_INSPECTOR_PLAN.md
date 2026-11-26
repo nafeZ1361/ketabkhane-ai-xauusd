@@ -23,7 +23,7 @@ The new Inspector is an independent CI execution context and an ephemeral standa
    - Runs as a separate job on a fresh windows-latest runner.
    - Downloads the frozen archive and verifies its SHA-256 against the freeze-job output.
    - Extracts a frozen snapshot and creates a separate writable test copy. Tests execute only against the copy; the frozen snapshot is not the test working directory.
-   - Checks out the Inspector harness from immutable commit bb1b9e45d0813aabf796a9c1896c89479649c553 as an immutable commit in the implementation branch history. The workflow checks out this exact immutable commit, not the mutable branch tip or candidate working tree.
+   - Checks out the Inspector harness from immutable commit 93ac20cbaacefbc52bd3903259e4a900e3b40c00 as an immutable commit in the implementation branch history. The workflow checks out this exact immutable commit, not the mutable branch tip or candidate working tree.
    - Creates a fresh standard local GuardianF1Inspector account with a unique random password and records its SID; verifies it is not an administrator.
    - Runs identity and write-boundary probes: writes to the harness, frozen snapshot, and evidence directory must be denied; writes to the test copy and temporary directory must succeed.
    - Applies explicit NTFS ACLs: harness/frozen/evidence read-only or inaccessible; test copy/temp writable by the Inspector SID. The pinned harness and frozen snapshot are not writable by the target process.
