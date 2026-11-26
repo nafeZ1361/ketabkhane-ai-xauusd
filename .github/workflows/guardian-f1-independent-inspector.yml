@@ -207,6 +207,8 @@ jobs:
           New-LocalUser -Name $account -Password $securePassword -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires -Description "Ephemeral least-privilege Guardian F1 Inspector" | Out-Null
           $users = @(Get-LocalGroupMember -Group "Users" | ForEach-Object { $_.SID.Value })
           $sid = (Get-LocalUser -Name $account).SID.Value
+          $runnerSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          if ($sid -eq $runnerSid) { throw "Inspector SID must differ from runner SID" }
           if ($users -notcontains $sid) { Add-LocalGroupMember -Group "Users" -Member $account }
           $admins = @(Get-LocalGroupMember -Group "Administrators" | ForEach-Object { $_.SID.Value })
           if ($admins -contains $sid) { throw "Inspector identity unexpectedly belongs to Administrators" }
@@ -240,6 +242,7 @@ jobs:
             schema = "guardian-f1-inspector-identity/v1"
             account = $accountName
             sid = $sid
+            runner_sid = $runnerSid
             administrator = $false
             runner_account = (whoami)
             harness_root = $harnessRoot
@@ -254,6 +257,7 @@ jobs:
           "INSPECTOR_ACCOUNT=$account" >> $env:GITHUB_ENV
           "INSPECTOR_PASSWORD=$password" >> $env:GITHUB_ENV
           "INSPECTOR_SID=$sid" >> $env:GITHUB_ENV
+          "INSPECTOR_RUNNER_SID=$runnerSid" >> $env:GITHUB_ENV
           "INSPECTOR_TEMP=$tempRoot" >> $env:GITHUB_ENV
 
       - name: Verify Inspector identity and read-only boundaries
@@ -291,7 +295,7 @@ jobs:
           $code = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log.exit-code.txt"))
           "IDENTITY_EXIT=$code" >> $env:GITHUB_ENV
           $probeText = Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log") -Raw
-          if ($code -ne 0 -or $probeText -notmatch "HARNESS_WRITE_DENIED" -or $probeText -notmatch "FROZEN_WRITE_DENIED" -or $probeText -notmatch "EVIDENCE_WRITE_DENIED" -or $probeText -notmatch "WORK_WRITE_ALLOWED" -or $probeText -notmatch "TEMP_WRITE_ALLOWED" -or $probeText -notmatch "GuardianF1Inspector" -or $probeText -notmatch [regex]::Escape($env:INSPECTOR_SID)) {
+          if ($code -ne 0 -or $env:INSPECTOR_SID -eq $env:INSPECTOR_RUNNER_SID -or $probeText -notmatch "HARNESS_WRITE_DENIED" -or $probeText -notmatch "FROZEN_WRITE_DENIED" -or $probeText -notmatch "EVIDENCE_WRITE_DENIED" -or $probeText -notmatch "WORK_WRITE_ALLOWED" -or $probeText -notmatch "TEMP_WRITE_ALLOWED" -or $probeText -notmatch "GuardianF1Inspector" -or $probeText -notmatch [regex]::Escape($env:INSPECTOR_SID)) {
             throw "Inspector identity/ACL negative-control probe failed"
           }
 
@@ -449,6 +453,7 @@ jobs:
             identity_exit = $env:IDENTITY_EXIT
             inspector_account = $env:INSPECTOR_ACCOUNT
             inspector_sid = $env:INSPECTOR_SID
+            runner_sid = $env:INSPECTOR_RUNNER_SID
             frozen_archive_stable = $frozenStable
             workflow_verdict = "BLOCK"
           }
