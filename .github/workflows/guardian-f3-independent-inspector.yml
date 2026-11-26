@@ -1,0 +1,428 @@
+name: Guardian F3 Independent Inspector
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/guardian-phase5-f3-risk-20261127
+    paths:
+      - "AGENTS.md"
+      - "ایجنت/xauusd-guardian/AGENTS.md"
+      - "ایجنت/xauusd-guardian/AI_WORK_PROTOCOL.md"
+      - "ایجنت/xauusd-guardian/src/**"
+      - "ایجنت/xauusd-guardian/scripts/**"
+      - "ایجنت/xauusd-guardian/tests/**"
+      - "ایجنت/xauusd-guardian/migrations/**"
+      - "ایجنت/xauusd-guardian/requirements.lock"
+      - "ایجنت/xauusd-guardian/requirements-hashed.lock"
+      - "ایجنت/xauusd-guardian/WHEELHOUSE.sha256"
+      - "ایجنت/xauusd-guardian/pyproject.toml"
+      - "ایجنت/xauusd-guardian/PHASE5_PLAN.md"
+      - "ایجنت/xauusd-guardian/PHASE5_F3_RISK_PLAN.md"
+      - "ایجنت/xauusd-guardian/DECISIONS_LOG.md"
+      - ".github/guardian-inspector/**"
+      - ".github/workflows/guardian-f3-independent-inspector.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: guardian-f3-inspector-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  freeze:
+    name: Freeze exact Guardian source snapshot
+    runs-on: windows-latest
+    timeout-minutes: 10
+    outputs:
+      archive_sha256: ${{ steps.freeze.outputs.archive_sha256 }}
+      target_commit: ${{ steps.freeze.outputs.target_commit }}
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create immutable source archive
+        id: freeze
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f3-source.tar"
+          git archive --format=tar --output="$archive" $env:GITHUB_SHA -- "ایجنت/xauusd-guardian"
+          if ($LASTEXITCODE -ne 0) { throw "git archive failed: $LASTEXITCODE" }
+          $digest = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          "archive_sha256=$digest" >> $env:GITHUB_OUTPUT
+          "target_commit=$env:GITHUB_SHA" >> $env:GITHUB_OUTPUT
+          "Frozen commit: $env:GITHUB_SHA"
+          "Archive SHA-256: $digest"
+
+      - name: Upload frozen source artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: guardian-f3-frozen-source
+          path: ${{ runner.temp }}/guardian-f3-source.tar
+          if-no-files-found: error
+          retention-days: 7
+
+  inspect:
+    name: Independent F3 inspection on isolated runner
+    needs: freeze
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout inspector harness at exact triggering commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download frozen source artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: guardian-f3-frozen-source
+          path: ${{ runner.temp }}/guardian-f3-artifact
+
+      - name: Checkout pinned independent Inspector harness
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: nafeZ1361/ketabkhane-ai-xauusd
+          ref: 0205030532305303941cdc58b05876182ec63fc0
+          path: .guardian-inspector
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify archive and extract frozen snapshot
+        id: snapshot
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f3-artifact\guardian-f3-source.tar"
+          $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          $expected = "${{ needs.freeze.outputs.archive_sha256 }}"
+          if ($actual -ne $expected) { throw "Frozen artifact digest mismatch: $actual != $expected" }
+          $root = Join-Path $env:RUNNER_TEMP "guardian-f3-frozen"
+          $evidence = Join-Path $env:RUNNER_TEMP "guardian-f3-evidence"
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          tar -xf $archive -C $root
+          if ($LASTEXITCODE -ne 0) { throw "Snapshot extraction failed: $LASTEXITCODE" }
+          $contracts = @(Get-ChildItem -Path $root -Filter "risk.py" -File -Recurse |
+            Where-Object { $_.FullName -match "[\\/]src[\\/]guardian[\\/]firewall[\\/]risk\.py$" })
+          if ($contracts.Count -ne 1) {
+            Get-ChildItem -Path $root -Recurse | Select-Object -First 40 -ExpandProperty FullName
+            throw "Expected exactly one F3 risk module; found $($contracts.Count)"
+          }
+          $snapshot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $contracts[0].FullName)))
+          "SNAPSHOT_ROOT=$snapshot" >> $env:GITHUB_ENV
+          "FROZEN_ROOT=$root" >> $env:GITHUB_ENV
+          "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV
+          "Verified archive SHA-256: $actual"
+
+      - name: Set up exact Python version
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11.8"
+          architecture: "x64"
+
+      - name: Prepare independent writable test copy
+        shell: pwsh
+        run: |
+          $work = Join-Path $env:RUNNER_TEMP "guardian-f3-inspector-work"
+          Copy-Item -Path $env:SNAPSHOT_ROOT -Destination $work -Recurse
+          New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP "guardian-f3-evidence") -Force | Out-Null
+          "INSPECTOR_WORK=$work" >> $env:GITHUB_ENV
+          "EVIDENCE_ROOT=$(Join-Path $env:RUNNER_TEMP 'guardian-f3-evidence')" >> $env:GITHUB_ENV
+          python -m venv (Join-Path $work ".venv")
+          if ($LASTEXITCODE -ne 0) { throw "venv creation failed: $LASTEXITCODE" }
+
+      - name: Build hash-verified wheelhouse
+        id: wheelhouse
+        shell: pwsh
+        run: |
+          $wheelhouse = Join-Path $env:RUNNER_TEMP "guardian-f3-wheelhouse"
+          New-Item -ItemType Directory -Path $wheelhouse -Force | Out-Null
+          Push-Location $env:INSPECTOR_WORK
+          try {
+            python -m pip download --disable-pip-version-check --require-hashes -r requirements-hashed.lock -d $wheelhouse 2>&1 |
+              Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "pip-download.log")
+            if ($LASTEXITCODE -ne 0) { throw "Hash-locked wheel download failed: $LASTEXITCODE" }
+            $expected = @{}
+            foreach ($line in Get-Content "WHEELHOUSE.sha256") {
+              if ($line.Trim()) {
+                $parts = $line.Trim() -split "\s+", 2
+                if ($parts.Count -ne 2) { throw "Malformed WHEELHOUSE.sha256 line: $line" }
+                $expected[$parts[1]] = $parts[0].ToLowerInvariant()
+              }
+            }
+            $actualFiles = @(Get-ChildItem -Path $wheelhouse -File)
+            if ($actualFiles.Count -ne $expected.Count) {
+              throw "Wheel count mismatch: expected $($expected.Count), found $($actualFiles.Count)"
+            }
+            foreach ($name in $expected.Keys) {
+              $file = Join-Path $wheelhouse $name
+              if (-not (Test-Path $file)) { throw "Missing pinned wheel: $name" }
+              $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
+              if ($hash -ne $expected[$name]) { throw "Wheel hash mismatch: $name" }
+            }
+            "Verified exact wheel set: $($expected.Count)/$($expected.Count)"
+            Get-Content "WHEELHOUSE.sha256" | Set-Content -Encoding ascii (Join-Path $env:EVIDENCE_ROOT "wheelhouse-verified.txt")
+          }
+          finally { Pop-Location }
+          "WHEELHOUSE=$wheelhouse" >> $env:GITHUB_ENV
+
+      - name: Install dependencies offline into isolated venv
+        shell: pwsh
+        run: |
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          Push-Location $env:INSPECTOR_WORK
+          try {
+            & $python -m pip install --disable-pip-version-check --no-index --find-links $env:WHEELHOUSE --require-hashes -r requirements-hashed.lock 2>&1 |
+              Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "pip-install-offline.log")
+            if ($LASTEXITCODE -ne 0) { throw "Offline install failed: $LASTEXITCODE" }
+            & $python -m pip check 2>&1 | Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "pip-check.log")
+            if ($LASTEXITCODE -ne 0) { throw "pip check failed: $LASTEXITCODE" }
+            & $python -c "import sys; print(sys.version); print(sys.prefix); print(sys.base_prefix)" 2>&1 | Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "python-identity.log")
+            if ($LASTEXITCODE -ne 0) { throw "Python identity check failed: $LASTEXITCODE" }
+          }
+          finally { Pop-Location }
+
+      - name: Create ephemeral standard Inspector identity and enforce ACLs
+        id: identity
+        shell: pwsh
+        run: |
+          $account = "GuardianF3Inspector"
+          if (Get-LocalUser -Name $account -ErrorAction SilentlyContinue) {
+            throw "Refusing to reuse an existing Inspector account on this runner"
+          }
+          $randomBytes = New-Object byte[] 32
+          [System.Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+          $password = [Convert]::ToBase64String($randomBytes) + "aA1!"
+          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+          New-LocalUser -Name $account -Password $securePassword -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires -Description "Ephemeral least-privilege Guardian F2 Inspector" | Out-Null
+          $users = @(Get-LocalGroupMember -Group "Users" | ForEach-Object { $_.SID.Value })
+          $sid = (Get-LocalUser -Name $account).SID.Value
+          $runnerSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          if ($sid -eq $runnerSid) { throw "Inspector SID must differ from runner SID" }
+          if ($users -notcontains $sid) { Add-LocalGroupMember -Group "Users" -Member $account }
+          $admins = @(Get-LocalGroupMember -Group "Administrators" | ForEach-Object { $_.SID.Value })
+          if ($admins -contains $sid) { throw "Inspector identity unexpectedly belongs to Administrators" }
+          $accountName = "$env:COMPUTERNAME\$account"
+          $harnessRoot = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector"
+          $tempRoot = Join-Path $env:RUNNER_TEMP "guardian-f3-inspector-temp"
+          $profileRoot = Join-Path $env:SystemDrive "Users\$account"
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $profileRoot "AppData\Roaming") -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $profileRoot "AppData\Local") -Force | Out-Null
+
+          & icacls.exe $env:GITHUB_WORKSPACE /grant "${accountName}:(X)"
+          if ($LASTEXITCODE -ne 0) { throw "Could not grant workspace traversal" }
+          & icacls.exe $env:RUNNER_TEMP /grant "${accountName}:(X)"
+          if ($LASTEXITCODE -ne 0) { throw "Could not grant runner-temp traversal" }
+
+          function Set-InspectorAcl([string]$path, [string]$rights) {
+            & icacls.exe $path /inheritance:r /grant "BUILTIN\Administrators:F" "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:$rights" "${accountName}:(OI)(CI)$rights" /T /C
+            if ($LASTEXITCODE -ne 0) { throw "ACL setup failed for $path" }
+          }
+          Set-InspectorAcl $harnessRoot "RX"
+          Set-InspectorAcl $env:FROZEN_ROOT "RX"
+          & icacls.exe $env:ARCHIVE_PATH /grant "${accountName}:R"
+          if ($LASTEXITCODE -ne 0) { throw "Could not grant read-only archive access" }
+          Set-InspectorAcl $env:INSPECTOR_WORK "M"
+          Set-InspectorAcl $tempRoot "M"
+          & icacls.exe $profileRoot /inheritance:r /grant "BUILTIN\Administrators:F" "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:M" "${accountName}:(OI)(CI)M" /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Inspector profile ACL setup failed" }
+          & icacls.exe $env:EVIDENCE_ROOT /inheritance:r /grant "BUILTIN\Administrators:F" "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Evidence directory must remain inaccessible to target process" }
+
+          $identity = [ordered]@{
+            schema = "guardian-f3-inspector-identity/v1"
+            account = $accountName
+            sid = $sid
+            runner_sid = $runnerSid
+            administrator = $false
+            runner_account = (whoami)
+            harness_root = $harnessRoot
+            frozen_root = $env:FROZEN_ROOT
+            writable_test_copy = $env:INSPECTOR_WORK
+            temp_root = $tempRoot
+            evidence_root_write_denied = $true
+            account_type = "ephemeral standard local user on GitHub-hosted Windows runner"
+          }
+          $identity | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "inspector-identity.json")
+          Write-Output "::add-mask::$password"
+          "INSPECTOR_ACCOUNT=$account" >> $env:GITHUB_ENV
+          "INSPECTOR_PASSWORD=$password" >> $env:GITHUB_ENV
+          "INSPECTOR_SID=$sid" >> $env:GITHUB_ENV
+          "INSPECTOR_RUNNER_SID=$runnerSid" >> $env:GITHUB_ENV
+          "INSPECTOR_TEMP=$tempRoot" >> $env:GITHUB_ENV
+
+      - name: Verify Inspector identity and read-only boundaries
+        id: identity_probe
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = (Get-Command python).Source
+          $probe = @'
+          import getpass, pathlib, subprocess, sys
+          harness = pathlib.Path(sys.argv[1])
+          frozen = pathlib.Path(sys.argv[2])
+          work = pathlib.Path(sys.argv[3])
+          temp = pathlib.Path(sys.argv[4])
+          evidence = pathlib.Path(sys.argv[5])
+          print("INSPECTOR_USER=" + getpass.getuser())
+          print(subprocess.run(["whoami", "/user"], capture_output=True, text=True, check=True).stdout)
+          for label, root in (("HARNESS", harness), ("FROZEN", frozen), ("EVIDENCE", evidence)):
+              probe = root / ".guardian_inspector_write_probe"
+              try:
+                  probe.write_text("forbidden", encoding="utf-8")
+              except PermissionError:
+                  print(label + "_WRITE_DENIED")
+              else:
+                  probe.unlink(missing_ok=True)
+                  print(label + "_WRITE_ALLOWED")
+                  raise SystemExit(20)
+          for label, root in (("WORK", work), ("TEMP", temp)):
+              probe = root / ".guardian_inspector_write_probe"
+              probe.write_text("allowed", encoding="utf-8")
+              probe.unlink()
+              print(label + "_WRITE_ALLOWED")
+          '@
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "identity-acl-probe.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-c", $probe, (Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector"), $env:FROZEN_ROOT, $env:INSPECTOR_WORK, $env:INSPECTOR_TEMP, $env:EVIDENCE_ROOT)
+          $code = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log.exit-code.txt"))
+          "IDENTITY_EXIT=$code" >> $env:GITHUB_ENV
+          $probeText = Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log") -Raw
+          if ($code -ne 0 -or $env:INSPECTOR_SID -eq $env:INSPECTOR_RUNNER_SID -or $probeText -notmatch "HARNESS_WRITE_DENIED" -or $probeText -notmatch "FROZEN_WRITE_DENIED" -or $probeText -notmatch "EVIDENCE_WRITE_DENIED" -or $probeText -notmatch "WORK_WRITE_ALLOWED" -or $probeText -notmatch "TEMP_WRITE_ALLOWED" -or $probeText -notmatch "GuardianF3Inspector" -or $probeText -notmatch [regex]::Escape($env:INSPECTOR_SID)) {
+            throw "Inspector identity/ACL negative-control probe failed"
+          }
+
+      - name: Independent focused contract tests
+        id: focused
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "focused-pytest.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "pytest", "-o", "addopts=--strict-markers", "-q", "tests/unit/test_firewall_risk.py", "--junitxml=focused-junit.xml")
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "focused-pytest.log.exit-code.txt"))
+          if (Test-Path (Join-Path $env:INSPECTOR_WORK "focused-junit.xml")) { Copy-Item (Join-Path $env:INSPECTOR_WORK "focused-junit.xml") (Join-Path $env:EVIDENCE_ROOT "focused-junit.xml") }
+          "FOCUSED_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: Independent full regression suite
+        id: full
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "full-pytest.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "pytest", "-o", "addopts=--strict-markers", "-q", "--junitxml=full-junit.xml")
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "full-pytest.log.exit-code.txt"))
+          if (Test-Path (Join-Path $env:INSPECTOR_WORK "full-junit.xml")) { Copy-Item (Join-Path $env:INSPECTOR_WORK "full-junit.xml") (Join-Path $env:EVIDENCE_ROOT "full-junit.xml") }
+          "FULL_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: Compile source, scripts and tests
+        id: compile
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "compileall.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "compileall", "-q", "src", "scripts", "tests")
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "compileall.log.exit-code.txt"))
+          "COMPILE_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: Run independent black-box, static and mutation inspection
+        id: inspector
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = (Get-Command python).Source
+          $harness = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\f3_inspector.py"
+          $inspectorResult = Join-Path $env:INSPECTOR_TEMP "f3-inspector-result.json"
+          & $helper -Python $python -WorkingDirectory $env:SNAPSHOT_ROOT -EvidenceRoot $env:EVIDENCE_ROOT -LogName "inspector.log" -TargetCommit $env:GITHUB_SHA -Arguments @($harness, "--project-root", $env:SNAPSHOT_ROOT, "--frozen-root", $env:SNAPSHOT_ROOT, "--archive", $env:ARCHIVE_PATH, "--output", $inspectorResult)
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "inspector.log.exit-code.txt"))
+          if (Test-Path $inspectorResult) { Copy-Item $inspectorResult (Join-Path $env:EVIDENCE_ROOT "inspector-result.json") -Force }
+          "INSPECTOR_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+
+      - name: Verify frozen source remained unchanged and write verdict
+        if: always()
+        shell: pwsh
+        run: |
+          $evidence = Join-Path $env:RUNNER_TEMP "guardian-f3-evidence"
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          $archiveHash = ""
+          $expectedHash = "${{ needs.freeze.outputs.archive_sha256 }}"
+          $frozenStable = $false
+          if ($env:ARCHIVE_PATH -and (Test-Path $env:ARCHIVE_PATH)) {
+            $archiveHash = (Get-FileHash -Algorithm SHA256 $env:ARCHIVE_PATH).Hash.ToLowerInvariant()
+            $frozenStable = ($archiveHash -eq $expectedHash)
+          }
+          function Get-JunitCounts([string]$path) {
+            $counts = @{ tests = 0; failures = 0; errors = 0; skipped = 0 }
+            if (-not (Test-Path $path)) { return $counts }
+            [xml]$doc = Get-Content -Raw $path
+            foreach ($node in @($doc.SelectNodes("//testsuite"))) {
+              $counts.tests += [int]$node.tests
+              $counts.failures += [int]$node.failures
+              $counts.errors += [int]$node.errors
+              $counts.skipped += [int]$node.skipped
+            }
+            return $counts
+          }
+          $focusedCounts = Get-JunitCounts (Join-Path $env:EVIDENCE_ROOT "focused-junit.xml")
+          $fullCounts = Get-JunitCounts (Join-Path $env:EVIDENCE_ROOT "full-junit.xml")
+          $summary = [ordered]@{
+            schema = "guardian-f3-run-summary/v1"
+            target_commit = "${{ needs.freeze.outputs.target_commit }}"
+            archive_sha256 = $archiveHash
+            inspector_harness_commit = "0205030532305303941cdc58b05876182ec63fc0"
+            focused_exit = $env:FOCUSED_EXIT
+            focused_junit = $focusedCounts
+            full_exit = $env:FULL_EXIT
+            full_junit = $fullCounts
+            compile_exit = $env:COMPILE_EXIT
+            inspector_exit = $env:INSPECTOR_EXIT
+            identity_exit = $env:IDENTITY_EXIT
+            inspector_account = $env:INSPECTOR_ACCOUNT
+            inspector_sid = $env:INSPECTOR_SID
+            runner_sid = $env:INSPECTOR_RUNNER_SID
+            frozen_archive_stable = $frozenStable
+            workflow_verdict = "BLOCK"
+          }
+          if ($env:IDENTITY_EXIT -eq "0" -and $env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $env:INSPECTOR_EXIT -eq "0" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0) {
+            $summary.workflow_verdict = "PASS"
+          }
+          $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
+          Get-ChildItem $env:EVIDENCE_ROOT -File | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
+            Set-Content -Encoding ascii (Join-Path $env:EVIDENCE_ROOT "SHA256SUMS.txt")
+          if ($summary.workflow_verdict -ne "PASS") { throw "Independent F3 inspection verdict: BLOCK" }
+
+      - name: Upload raw Inspector evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: guardian-f3-inspector-evidence
+          path: ${{ runner.temp }}/guardian-f3-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Remove ephemeral Inspector account
+        if: always()
+        shell: pwsh
+        run: |
+          if (Get-LocalUser -Name "GuardianF3Inspector" -ErrorAction SilentlyContinue) {
+            Remove-LocalUser -Name "GuardianF3Inspector"
+          }
