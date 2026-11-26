@@ -480,6 +480,7 @@ class RestrictedWorker:
             if not assigned:
                 raise _win_error("AssignProcessToJobObject")
             self._job_assigned = bool(assigned)
+            self._security_report["job_assigned"] = self._job_assigned
 
             # The child is suspended, so the key pipe can be filled before Python runs.
             written = wintypes.DWORD()
