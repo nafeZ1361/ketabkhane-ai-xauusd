@@ -1,4 +1,4 @@
-"""F4 Windows restricted-process integration probes."""
+"""F4 Windows non-elevated worker integration probes."""
 
 import sys
 
