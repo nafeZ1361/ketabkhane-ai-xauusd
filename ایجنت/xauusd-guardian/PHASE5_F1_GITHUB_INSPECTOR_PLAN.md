@@ -23,7 +23,7 @@ The new Inspector means an independent CI execution context, not a separate huma
    - Runs as a separate job on a fresh windows-latest runner.
    - Downloads the frozen archive and verifies its SHA-256 against the freeze-job output.
    - Extracts a frozen snapshot and creates a separate writable test copy. Tests execute only against the copy; the frozen snapshot is not the test working directory.
-   - Checks out the Inspector harness from immutable commit 203783d4909956f5b22b02a097eaa03766fc63b6 on branch security/guardian-f1-inspector-harness-20261126. The candidate branch cannot replace the harness by changing its own copy.
+   - Checks out the Inspector harness from immutable commit 203783d4909956f5b22b02a097eaa03766fc63b6 as an immutable commit in the implementation branch history. The workflow checks out this exact immutable commit, not the mutable branch tip or candidate working tree.
    - Uses contents: read and actions: read; checkout credentials are not persisted. No repository secrets or write token are passed to target tests.
    - Does not commit, push, merge, change refs, or modify repository settings.
 

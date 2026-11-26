@@ -5,7 +5,20 @@ on:
     branches:
       - work/guardian-f1-independent-ci-20261126
     paths:
-      - "ایجنت/xauusd-guardian/**"
+      - "AGENTS.md"
+      - "ایجنت/xauusd-guardian/AGENTS.md"
+      - "ایجنت/xauusd-guardian/AI_WORK_PROTOCOL.md"
+      - "ایجنت/xauusd-guardian/src/**"
+      - "ایجنت/xauusd-guardian/scripts/**"
+      - "ایجنت/xauusd-guardian/tests/**"
+      - "ایجنت/xauusd-guardian/migrations/**"
+      - "ایجنت/xauusd-guardian/requirements.lock"
+      - "ایجنت/xauusd-guardian/requirements-hashed.lock"
+      - "ایجنت/xauusd-guardian/WHEELHOUSE.sha256"
+      - "ایجنت/xauusd-guardian/pyproject.toml"
+      - "ایجنت/xauusd-guardian/PHASE5_PLAN.md"
+      - "ایجنت/xauusd-guardian/PHASE5_F1_GITHUB_INSPECTOR_PLAN.md"
+      - "ایجنت/xauusd-guardian/DECISIONS_LOG.md"
       - ".github/guardian-inspector/**"
       - ".github/workflows/guardian-f1-independent-inspector.yml"
 
@@ -80,7 +93,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: 203783d4909956f5b22b02a097eaa03766fc63b6
+          ref: 215d1b91bab7dfa82812e69927292be6adb96405
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -271,7 +284,7 @@ jobs:
             schema = "guardian-f1-run-summary/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $archiveHash
-            inspector_harness_commit = "203783d4909956f5b22b02a097eaa03766fc63b6"
+            inspector_harness_commit = "215d1b91bab7dfa82812e69927292be6adb96405"
             focused_exit = $env:FOCUSED_EXIT
             focused_junit = $focusedCounts
             full_exit = $env:FULL_EXIT
