@@ -44,7 +44,7 @@ F4 is infrastructure only. F2 remains authoritative and denies all execution/ord
 7. Secret handling: key absent from argv/env/logs/files; bounded redacted diagnostics; no raw payload/credential leakage.
 8. Policy regression: F2 continues to deny all execution/order/LIVE/financial-read operations; only empty POLICY_STATUS remains allowed. F3 arithmetic contract remains unchanged.
 9. Static worker boundary: no MT5, order APIs, account reads, network, arbitrary file access, shell, or process-spawn surface beyond the single parent-controlled launch.
-10. Mutation controls: deliberately disable HMAC verification, replay tracking, or restricted-token enforcement in disposable copies; independent probes must detect each mutant.
+10. Mutation controls: deliberately disable HMAC verification, replay tracking, or Job Object assignment in disposable copies; independent probes must detect each mutant.
 11. Focused tests, full suite, compileall, pinned wheelhouse/offline install, clean pip check, exact frozen archive/hash, manifest stability, and raw evidence sidecar verification.
 
 ## 5. Acceptance and evidence
