@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: 50c4e4e12ada513e3eebb41b6c3f7a769e2f51e9
+          ref: 2650f0369c56aa30887880da37fbefa2f8ba726e
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -175,6 +175,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Frozen ACL failed" }
           & icacls.exe $env:INSPECTOR_WORK /inheritance:r /grant "BUILTIN\Administrators:F" "NT AUTHORITY\SYSTEM:F" ("{0}:(OI)(CI)M" -f $accountName) /T /C
           if ($LASTEXITCODE -ne 0) { throw "Work ACL failed" }
+          $pythonRoot = $env:pythonLocation
+          if ([string]::IsNullOrWhiteSpace($pythonRoot) -or -not (Test-Path (Join-Path $pythonRoot "python.exe"))) { throw "Base Python installation root is unavailable" }
+          & icacls.exe $pythonRoot /grant ("{0}:(OI)(CI)RX" -f $accountName) /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Base Python read/execute ACL failed" }
           "INSPECTOR_ACCOUNT=$account" >> $env:GITHUB_ENV
           "INSPECTOR_PASSWORD=$password" >> $env:GITHUB_ENV
           "INSPECTOR_SID=$sid" >> $env:GITHUB_ENV
