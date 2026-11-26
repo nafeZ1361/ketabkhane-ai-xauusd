@@ -172,7 +172,8 @@ def blackbox(project_root: Path) -> tuple[unittest.result.TestResult, str]:
                 report = worker.security_report
                 self.assertTrue(report["is_non_elevated"])
                 self.assertEqual(report["integrity_rid"], 8192)
-                self.assertLessEqual(report["privilege_count"], 1)
+                self.assertLessEqual(len(report["enabled_privileges"]), 1)
+                self.assertTrue(set(report["enabled_privileges"]).issubset({"SeChangeNotifyPrivilege"}))
                 self.assertTrue(report["job_limits_verified"])
                 self.assertTrue(report["job_assigned"])
                 self.assertEqual(worker.request("HEALTH_CHECK", {}), {"status": "OK"})
