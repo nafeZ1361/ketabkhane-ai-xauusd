@@ -93,7 +93,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: 215d1b91bab7dfa82812e69927292be6adb96405
+          ref: bb1b9e45d0813aabf796a9c1896c89479649c553
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -192,7 +192,161 @@ jobs:
           }
           finally { Pop-Location }
 
+      - name: Create ephemeral standard Inspector identity and enforce ACLs
+        id: identity
+        shell: pwsh
+        run: |
+          $account = "GuardianF1Inspector"
+          if (Get-LocalUser -Name $account -ErrorAction SilentlyContinue) {
+            throw "Refusing to reuse an existing Inspector account on this runner"
+          }
+          $randomBytes = New-Object byte[] 32
+          [System.Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+          $password = [Convert]::ToBase64String($randomBytes) + "aA1!"
+          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+          New-LocalUser -Name $account -Password $securePassword -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires -Description "Ephemeral least-privilege Guardian F1 Inspector" | Out-Null
+          $users = @(Get-LocalGroupMember -Group "Users" | ForEach-Object { $_.SID.Value })
+          $sid = (Get-LocalUser -Name $account).SID.Value
+          if ($users -notcontains $sid) { Add-LocalGroupMember -Group "Users" -Member $account }
+          $admins = @(Get-LocalGroupMember -Group "Administrators" | ForEach-Object { $_.SID.Value })
+          if ($admins -contains $sid) { throw "Inspector identity unexpectedly belongs to Administrators" }
+          $accountName = "$env:COMPUTERNAME\$account"
+          $harnessRoot = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector"
+          $tempRoot = Join-Path $env:RUNNER_TEMP "guardian-f1-inspector-temp"
+          $profileRoot = Join-Path $env:SystemDrive "Users\$account"
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $profileRoot "AppData\Roaming") -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $profileRoot "AppData\Local") -Force | Out-Null
+
+          & icacls.exe $env:GITHUB_WORKSPACE /grant "${accountName}:(X)"
+          if ($LASTEXITCODE -ne 0) { throw "Could not grant workspace traversal" }
+          & icacls.exe $env:RUNNER_TEMP /grant "${accountName}:(X)"
+          if ($LASTEXITCODE -ne 0) { throw "Could not grant runner-temp traversal" }
+
+          function Set-InspectorAcl([string]$path, [string]$rights) {
+            & icacls.exe $path /inheritance:r /grant:r "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:(OI)(CI)$rights" /T /C
+            if ($LASTEXITCODE -ne 0) { throw "ACL setup failed for $path" }
+          }
+          Set-InspectorAcl $harnessRoot "RX"
+          Set-InspectorAcl $env:FROZEN_ROOT "RX"
+          Set-InspectorAcl $env:INSPECTOR_WORK "M"
+          Set-InspectorAcl $tempRoot "M"
+          & icacls.exe $profileRoot /inheritance:r /grant:r "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" "${accountName}:(OI)(CI)M" /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Inspector profile ACL setup failed" }
+          & icacls.exe $env:EVIDENCE_ROOT /inheritance:r /grant:r "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:(OI)(CI)F" /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Evidence directory must remain inaccessible to target process" }
+
+          $identity = [ordered]@{
+            schema = "guardian-f1-inspector-identity/v1"
+            account = $accountName
+            sid = $sid
+            administrator = $false
+            runner_account = (whoami)
+            harness_root = $harnessRoot
+            frozen_root = $env:FROZEN_ROOT
+            writable_test_copy = $env:INSPECTOR_WORK
+            temp_root = $tempRoot
+            evidence_root_write_denied = $true
+            account_type = "ephemeral standard local user on GitHub-hosted Windows runner"
+          }
+          $identity | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "inspector-identity.json")
+          Write-Output "::add-mask::$password"
+          "INSPECTOR_ACCOUNT=$account" >> $env:GITHUB_ENV
+          "INSPECTOR_PASSWORD=$password" >> $env:GITHUB_ENV
+          "INSPECTOR_SID=$sid" >> $env:GITHUB_ENV
+          "INSPECTOR_TEMP=$tempRoot" >> $env:GITHUB_ENV
+
+      - name: Verify Inspector identity and read-only boundaries
+        id: identity_probe
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = (Get-Command python).Source
+          $probe = @'
+          import getpass, pathlib, subprocess, sys
+          harness = pathlib.Path(sys.argv[1])
+          frozen = pathlib.Path(sys.argv[2])
+          work = pathlib.Path(sys.argv[3])
+          temp = pathlib.Path(sys.argv[4])
+          print("INSPECTOR_USER=" + getpass.getuser())
+          print(subprocess.run(["whoami", "/user"], capture_output=True, text=True, check=True).stdout)
+          for label, root in (("HARNESS", harness), ("FROZEN", frozen)):
+              probe = root / ".guardian_inspector_write_probe"
+              try:
+                  probe.write_text("forbidden", encoding="utf-8")
+              except PermissionError:
+                  print(label + "_WRITE_DENIED")
+              else:
+                  probe.unlink(missing_ok=True)
+                  print(label + "_WRITE_ALLOWED")
+                  raise SystemExit(20)
+          for label, root in (("WORK", work), ("TEMP", temp)):
+              probe = root / ".guardian_inspector_write_probe"
+              probe.write_text("allowed", encoding="utf-8")
+              probe.unlink()
+              print(label + "_WRITE_ALLOWED")
+          '@
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "identity-acl-probe.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-c", $probe, (Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector"), $env:FROZEN_ROOT, $env:INSPECTOR_WORK, $env:INSPECTOR_TEMP)
+          $code = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log.exit-code.txt"))
+          "IDENTITY_EXIT=$code" >> $env:GITHUB_ENV
+          $probeText = Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-acl-probe.log") -Raw
+          if ($code -ne 0 -or $probeText -notmatch "HARNESS_WRITE_DENIED" -or $probeText -notmatch "FROZEN_WRITE_DENIED" -or $probeText -notmatch "WORK_WRITE_ALLOWED" -or $probeText -notmatch "TEMP_WRITE_ALLOWED" -or $probeText -notmatch "GuardianF1Inspector") {
+            throw "Inspector identity/ACL negative-control probe failed"
+          }
+
       - name: Independent focused contract tests
+        id: focused
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "focused-pytest.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "pytest", "-o", "addopts=--strict-markers", "-q", "tests/unit/test_firewall_contracts.py", "--junitxml=focused-junit.xml")
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "focused-pytest.log.exit-code.txt"))
+          if (Test-Path (Join-Path $env:INSPECTOR_WORK "focused-junit.xml")) { Copy-Item (Join-Path $env:INSPECTOR_WORK "focused-junit.xml") (Join-Path $env:EVIDENCE_ROOT "focused-junit.xml") }
+          "FOCUSED_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: Independent full regression suite
+        id: full
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "full-pytest.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "pytest", "-o", "addopts=--strict-markers", "-q", "--junitxml=full-junit.xml")
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "full-pytest.log.exit-code.txt"))
+          if (Test-Path (Join-Path $env:INSPECTOR_WORK "full-junit.xml")) { Copy-Item (Join-Path $env:INSPECTOR_WORK "full-junit.xml") (Join-Path $env:EVIDENCE_ROOT "full-junit.xml") }
+          "FULL_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: Compile source, scripts and tests
+        id: compile
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
+          & $helper -Python $python -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "compileall.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-m", "compileall", "-q", "src", "scripts", "tests")
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "compileall.log.exit-code.txt"))
+          "COMPILE_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: Run independent black-box, static and mutation inspection
+        id: inspector
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = (Get-Command python).Source
+          $harness = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\f1_inspector.py"
+          & $helper -Python $python -WorkingDirectory $env:SNAPSHOT_ROOT -EvidenceRoot $env:EVIDENCE_ROOT -LogName "inspector.log" -TargetCommit $env:GITHUB_SHA -Arguments @($harness, "--project-root", $env:SNAPSHOT_ROOT, "--frozen-root", $env:SNAPSHOT_ROOT)
+          $exitCode = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "inspector.log.exit-code.txt"))
+          Copy-Item (Join-Path $env:EVIDENCE_ROOT "inspector.log") (Join-Path $env:EVIDENCE_ROOT "inspector-result.json") -Force
+          "INSPECTOR_EXIT=$exitCode" >> $env:GITHUB_ENV
+          if ($exitCode -ne 0) { exit $exitCode }
+
+
         id: focused
         continue-on-error: true
         shell: pwsh
@@ -284,17 +438,20 @@ jobs:
             schema = "guardian-f1-run-summary/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $archiveHash
-            inspector_harness_commit = "215d1b91bab7dfa82812e69927292be6adb96405"
+            inspector_harness_commit = "bb1b9e45d0813aabf796a9c1896c89479649c553"
             focused_exit = $env:FOCUSED_EXIT
             focused_junit = $focusedCounts
             full_exit = $env:FULL_EXIT
             full_junit = $fullCounts
             compile_exit = $env:COMPILE_EXIT
             inspector_exit = $env:INSPECTOR_EXIT
+            identity_exit = $env:IDENTITY_EXIT
+            inspector_account = $env:INSPECTOR_ACCOUNT
+            inspector_sid = $env:INSPECTOR_SID
             frozen_archive_stable = $frozenStable
             workflow_verdict = "BLOCK"
           }
-          if ($env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $env:INSPECTOR_EXIT -eq "0" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0) {
+          if ($env:IDENTITY_EXIT -eq "0" -and $env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $env:INSPECTOR_EXIT -eq "0" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0) {
             $summary.workflow_verdict = "PASS"
           }
           $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
@@ -311,3 +468,11 @@ jobs:
           path: ${{ runner.temp }}/guardian-f1-evidence/
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Remove ephemeral Inspector account
+        if: always()
+        shell: pwsh
+        run: |
+          if (Get-LocalUser -Name "GuardianF1Inspector" -ErrorAction SilentlyContinue) {
+            Remove-LocalUser -Name "GuardianF1Inspector"
+          }
