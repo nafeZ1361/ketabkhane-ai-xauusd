@@ -60,6 +60,13 @@ def authorize_request(
     if type(context) is not PolicyContext:
         return PolicyDecision(False, "INVALID_POLICY_CONTEXT")
 
+    # Re-serialize and parse to revalidate every request field after possible
+    # low-level mutation (for example object.__setattr__ on a frozen dataclass).
+    try:
+        request = FirewallRequest.from_dict(request.to_dict())
+    except Exception:
+        return PolicyDecision(False, "INVALID_REQUEST")
+
     # Exact types prevent bool/int and str-subclass surprises in security fields.
     if type(context.phase) is not int or context.phase != 5:
         return PolicyDecision(False, "PHASE_SCOPE_MISMATCH")
