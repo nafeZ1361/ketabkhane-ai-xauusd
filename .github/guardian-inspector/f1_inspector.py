@@ -291,6 +291,8 @@ def main() -> int:
     parser.add_argument("--blackbox-only", action="store_true")
     args = parser.parse_args()
     project_root = Path(args.project_root).resolve()
+    frozen_root = Path(args.frozen_root).resolve() if args.frozen_root else None
+    frozen_manifest_before = file_manifest(frozen_root) if frozen_root else None
 
     result, test_output = run_blackbox(project_root)
     if args.blackbox_only:
@@ -299,11 +301,7 @@ def main() -> int:
 
     findings = static_boundary_check(project_root)
     mutation = mutation_control(project_root)
-    frozen_manifest_before = None
     frozen_manifest_after = None
-    if args.frozen_root:
-        frozen_root = Path(args.frozen_root).resolve()
-        frozen_manifest_before = file_manifest(frozen_root)
 
     payload = {
         "schema": "guardian-f1-independent-inspector/v1",
@@ -319,11 +317,11 @@ def main() -> int:
         },
         "static_boundary_findings": findings,
         "mutation_control": mutation,
-        "frozen_manifest": frozen_manifest,
+        "frozen_manifest_before": frozen_manifest_before,
         "status": "PASS" if result.wasSuccessful() and not findings and mutation["status"] == "PASS" else "BLOCK",
     }
-    if args.frozen_root:
-        frozen_manifest_after = file_manifest(Path(args.frozen_root).resolve())
+    if frozen_root:
+        frozen_manifest_after = file_manifest(frozen_root)
         payload["frozen_manifest_before"] = frozen_manifest_before
         payload["frozen_manifest_after"] = frozen_manifest_after
         payload["frozen_manifest_stable"] = frozen_manifest_before == frozen_manifest_after
