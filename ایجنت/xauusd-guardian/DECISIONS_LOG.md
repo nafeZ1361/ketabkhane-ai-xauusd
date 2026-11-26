@@ -540,3 +540,13 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - **Evidence integrity:** evidence artifact ID `15152603251`, ZIP SHA-256 `4a821504395909a2d77db8943d347d3bed05d8a12f36efaff73f0648325322b4`; all 25 SHA256SUMS entries independently recomputed and matched. Frozen artifact ID `15152478189`, ZIP SHA-256 `fd0d3dbc18e216083f3c7fc72ae43f658e5763daba0d01269e4b28530900fd43`. Full record: `PHASE5_F1_GITHUB_INSPECTOR_PLAN.md`.
 - **Limitations preserved:** this is independent CI execution under D-033, not an external human reviewer or proof of a local GuardianInspector account/ACL on the owner's Windows machine. No network isolation of the hosted runner is claimed.
 - **Consequence:** Phase 5 is **10/100**. F2-F8 remain NOT STARTED. This decision does not authorize PR merge, DEMO activation, order construction/submission, account financial-field access, or LIVE trading. PR #8 remains Draft and unmerged.
+
+
+## D-035 — Phase 5 F2 fail-closed policy implementation (2026-11-27)
+
+- **Scope:** Implement the frozen F2 deliverable from D-028: central fail-closed policy and authorization checks. No approval scope or trading capability is expanded.
+- **Implementation:** `src/guardian/firewall/policy.py` and `tests/unit/test_firewall_policy.py` on `work/guardian-phase5-f2-policy-20261127`, based on accepted F1.
+- **Policy:** only empty `POLICY_STATUS` is allowed in exact Phase-5 / DEMO context. DEMO execution/order operations, LIVE operations, account financial reads, unknown operations, malformed context and non-empty status payloads are denied. A-09 is Phase-12-only and cannot authorize Phase-5 actions.
+- **Regression evidence:** GitHub Actions `guardian-ci` run `45895035484` SUCCESS; 468 full-suite tests passed; compileall exit 0. Python hosted runner was 3.11.9. This CI run is not an independent Inspector review.
+- **Disposition:** F2 is **IMPLEMENTED / INDEPENDENT INSPECTION PENDING / 0 of 12**. No points are earned until a read-only Inspector independently passes the frozen candidate and evidence. Acceptance criteria are in `PHASE5_F2_POLICY_PLAN.md`.
+- **Safety:** no approval file changed; no order construction/submission, MT5 execution, DEMO activation, LIVE mode, account financial-field access, PR merge, or changes outside the Guardian project.
