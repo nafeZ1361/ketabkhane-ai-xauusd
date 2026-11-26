@@ -314,3 +314,14 @@ F1 accepted **10/10** on target `1cee6409d6bdf0355e80e7e93ba83e3d49efd1e5`. Work
 - F3 **ACCEPTED 12/12**; Phase 5 total **34/100** (F1 10 + F2 12 + F3 12).
 - Independent workflow `45898985819` inspected exact source target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; focused 35/0/0, full 506/0/0, compileall 0, black-box 10/10, static findings 0, mutation detected, frozen 259-file manifest stable.
 - F4–F8 remain NOT STARTED. PR #8 remains Draft/unmerged. No account reads, MT5, order construction/submission, DEMO activation or LIVE path.
+
+
+## Phase 5 F4 implementation start — 2026-11-27
+
+- F1 **10/10 ACCEPTED**; F2 **12/12 ACCEPTED**; F3 **12/12 ACCEPTED**; Phase 5 total **34/100**.
+- F4 is **IMPLEMENTED / INDEPENDENT INSPECTION PENDING — 0/15** on `work/guardian-phase5-f4-worker-20261127`.
+- F4 base: accepted F3 HEAD `9a4113be8a5b16ebd141c2b429f40f6946c0688f`.
+- Controls implemented: restricted Windows worker token, anchored launcher, authenticated replay-resistant localhost IPC, token verification, handshake and lifecycle fail-closed controls.
+- First F4 review finding was corrected: UAC elevation type is not treated as proof of restriction; `TokenHasRestrictions` is now the restriction predicate.
+- Draft PR #10 is for CI/inspection only and remains unmerged. PR #8 remains Draft/unmerged.
+- No account reads, MT5, orders, DEMO activation or LIVE path.
