@@ -636,7 +636,13 @@ class RestrictedWorker:
     def request(self, message_type: str, payload: dict[str, Any]) -> dict[str, Any]:
         if self._closed or self._poisoned or self._stdin is None:
             raise WorkerHostError("WORKER_SESSION_NOT_AVAILABLE")
+        if type(payload) is not dict:
+            self._poisoned = True
+            self.close(force=True)
+            raise WorkerHostError("WORKER_PAYLOAD_NOT_OBJECT")
         if message_type not in ("HEALTH_CHECK", "RISK_REVALIDATE"):
+            self._poisoned = True
+            self.close(force=True)
             raise WorkerHostError("WORKER_OPERATION_NOT_ALLOWED")
         correlation_id = secrets.token_hex(16)
         try:
