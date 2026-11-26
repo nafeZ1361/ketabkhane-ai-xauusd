@@ -74,6 +74,15 @@ jobs:
           name: guardian-f1-frozen-source
           path: ${{ runner.temp }}/guardian-f1-artifact
 
+      - name: Checkout pinned independent Inspector harness
+        uses: actions/checkout@v4
+        with:
+          repository: nafeZ1361/ketabkhane-ai-xauusd
+          ref: 5ee7e9c49f0ba8e3dec11dea2c82c5fe22da8148
+          path: .guardian-inspector
+          persist-credentials: false
+          fetch-depth: 1
+
       - name: Verify archive and extract frozen snapshot
         id: snapshot
         shell: pwsh
@@ -213,7 +222,7 @@ jobs:
         shell: pwsh
         run: |
           $python = Join-Path $env:INSPECTOR_WORK ".venv\Scripts\python.exe"
-          $harness = Join-Path $env:GITHUB_WORKSPACE ".github\guardian-inspector\f1_inspector.py"
+          $harness = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\f1_inspector.py"
           & $python $harness --project-root $env:INSPECTOR_WORK --frozen-root $env:SNAPSHOT_ROOT --output (Join-Path $env:EVIDENCE_ROOT "inspector-result.json") 2>&1 |
             Tee-Object -FilePath (Join-Path $env:EVIDENCE_ROOT "inspector.log")
           "INSPECTOR_EXIT=$LASTEXITCODE" >> $env:GITHUB_ENV
