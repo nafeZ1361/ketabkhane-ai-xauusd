@@ -535,7 +535,17 @@ class RestrictedWorker:
             system_root = os.environ.get("SystemRoot", r"C:\Windows")
             temp_path = self._temp.name
             python_dir = str(Path(sys.executable).resolve().parent)
+            safe_environment_names = {
+                "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "APPDATA", "LOCALAPPDATA",
+                "ProgramData", "ProgramFiles", "ProgramFiles(x86)", "CommonProgramFiles",
+                "CommonProgramFiles(x86)", "COMSPEC", "PATHEXT", "SYSTEMDRIVE",
+                "PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER", "NUMBER_OF_PROCESSORS",
+            }
             environment_values = {
+                key: value for key, value in os.environ.items()
+                if key in safe_environment_names or key.startswith("=")
+            }
+            environment_values.update({
                 "SystemRoot": system_root,
                 "WINDIR": system_root,
                 "TEMP": temp_path,
@@ -546,7 +556,7 @@ class RestrictedWorker:
                     str(Path(system_root) / "System32"),
                     system_root,
                 )),
-            }
+            })
             env_text = "\0".join(
                 f"{key}={value}"
                 for key, value in sorted(environment_values.items(), key=lambda item: item[0].casefold())
