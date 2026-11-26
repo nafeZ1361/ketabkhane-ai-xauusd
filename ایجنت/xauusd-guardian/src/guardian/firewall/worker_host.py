@@ -534,7 +534,8 @@ class RestrictedWorker:
         _configure_apis(kernel32, advapi32)
         self._kernel32 = kernel32
         self._temp = tempfile.TemporaryDirectory(prefix="guardian-worker-")
-        key = secrets.token_bytes(32)
+        key = bytearray(secrets.token_bytes(32))
+        key_buffer = None
         session_id = secrets.token_hex(32)
         self._codec = AuthenticatedCodec(
             key=key, session_id=session_id,
@@ -613,11 +614,15 @@ class RestrictedWorker:
 
             # The child is suspended, so the key pipe can be filled before Python runs.
             written = wintypes.DWORD()
-            key_buffer = ctypes.create_string_buffer(key)
+            key_buffer = ctypes.create_string_buffer(bytes(key))
             if not kernel32.WriteFile(key_write, key_buffer, len(key), ctypes.byref(written), None):
                 raise _win_error("WriteFile(session key)")
             if written.value != len(key):
                 raise WorkerHostError("SESSION_KEY_PIPE_SHORT_WRITE")
+            ctypes.memset(key_buffer, 0, len(key))
+            for index in range(len(key)):
+                key[index] = 0
+            key.clear()
             _close_handle(kernel32, key_write)
             key_write = None
 
@@ -666,6 +671,11 @@ class RestrictedWorker:
                 _close_handle(kernel32, handle)
             raise
         finally:
+            if key_buffer is not None:
+                ctypes.memset(key_buffer, 0, 32)
+            for index in range(len(key)):
+                key[index] = 0
+            key.clear()
             _close_handle(kernel32, self._thread)
             self._thread = None
             _close_handle(kernel32, self._token)
@@ -772,6 +782,9 @@ class RestrictedWorker:
         if self._process is not None and kernel32 is not None:
             _close_handle(kernel32, self._process)
             self._process = None
+        if self._codec is not None:
+            self._codec.destroy()
+            self._codec = None
         if self._temp is not None:
             self._temp.cleanup()
             self._temp = None
