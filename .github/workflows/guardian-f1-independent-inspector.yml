@@ -14,7 +14,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: guardian-f1-inspector-\${{ github.ref }}
+  group: guardian-f1-inspector-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -22,13 +22,13 @@ jobs:
     name: Freeze exact Guardian source snapshot
     runs-on: windows-latest
     outputs:
-      archive_sha256: \${{ steps.freeze.outputs.archive_sha256 }}
-      target_commit: \${{ steps.freeze.outputs.target_commit }}
+      archive_sha256: ${{ steps.freeze.outputs.archive_sha256 }}
+      target_commit: ${{ steps.freeze.outputs.target_commit }}
     steps:
       - name: Checkout exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -49,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: guardian-f1-frozen-source
-          path: \${{ runner.temp }}/guardian-f1-source.tar
+          path: ${{ runner.temp }}/guardian-f1-source.tar
           if-no-files-found: error
           retention-days: 7
 
@@ -64,7 +64,7 @@ jobs:
       - name: Checkout inspector harness at exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -72,7 +72,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: guardian-f1-frozen-source
-          path: \${{ runner.temp }}/guardian-f1-artifact
+          path: ${{ runner.temp }}/guardian-f1-artifact
 
       - name: Verify archive and extract frozen snapshot
         id: snapshot
@@ -80,7 +80,7 @@ jobs:
         run: |
           $archive = Join-Path $env:RUNNER_TEMP "guardian-f1-artifact\guardian-f1-source.tar"
           $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-          $expected = "\${{ needs.freeze.outputs.archive_sha256 }}"
+          $expected = "${{ needs.freeze.outputs.archive_sha256 }}"
           if ($actual -ne $expected) { throw "Frozen artifact digest mismatch: $actual != $expected" }
           $root = Join-Path $env:RUNNER_TEMP "guardian-f1-frozen"
           New-Item -ItemType Directory -Path $root -Force | Out-Null
@@ -224,11 +224,11 @@ jobs:
         shell: pwsh
         run: |
           $archiveHash = (Get-FileHash -Algorithm SHA256 $env:ARCHIVE_PATH).Hash.ToLowerInvariant()
-          $expectedHash = "\${{ needs.freeze.outputs.archive_sha256 }}"
+          $expectedHash = "${{ needs.freeze.outputs.archive_sha256 }}"
           if ($archiveHash -ne $expectedHash) { throw "Frozen archive changed during inspection" }
           $summary = [ordered]@{
             schema = "guardian-f1-run-summary/v1"
-            target_commit = "\${{ needs.freeze.outputs.target_commit }}"
+            target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $archiveHash
             focused_exit = $env:FOCUSED_EXIT
             full_exit = $env:FULL_EXIT
@@ -251,6 +251,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: guardian-f1-inspector-evidence
-          path: \${{ runner.temp }}/guardian-f1-evidence/
+          path: ${{ runner.temp }}/guardian-f1-evidence/
           if-no-files-found: warn
           retention-days: 30
