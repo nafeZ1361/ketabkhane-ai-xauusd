@@ -230,7 +230,7 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
         label = _TOKEN_MANDATORY_LABEL(
             _SID_AND_ATTRIBUTES(medium_sid, SE_GROUP_INTEGRITY)
         )
-        label_size = ctypes.sizeof(label) + advapi32.GetLengthSid(low_sid)
+        label_size = ctypes.sizeof(label) + advapi32.GetLengthSid(medium_sid)
         if not advapi32.SetTokenInformation(
             restricted, TokenIntegrityLevel, ctypes.byref(label), label_size
         ):
