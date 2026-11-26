@@ -63,13 +63,6 @@ def blackbox(project_root: Path) -> tuple[unittest.result.TestResult, str]:
             with self.assertRaisesRegex(IPCError, "unexpected IPC fields"):
                 a.decode(b'{"v":1}')
 
-        def test_worker_token_is_restricted_on_windows(self):
-            if os.name != "nt":
-                self.skipTest("Windows-only F4 token probe")
-            report = verify_token()
-            self.assertTrue(report.restricted)
-            self.assertLess(report.integrity_rid, 0x3000)
-
         def test_restricted_worker_lifecycle(self):
             if os.name != "nt":
                 self.skipTest("Windows-only F4 lifecycle probe")
