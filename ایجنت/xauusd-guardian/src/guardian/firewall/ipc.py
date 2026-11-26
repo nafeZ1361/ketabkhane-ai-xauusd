@@ -148,7 +148,7 @@ class AuthenticatedCodec:
         self, *, key: bytes, session_id: str, send_direction: str,
         receive_direction: str,
     ) -> None:
-        if type(key) is not bytes or len(key) != KEY_BYTES:
+        if type(key) not in (bytes, bytearray) or len(key) != KEY_BYTES:
             raise IPCProtocolError("INVALID_SESSION_KEY")
         if type(session_id) is not str or len(session_id) != SESSION_ID_HEX_LENGTH:
             raise IPCProtocolError("INVALID_SESSION_ID")
@@ -160,10 +160,19 @@ class AuthenticatedCodec:
             raise IPCProtocolError("INVALID_DIRECTION")
         if send_direction == receive_direction:
             raise IPCProtocolError("DIRECTION_COLLISION")
-        self._key = key
+        self._key = bytearray(key)
         self._session_id = session_id
         self._send_direction = send_direction
         self._receive_direction = receive_direction
+        self._send_sequence = 0
+        self._receive_sequence = 0
+
+    def destroy(self) -> None:
+        """Best-effort in-place zeroization of the ephemeral session key."""
+        for index in range(len(self._key)):
+            self._key[index] = 0
+        self._key.clear()
+        self._session_id = ""
         self._send_sequence = 0
         self._receive_sequence = 0
 
