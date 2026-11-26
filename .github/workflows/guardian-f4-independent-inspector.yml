@@ -386,6 +386,11 @@ jobs:
           $inspectorExitPath = Join-Path $env:EVIDENCE_ROOT "inspector.log.exit-code.txt"
           $inspectorExit = $null
           if (Test-Path $inspectorExitPath) { $inspectorExit = [int]((Get-Content -Raw $inspectorExitPath).Trim()) }
+          $inspectorVerdict = ""
+          $inspectorResultPath = Join-Path $env:EVIDENCE_ROOT "inspector-result.json"
+          if (Test-Path $inspectorResultPath) {
+            $inspectorVerdict = (Get-Content -Raw $inspectorResultPath | ConvertFrom-Json).verdict
+          }
           $summary = [ordered]@{
             schema = "guardian-f4-run-summary/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
@@ -397,6 +402,7 @@ jobs:
             full_junit = $fullCounts
             compile_exit = $env:COMPILE_EXIT
             inspector_exit = $inspectorExit
+            inspector_verdict = $inspectorVerdict
             identity_exit = $env:IDENTITY_EXIT
             inspector_account = $env:INSPECTOR_ACCOUNT
             inspector_sid = $env:INSPECTOR_SID
@@ -404,7 +410,7 @@ jobs:
             frozen_archive_stable = $frozenStable
             workflow_verdict = "BLOCK"
           }
-          if ($env:IDENTITY_EXIT -eq "0" -and $env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $inspectorExit -eq 0 -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $focusedCounts.skipped -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0 -and $fullCounts.skipped -eq 0) {
+          if ($env:IDENTITY_EXIT -eq "0" -and $env:FOCUSED_EXIT -eq "0" -and $env:FULL_EXIT -eq "0" -and $env:COMPILE_EXIT -eq "0" -and $inspectorExit -eq 0 -and $inspectorVerdict -eq "PASS" -and $summary.frozen_archive_stable -and $focusedCounts.tests -gt 0 -and $fullCounts.tests -gt 0 -and $focusedCounts.failures -eq 0 -and $focusedCounts.errors -eq 0 -and $focusedCounts.skipped -eq 0 -and $fullCounts.failures -eq 0 -and $fullCounts.errors -eq 0 -and $fullCounts.skipped -eq 0) {
             $summary.workflow_verdict = "PASS"
           }
           $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
