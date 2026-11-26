@@ -7,6 +7,7 @@ restricted primary token or Job Object prevents worker startup.
 from __future__ import annotations
 
 import ctypes
+import hashlib
 import os
 import queue
 import secrets
@@ -134,6 +135,8 @@ def _configure_apis(kernel32: Any, advapi32: Any) -> None:
     kernel32.WaitForSingleObject.restype = wintypes.DWORD
     kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
     kernel32.TerminateProcess.restype = wintypes.BOOL
+    kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.GetExitCodeProcess.restype = wintypes.BOOL
     advapi32.OpenProcessToken.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
     advapi32.OpenProcessToken.restype = wintypes.BOOL
     advapi32.ConvertStringSidToSidW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.LPVOID)]
@@ -495,6 +498,7 @@ class RestrictedWorker:
         self._stdout = None
         self._stderr = None
         self._reader_queue: queue.Queue[Any] = queue.Queue(maxsize=8)
+        self._stderr_digest = None
         self._reader = None
         self._stderr_reader = None
         self._temp = None
@@ -670,14 +674,16 @@ class RestrictedWorker:
     def _drain_stderr(self) -> None:
         try:
             total = 0
+            digest = hashlib.sha256()
             while True:
                 chunk = self._stderr.read(1024)
                 if not chunk:
+                    self._stderr_digest = digest.hexdigest()
                     return
                 total += len(chunk)
-                # Drain to prevent pipe deadlock; never log worker diagnostics.
-                if total > 64 * 1024:
-                    continue
+                if total <= 64 * 1024:
+                    digest.update(chunk)
+                # Drain to prevent pipe deadlock; never retain or log diagnostics.
         except Exception:
             return
 
@@ -687,7 +693,12 @@ class RestrictedWorker:
         except queue.Empty as exc:
             raise WorkerHostError("WORKER_RESPONSE_TIMEOUT") from exc
         if isinstance(item, Exception):
-            raise WorkerHostError("WORKER_PIPE_CLOSED") from item
+            exit_code = wintypes.DWORD(0xFFFFFFFF)
+            if self._process is not None and self._kernel32.GetExitCodeProcess(self._process, ctypes.byref(exit_code)):
+                code = exit_code.value
+            else:
+                code = None
+            raise WorkerHostError(f"WORKER_PIPE_CLOSED exit_code={code}") from item
         try:
             return self._codec.decode(item)
         except IPCProtocolError as exc:
