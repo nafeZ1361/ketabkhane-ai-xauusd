@@ -298,3 +298,12 @@ Suite `198 passed`, exit 0. Full record: `reports/PHASE2-REMEDIATION-REPORT.md`.
 ## Phase 5 F1 acceptance — D-034 (2026-11-26)
 
 F1 accepted **10/10** on target `1cee6409d6bdf0355e80e7e93ba83e3d49efd1e5`. Workflow run `45893671363` passed both freeze and Inspector jobs. Focused 66/66, full suite 443/443, compileall 0; identity/ACL probes 5/5; wheelhouse 8/8; black-box 11/11; static findings 0; mutation detected; frozen manifest 253/253 unchanged; evidence sidecar 25/25 hashes matched. Pinned harness `9d0d8ed0bee62d7947a45cfab3c4b8c1aa03bec5`. Hosted-runner limitations remain as documented under D-033. Phase 5 is **10/100**; F2-F8 remain NOT STARTED. PR #8 is unchanged, Draft and unmerged. No order or trading action occurred.
+
+
+## Phase 5 F3 start — 2026-11-27
+
+- F1 **ACCEPTED 10/10**; F2 **ACCEPTED 12/12**; Phase 5 remains **22/100**.
+- F3 branch created from accepted F2 branch HEAD `841ab0c3b03bbfb3258603aee95774919db69429`: `work/guardian-phase5-f3-risk-20261127`.
+- F3 acceptance contract pre-registered in `PHASE5_F3_RISK_PLAN.md`; D-038 recorded before implementation.
+- F3 implementation and independent inspection are **NOT YET VERIFIED**; no F3 points awarded.
+- F3–F8 remain open. PR #8 remains Draft/unmerged. No account reads, MT5, orders, DEMO activation or LIVE path.
