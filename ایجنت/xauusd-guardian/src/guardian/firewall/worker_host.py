@@ -188,8 +188,10 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
     DISABLE_MAX_PRIVILEGE = 0x0001
     SE_GROUP_USE_FOR_DENY_ONLY = 0x0010
     SE_GROUP_INTEGRITY = 0x0020
+    TokenUser = 1
     TokenGroups = 2
     TokenPrivileges = 3
+    TokenRestrictedSids = 11
     TokenIntegrityLevel = 25
 
     current_token = wintypes.HANDLE()
@@ -201,17 +203,33 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
         raise _win_error("OpenProcessToken")
 
     admin_sid = wintypes.LPVOID()
+    users_sid = wintypes.LPVOID()
     low_sid = wintypes.LPVOID()
     restricted = wintypes.HANDLE()
     try:
         if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
             raise _win_error("ConvertStringSidToSidW(Administrators)")
+        if not advapi32.ConvertStringSidToSidW("S-1-5-32-545", ctypes.byref(users_sid)):
+            raise _win_error("ConvertStringSidToSidW(Users)")
         if not advapi32.ConvertStringSidToSidW("S-1-16-4096", ctypes.byref(low_sid)):
             raise _win_error("ConvertStringSidToSidW(LowIntegrity)")
+        user_size = wintypes.DWORD()
+        advapi32.GetTokenInformation(current_token, TokenUser, None, 0, ctypes.byref(user_size))
+        if not user_size.value:
+            raise _win_error("GetTokenInformation(TokenUser size)")
+        user_buffer = ctypes.create_string_buffer(user_size.value)
+        if not advapi32.GetTokenInformation(
+            current_token, TokenUser, user_buffer, user_size.value, ctypes.byref(user_size)
+        ):
+            raise _win_error("GetTokenInformation(TokenUser)")
+        user_sid = ctypes.cast(user_buffer, ctypes.POINTER(_SID_AND_ATTRIBUTES)).contents.Sid
         disabled = _SID_AND_ATTRIBUTES(admin_sid, SE_GROUP_USE_FOR_DENY_ONLY)
+        restricting = (_SID_AND_ATTRIBUTES * 2)()
+        restricting[0] = _SID_AND_ATTRIBUTES(user_sid, 0)
+        restricting[1] = _SID_AND_ATTRIBUTES(users_sid, 0)
         if not advapi32.CreateRestrictedToken(
             current_token, DISABLE_MAX_PRIVILEGE, 1, ctypes.byref(disabled),
-            0, None, 0, None, ctypes.byref(restricted),
+            0, None, 2, restricting, ctypes.byref(restricted),
         ):
             raise _win_error("CreateRestrictedToken")
         if not advapi32.IsTokenRestricted(restricted):
@@ -297,12 +315,15 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
             kernel32.LocalFree(admin_sid)
         if low_sid:
             kernel32.LocalFree(low_sid)
+        if users_sid:
+            kernel32.LocalFree(users_sid)
 
 
 def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
     TOKEN_QUERY = 0x0008
     TokenGroups = 2
     TokenPrivileges = 3
+    TokenRestrictedSids = 11
     TokenIntegrityLevel = 25
     SE_GROUP_USE_FOR_DENY_ONLY = 0x0010
 
@@ -312,6 +333,18 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
     try:
         if not advapi32.IsTokenRestricted(token):
             raise WorkerHostError("WORKER_TOKEN_NOT_RESTRICTED")
+        needed = wintypes.DWORD()
+        advapi32.GetTokenInformation(token, TokenRestrictedSids, None, 0, ctypes.byref(needed))
+        if not needed.value:
+            raise WorkerHostError("WORKER_RESTRICTED_SIDS_MISSING")
+        restricted_buffer = ctypes.create_string_buffer(needed.value)
+        if not advapi32.GetTokenInformation(
+            token, TokenRestrictedSids, restricted_buffer, needed.value, ctypes.byref(needed)
+        ):
+            raise _win_error("GetTokenInformation(worker restricted SIDs)")
+        restricted_count = ctypes.cast(restricted_buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
+        if restricted_count < 2:
+            raise WorkerHostError("WORKER_RESTRICTED_SIDS_INCOMPLETE")
 
         admin_sid = wintypes.LPVOID()
         if not advapi32.ConvertStringSidToSidW("S-1-5-32-544", ctypes.byref(admin_sid)):
@@ -374,6 +407,7 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
             "administrators_sid_present": admin_present,
             "administrators_sid_deny_only": admin_deny_only if admin_present else None,
             "privilege_count": privilege_count,
+            "restricted_sid_count": restricted_count,
             "integrity_rid": 4096,
         }
     finally:
