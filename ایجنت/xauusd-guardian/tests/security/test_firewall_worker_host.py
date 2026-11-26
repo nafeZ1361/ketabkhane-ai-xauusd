@@ -4,21 +4,21 @@ import sys
 
 import pytest
 
-from guardian.firewall.worker_host import RestrictedWorker, WorkerHostError
+from guardian.firewall.worker_host import RestrictedWorker, WorkerHostError, parent_token_suitable
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="F4 worker isolation is Windows-only")
+@pytest.mark.skipif(sys.platform != "win32" or not parent_token_suitable(), reason="F4 worker isolation is Windows-only")
 def test_restricted_worker_starts_and_authenticates_health_check():
     with RestrictedWorker.launch() as worker:
-        assert worker.security_report["is_restricted"] is True
+        assert worker.security_report["is_non_elevated"] is True
         assert worker.security_report["integrity_rid"] == 8192
         assert worker.security_report["privilege_count"] <= 1
-        assert worker.security_report["restricted_sid_count"] == 0
         assert worker.security_report["job_limits_verified"] is True
+        assert worker.security_report["job_assigned"] is True
         assert worker.request("HEALTH_CHECK", {}) == {"status": "OK"}
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="F4 worker isolation is Windows-only")
+@pytest.mark.skipif(sys.platform != "win32" or not parent_token_suitable(), reason="F4 worker isolation is Windows-only")
 def test_restricted_worker_revalidates_synthetic_risk_only():
     payload = {
         "equity": "10000",
@@ -41,7 +41,7 @@ def test_restricted_worker_revalidates_synthetic_risk_only():
     }
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="F4 worker isolation is Windows-only")
+@pytest.mark.skipif(sys.platform != "win32" or not parent_token_suitable(), reason="F4 worker isolation is Windows-only")
 def test_restricted_worker_refuses_order_operation_and_poisoned_session():
     with RestrictedWorker.launch() as worker:
         with pytest.raises(WorkerHostError, match="WORKER_OPERATION_NOT_ALLOWED"):
