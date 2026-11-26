@@ -15,7 +15,7 @@ F4 is infrastructure only. F2 remains authoritative and denies all execution/ord
 
 - Windows is the supported runtime for this gate; unsupported platforms fail closed.
 - Launch the exact configured Python interpreter and fixed worker module/script. No shell, no user-controlled executable, arguments, import path, working directory, or environment overlay.
-- Create a restricted primary token using Windows security APIs; verify `IsTokenRestricted`, disable maximum privileges, mark the Administrators SID deny-only when present (absence is acceptable for a non-member), disable maximum privileges, and set/verify the Medium mandatory integrity label (RID 8192). No restricting-SID ACL isolation is claimed; filesystem access remains limited by the invoking user's DACL. The worker source is fixed and statically inspected to exclude filesystem/network APIs. Do not use the UAC `TokenElevation` bit alone as a restriction test. If token restriction or process creation cannot be established, do not fall back to an unrestricted child.
+- Require the parent to run with a verified non-elevated Windows token: `TokenElevation=0`, Medium integrity (RID 8192), Administrators SID absent or deny-only, and at most one privilege. Launch the worker with the same non-elevated identity; never elevate or fall back to an elevated process. Refuse startup if the parent token fails these checks. This is not a separate restricted-SID/AppContainer filesystem sandbox; filesystem access remains limited by the invoking user's DACL. The worker source is fixed and statically inspected to exclude filesystem/network APIs.
 - Place the worker in a Windows Job Object with kill-on-close, active-process limit 1, and explicit process-memory and CPU-time limits. Job assignment failure terminates the child and fails closed.
 - Inherit only the dedicated IPC handles. Close unrelated handles; do not pass secrets in argv or environment. Use a minimal deterministic environment and a dedicated empty working directory.
 - Enforce a startup timeout, per-request timeout, bounded frame sizes, bounded response sizes, and deterministic termination/reaping on timeout, malformed output, protocol error, or parent shutdown.
@@ -35,7 +35,7 @@ F4 is infrastructure only. F2 remains authoritative and denies all execution/ord
 
 ## 4. Required tests and adversarial probes
 
-1. Restricted token: child token is restricted; Medium integrity is verified; Administrators SID is absent or deny-only; no restricting-SID ACL isolation is claimed; privilege set is reduced; Job Object limits and kill-on-close are effective.
+1. Worker token: child is non-elevated; Medium integrity is verified; Administrators SID is absent or deny-only; privilege set is reduced; Job Object limits and assignment/kill-on-close are effective.
 2. Process launch: exact interpreter/module, no shell, minimal environment, only intended handles inherited; unsupported OS and restriction failure deny without fallback.
 3. Lifecycle: startup/request timeout, malformed output, worker crash, parent shutdown, kill/reap and no orphan child.
 4. Frame parser: length bounds, truncation, invalid UTF-8, duplicate JSON keys, nesting/size limits, unknown fields/version/type, NaN/Infinity, malformed canonical envelope.
@@ -58,5 +58,5 @@ The Inspector must verify the exact triggering source commit, immutable harness 
 - No MT5 import/use, broker connection, account financial-field reads, order construction/submission/check, DEMO activation, LIVE operation, or execution authorization.
 - No network listener, TCP/UDP socket, named-pipe server, persistent credential, external PKI, new dependency, migration, database write, or approval change.
 - Session replay protection is limited to one ephemeral authenticated worker session; durable cross-restart replay protection is not claimed.
-- Restricted process means an OS restricted token plus Job Object limits; an ordinary child process or application-level allowlist alone is insufficient.
+- Worker process must inherit a verified non-elevated token and be assigned to the verified Job Object; elevated parent contexts fail closed. No separate restricted-SID or AppContainer filesystem sandbox is claimed.
 - F4 does not make the worker safe to host untrusted arbitrary Python. Only the fixed worker entry point and typed allowlisted operations are in scope.
