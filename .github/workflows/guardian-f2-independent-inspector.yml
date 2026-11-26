@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - work/guardian-f2-independent-ci-20261126
+      - work/guardian-phase5-f2-policy-20261127
     paths:
       - "AGENTS.md"
       - "ایجنت/xauusd-guardian/AGENTS.md"
@@ -18,7 +18,7 @@ on:
       - "ایجنت/xauusd-guardian/WHEELHOUSE.sha256"
       - "ایجنت/xauusd-guardian/pyproject.toml"
       - "ایجنت/xauusd-guardian/PHASE5_PLAN.md"
-      - "ایجنت/xauusd-guardian/PHASE5_F1_GITHUB_INSPECTOR_PLAN.md"
+      - "ایجنت/xauusd-guardian/PHASE5_F2_POLICY_PLAN.md"
       - "ایجنت/xauusd-guardian/DECISIONS_LOG.md"
       - ".github/guardian-inspector/**"
       - ".github/workflows/guardian-f2-independent-inspector.yml"
@@ -69,7 +69,7 @@ jobs:
           retention-days: 7
 
   inspect:
-    name: Independent F1 inspection on isolated runner
+    name: Independent F2 inspection on isolated runner
     needs: freeze
     runs-on: windows-latest
     timeout-minutes: 45
@@ -94,7 +94,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: e2e2577ea898db1326c9bde0713f3b42dad705f7
+          ref: 0297a23415b15824f176067d355ba2c09aa95788
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -114,14 +114,13 @@ jobs:
           tar -xf $archive -C $root
           if ($LASTEXITCODE -ne 0) { throw "Snapshot extraction failed: $LASTEXITCODE" }
           $contracts = @(Get-ChildItem -Path $root -Filter "policy.py" -File -Recurse |
-            Where-Object { $_.FullName -match "[\\/]src[\\/]guardian[\\/]contracts[\\/]firewall\.py$" })
+            Where-Object { $_.FullName -match "[\\/]src[\\/]guardian[\\/]firewall[\\/]policy\.py$" })
           if ($contracts.Count -ne 1) {
             Get-ChildItem -Path $root -Recurse | Select-Object -First 40 -ExpandProperty FullName
             throw "Expected exactly one F2 policy module; found $($contracts.Count)"
           }
           $snapshot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $contracts[0].FullName)))
           "SNAPSHOT_ROOT=$snapshot" >> $env:GITHUB_ENV
-          "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV
           "FROZEN_ROOT=$root" >> $env:GITHUB_ENV
           "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV
           "Verified archive SHA-256: $actual"
@@ -409,7 +408,7 @@ jobs:
           Get-ChildItem $env:EVIDENCE_ROOT -File | Get-FileHash -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
             Set-Content -Encoding ascii (Join-Path $env:EVIDENCE_ROOT "SHA256SUMS.txt")
-          if ($summary.workflow_verdict -ne "PASS") { throw "Independent F1 inspection verdict: BLOCK" }
+          if ($summary.workflow_verdict -ne "PASS") { throw "Independent F2 inspection verdict: BLOCK" }
 
       - name: Upload raw Inspector evidence
         if: always()
