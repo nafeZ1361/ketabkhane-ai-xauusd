@@ -171,6 +171,12 @@ def _configure_apis(kernel32: Any, advapi32: Any) -> None:
         ctypes.POINTER(_PROCESS_INFORMATION),
     ]
     advapi32.CreateProcessAsUserW.restype = wintypes.BOOL
+    advapi32.CreateProcessWithTokenW.argtypes = [
+        wintypes.HANDLE, wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPWSTR,
+        wintypes.DWORD, wintypes.LPVOID, wintypes.LPCWSTR,
+        ctypes.POINTER(_STARTUPINFOW), ctypes.POINTER(_PROCESS_INFORMATION),
+    ]
+    advapi32.CreateProcessWithTokenW.restype = wintypes.BOOL
 
 
 def _win_error(operation: str) -> WorkerHostError:
@@ -567,14 +573,26 @@ class RestrictedWorker:
             CREATE_NO_WINDOW = 0x08000000
             flags = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW
 
-            create = advapi32.CreateProcessAsUserW
-            create.restype = wintypes.BOOL
-            if not create(
-                self._token, sys.executable, command_line, None, None, True,
-                flags, ctypes.cast(environment, wintypes.LPVOID),
+            create_with_token = advapi32.CreateProcessWithTokenW
+            created = create_with_token(
+                self._token, 0, sys.executable, command_line, flags,
+                ctypes.cast(environment, wintypes.LPVOID),
                 temp_path, ctypes.byref(startup), ctypes.byref(process_info),
-            ):
-                raise _win_error("CreateProcessAsUserW(restricted token)")
+            )
+            with_token_error = None if created else ctypes.get_last_error()
+            if not created:
+                # Both APIs receive the exact same restricted primary token.
+                # There is deliberately no unrestricted fallback.
+                created = advapi32.CreateProcessAsUserW(
+                    self._token, sys.executable, command_line, None, None, True,
+                    flags, ctypes.cast(environment, wintypes.LPVOID),
+                    temp_path, ctypes.byref(startup), ctypes.byref(process_info),
+                )
+            if not created:
+                raise WorkerHostError(
+                    "RESTRICTED_PROCESS_CREATION_FAILED "
+                    f"with_token={with_token_error} as_user={ctypes.get_last_error()}"
+                )
 
             self._process = process_info.hProcess
             self._thread = process_info.hThread
