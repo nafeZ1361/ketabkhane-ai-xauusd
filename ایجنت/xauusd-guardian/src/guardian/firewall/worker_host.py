@@ -258,7 +258,8 @@ def _restricted_token(advapi32: Any, kernel32: Any) -> Any:
         count = ctypes.cast(group_buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
         admin_is_deny_only = False
         admin_present = False
-        base = ctypes.addressof(group_buffer) + ctypes.sizeof(wintypes.DWORD)
+        group_offset = (ctypes.sizeof(wintypes.DWORD) + ctypes.sizeof(ctypes.c_void_p) - 1) & ~(ctypes.sizeof(ctypes.c_void_p) - 1)
+        base = ctypes.addressof(group_buffer) + group_offset
         for index in range(count):
             item = ctypes.cast(
                 base + index * ctypes.sizeof(_SID_AND_ATTRIBUTES),
@@ -360,7 +361,8 @@ def _inspect_process_token(advapi32: Any, process: Any) -> dict[str, Any]:
             count = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
             admin_present = False
             admin_deny_only = False
-            base = ctypes.addressof(buffer) + ctypes.sizeof(wintypes.DWORD)
+            group_offset = (ctypes.sizeof(wintypes.DWORD) + ctypes.sizeof(ctypes.c_void_p) - 1) & ~(ctypes.sizeof(ctypes.c_void_p) - 1)
+            base = ctypes.addressof(buffer) + group_offset
             for index in range(count):
                 item = ctypes.cast(
                     base + index * ctypes.sizeof(_SID_AND_ATTRIBUTES),
