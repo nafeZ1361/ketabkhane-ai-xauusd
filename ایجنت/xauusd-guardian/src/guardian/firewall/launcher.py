@@ -6,14 +6,20 @@ import base64
 import json
 import os
 import socket
-import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from typing import Any
 
 from guardian.firewall.ipc import AuthenticatedSession, IPCError, recv_frame, send_frame
-from guardian.firewall.worker_security import WorkerSecurityError, create_restricted_worker
+from guardian.firewall.worker_security import (
+    PROCESS_INFORMATION,
+    WorkerSecurityError,
+    close_process_handles,
+    create_restricted_worker,
+    exit_code,
+    terminate_process,
+    wait_process,
+)
 
 
 class WorkerLaunchError(RuntimeError):
@@ -32,11 +38,13 @@ class RestrictedWorkerLauncher:
     """Launch exactly one restricted worker and verify its authenticated hello."""
 
     def __init__(self, *, python_executable: str | None = None) -> None:
-        self.python_executable = python_executable or sys.executable
+        self.python_executable = os.path.abspath(python_executable or sys.executable)
 
     def start(self, *, timeout: float = 5.0) -> WorkerHandle:
         if os.name != "nt":
             raise WorkerLaunchError("F4 requires a Windows restricted worker")
+        if not os.path.isfile(self.python_executable):
+            raise WorkerLaunchError("anchored Python executable does not exist")
         if type(timeout) not in (int, float) or timeout <= 0 or timeout > 30:
             raise WorkerLaunchError("invalid startup timeout")
 
@@ -53,24 +61,28 @@ class RestrictedWorkerLauncher:
         server.settimeout(timeout)
         port = server.getsockname()[1]
 
-        bootstrap = json.dumps({
-            "host": "127.0.0.1",
-            "port": port,
-            "key": base64.b64encode(session.key).decode("ascii"),
-            "nonce": session.session_nonce.hex(),
-        }, separators=(",", ":")).encode("utf-8")
+        bootstrap = json.dumps(
+            {
+                "host": "127.0.0.1",
+                "port": port,
+                "key": base64.b64encode(session.key).decode("ascii"),
+                "nonce": session.session_nonce.hex(),
+            },
+            separators=(",", ":"),
+        ).encode("utf-8")
 
-        # Anonymous stdin pipe is used only for one-shot bootstrap material.
         read_fd, write_fd = os.pipe()
+        pi: PROCESS_INFORMATION | None = None
+        conn: socket.socket | None = None
         try:
             os.set_inheritable(read_fd, True)
             os.set_inheritable(write_fd, False)
-            command = subprocess.list2cmdline([
-                self.python_executable, "-m", "guardian.firewall.worker"
-            ])
-            # The Windows API receives the inherited read handle explicitly;
-            # no secret appears in argv or environment.
-            pi = create_restricted_worker(command, read_fd)
+            command_line = f'"{self.python_executable}" -m guardian.firewall.worker'
+            pi = create_restricted_worker(
+                application_name=self.python_executable,
+                command_line=command_line,
+                stdin_handle=read_fd,
+            )
             os.close(read_fd)
             read_fd = -1
             with os.fdopen(write_fd, "wb", closefd=True) as pipe:
@@ -78,22 +90,25 @@ class RestrictedWorkerLauncher:
                 pipe.flush()
             conn, _ = server.accept()
             conn.settimeout(timeout)
-            frame = recv_frame(conn)
-            hello = session.decode(frame)
+            hello = session.decode(recv_frame(conn))
             if (
                 hello.get("type") != "worker_hello"
                 or hello.get("restricted") is not True
                 or type(hello.get("integrity_rid")) is not int
-                or hello.get("integrity_rid") >= 0x3000
                 or hello.get("pid") != int(pi.dwProcessId)
             ):
-                conn.close()
                 raise WorkerLaunchError("worker security handshake failed")
             send_frame(conn, session.encode({"type": "ready"}))
-            # The process handle is represented by a minimal subprocess-like
-            # monitor. The launcher does not expose an execution API.
-            return WorkerHandle(process=pi, session=session, socket=conn, pid=int(pi.dwProcessId))
+            server.close()
+            return WorkerHandle(
+                process=pi, session=session, socket=conn, pid=int(pi.dwProcessId)
+            )
         except Exception as exc:
+            if conn is not None:
+                try:
+                    conn.close()
+                except OSError:
+                    pass
             if read_fd >= 0:
                 try:
                     os.close(read_fd)
@@ -103,6 +118,13 @@ class RestrictedWorkerLauncher:
                 os.close(write_fd)
             except OSError:
                 pass
+            if pi is not None:
+                try:
+                    if not wait_process(pi, 0):
+                        terminate_process(pi)
+                        wait_process(pi, 3000)
+                finally:
+                    close_process_handles(pi)
             server.close()
             if isinstance(exc, WorkerLaunchError):
                 raise
@@ -112,8 +134,19 @@ class RestrictedWorkerLauncher:
     def shutdown(handle: WorkerHandle, *, timeout: float = 3.0) -> None:
         if type(handle) is not WorkerHandle:
             raise WorkerLaunchError("invalid worker handle")
-        send_frame(handle.socket, handle.session.encode({"type": "shutdown"}))
-        response = handle.session.decode(recv_frame(handle.socket))
-        if response.get("type") != "stopped":
-            raise WorkerLaunchError("worker did not confirm shutdown")
-        handle.socket.close()
+        try:
+            send_frame(handle.socket, handle.session.encode({"type": "shutdown"}))
+            response = handle.session.decode(recv_frame(handle.socket))
+            if response.get("type") != "stopped":
+                raise WorkerLaunchError("worker did not confirm shutdown")
+            if not wait_process(handle.process, int(timeout * 1000)):
+                terminate_process(handle.process)
+                if not wait_process(handle.process, 3000):
+                    raise WorkerLaunchError("worker failed to terminate")
+            if exit_code(handle.process) != 0:
+                raise WorkerLaunchError("worker exited with failure")
+        finally:
+            try:
+                handle.socket.close()
+            finally:
+                close_process_handles(handle.process)
