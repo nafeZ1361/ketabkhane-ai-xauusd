@@ -25,9 +25,12 @@ $profilePath = Join-Path $env:SystemDrive "Users\$account"
 
 $launcher = @'
 import json
+import os
 import pathlib
+import platform
 import subprocess
 import sys
+import traceback
 
 config_path = pathlib.Path(sys.argv[1])
 config = json.loads(config_path.read_text(encoding="utf-8-sig"))
@@ -44,7 +47,30 @@ try:
     pathlib.Path(config["stderr"]).write_bytes(result.stderr)
     pathlib.Path(config["exit"]).write_text(str(result.returncode), encoding="ascii")
 except Exception as exc:
-    pathlib.Path(config["stderr"]).write_text(repr(exc), encoding="utf-8")
+    target = pathlib.Path(config["python"])
+    details = {
+        "event": "inspector_child_process_launch_failed",
+        "exception_type": type(exc).__name__,
+        "exception_repr": repr(exc),
+        "errno": getattr(exc, "errno", None),
+        "winerror": getattr(exc, "winerror", None),
+        "filename": getattr(exc, "filename", None),
+        "filename2": getattr(exc, "filename2", None),
+        "python_executable": sys.executable,
+        "target_python": str(target),
+        "target_exists": target.exists(),
+        "target_is_file": target.is_file(),
+        "target_access_execute": os.access(str(target), os.X_OK),
+        "target_parent": str(target.parent),
+        "target_parent_exists": target.parent.exists(),
+        "working_directory": config.get("working_directory"),
+        "working_directory_exists": pathlib.Path(config["working_directory"]).exists(),
+        "platform": platform.platform(),
+        "traceback": traceback.format_exc(),
+    }
+    pathlib.Path(config["stderr"]).write_text(
+        json.dumps(details, sort_keys=True, indent=2), encoding="utf-8"
+    )
     pathlib.Path(config["exit"]).write_text("125", encoding="ascii")
     raise
 sys.exit(result.returncode)
