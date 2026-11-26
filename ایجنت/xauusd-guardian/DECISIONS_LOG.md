@@ -559,3 +559,15 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 - **Exact candidate:** `c35705ab1a3ee8bfc184eea3864402f98499da00`.
 - **Evidence:** GitHub Actions run `45895338899` SUCCESS; full suite **471 passed**, compileall exit 0.
 - **Disposition:** hardening is implementation evidence only. F2 remains **0/12 / INDEPENDENT INSPECTION PENDING**. No approval or execution scope is expanded.
+
+
+## D-037 — Phase 5 F2 independent acceptance (2026-11-27)
+
+- **Verdict:** ACCEPTED — F2 **12/12**. Phase 5 progress **22/100** (F1 10/10 + F2 12/12).
+- **Exact target:** `a85bfc13ebb99ed034113540c7936ab57725341a`.
+- **Independent evidence:** GitHub Actions run `45896771516` SUCCESS; Freeze job `140172493274`; Inspector job `140172600121`; immutable harness commit `0297a23415b15824f176067d355ba2c09aa95788`.
+- **Results:** focused **28 passed**, full suite **471 passed**, both JUnit reports zero failures/errors/skips; compileall exit 0; independent black-box **15/15**; static boundary findings **0**; deliberately execution-permissive mutant detected (seven expected black-box failures).
+- **Integrity:** frozen manifest **256 files stable**; source archive SHA-256 `30ee63f9be0b2615ceb9cf6ddc1bb83a8d461b1003546c42a6dde6121a743222`; evidence artifact `15154865015`, ZIP SHA-256 `fc7cf9a5273bcfbfc3e3b2c69d5eda59e9aa64d74a507857d2964d879f5bf0c8`; all 25 sidecar hashes independently recomputed and matched.
+- **Inspector controls:** distinct non-admin ephemeral SID; harness/frozen/evidence writes denied; test-copy/temp writes allowed; eight pinned wheels verified; offline hash-locked install and pip check passed; temporary account removed.
+- **Disposition:** F2 earns full **12/12**. F3–F8 remain NOT STARTED. No order construction/submission, MT5 connectivity, DEMO activation, LIVE trading, financial account-data access, approval mutation, or PR merge is authorized. PR #8 remains Draft/unmerged.
+- **Limitations:** independent CI execution context is not an external human review and does not establish local Windows ACLs/account on the user's PC; hosted-runner network isolation is not claimed. Full evidence and exact hashes are recorded in `PHASE5_F2_POLICY_PLAN.md`.
