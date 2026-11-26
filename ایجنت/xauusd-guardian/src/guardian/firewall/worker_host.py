@@ -476,9 +476,10 @@ class RestrictedWorker:
             self._security_report = _inspect_process_token(advapi32, self._process)
             self._security_report["job_limits_verified"] = bool(self._job_limits_verified)
             self._security_report["job_assigned"] = bool(self._job_assigned)
-            if not kernel32.AssignProcessToJobObject(self._job, self._process):
+            assigned = kernel32.AssignProcessToJobObject(self._job, self._process)
+            if not assigned:
                 raise _win_error("AssignProcessToJobObject")
-            self._job_assigned = True
+            self._job_assigned = bool(assigned)
 
             # The child is suspended, so the key pipe can be filled before Python runs.
             written = wintypes.DWORD()
