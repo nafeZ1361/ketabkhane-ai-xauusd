@@ -53,6 +53,7 @@ $launcher | Set-Content -Path $launcherPath -Encoding utf8
 $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 $credential = [System.Management.Automation.PSCredential]::new("$env:COMPUTERNAME\$account", $securePassword)
 
+$bootstrapPython = (Get-Command python -ErrorAction Stop).Source
 $originalEnvironment = [Environment]::GetEnvironmentVariables("Process")
 try {
     foreach ($key in @($originalEnvironment.Keys)) {
@@ -94,7 +95,7 @@ try {
     }
     $config | ConvertTo-Json -Depth 8 | Set-Content -Path $configPath -Encoding utf8
     $quotedConfig = '"' + $configPath.Replace('"', '\"') + '"'
-    $process = Start-Process -FilePath $Python -Credential $credential -LoadUserProfile -WorkingDirectory $WorkingDirectory -ArgumentList @($launcherPath, $configPath) -Wait -PassThru
+    $process = Start-Process -FilePath $bootstrapPython -Credential $credential -LoadUserProfile -WorkingDirectory $WorkingDirectory -ArgumentList @($launcherPath, $configPath) -Wait -PassThru
     if (-not (Test-Path $innerExit)) { throw "Inspector launcher did not write an exit code; outer exit=$($process.ExitCode)" }
     $innerCode = [int](Get-Content $innerExit -Raw)
     if (Test-Path $innerStdout) { Copy-Item $innerStdout $stdoutPath -Force } else { [IO.File]::WriteAllText($stdoutPath, "") }
