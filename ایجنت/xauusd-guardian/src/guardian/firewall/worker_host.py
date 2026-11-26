@@ -509,6 +509,7 @@ class RestrictedWorker:
         self._stderr = None
         self._reader_queue: queue.Queue[Any] = queue.Queue(maxsize=8)
         self._stderr_digest = None
+        self._stderr_capture = bytearray()
         self._reader = None
         self._stderr_reader = None
         self._temp = None
@@ -703,7 +704,9 @@ class RestrictedWorker:
                 total += len(chunk)
                 if total <= 64 * 1024:
                     digest.update(chunk)
-                # Drain to prevent pipe deadlock; never retain or log diagnostics.
+                if len(self._stderr_capture) < 4096:
+                    self._stderr_capture.extend(chunk[: 4096 - len(self._stderr_capture)])
+                # Drain to prevent pipe deadlock; retain only a bounded diagnostic tail.
         except Exception:
             return
 
@@ -718,7 +721,9 @@ class RestrictedWorker:
                 code = exit_code.value
             else:
                 code = None
-            raise WorkerHostError(f"WORKER_PIPE_CLOSED exit_code={code}") from item
+            diagnostic = bytes(self._stderr_capture).decode("utf-8", errors="replace")
+            diagnostic = diagnostic.replace(self._codec._session_id, "[SESSION]")
+            raise WorkerHostError(f"WORKER_PIPE_CLOSED exit_code={code} stderr={diagnostic[-2000:]}") from item
         try:
             return self._codec.decode(item)
         except IPCProtocolError as exc:
