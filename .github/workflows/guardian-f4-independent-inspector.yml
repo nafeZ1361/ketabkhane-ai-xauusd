@@ -194,6 +194,42 @@ jobs:
           $code = [int](Get-Content (Join-Path $env:EVIDENCE_ROOT "identity-probe.log.exit-code.txt"))
           if ($code -ne 0 -or $env:INSPECTOR_SID -eq $env:INSPECTOR_RUNNER_SID) { throw "Inspector identity probe failed" }
 
+      - name: Capture restricted Python launch diagnostics
+        if: always()
+        shell: pwsh
+        run: |
+          $diag = Join-Path $env:EVIDENCE_ROOT "restricted-python-launch-diagnostics.txt"
+          "Target commit: $env:GITHUB_SHA" | Set-Content $diag
+          $venv = Join-Path $env:INSPECTOR_WORK ".venv"
+          $paths = @($venv,(Join-Path $venv "Scripts"),(Join-Path $venv "Scripts\python.exe"),(Join-Path $venv "Lib"),(Join-Path $venv "Lib\site-packages"),$env:pythonLocation,(Join-Path $env:pythonLocation "python.exe"),(Join-Path $env:pythonLocation "python311.dll"),$env:INSPECTOR_WORK,$env:EVIDENCE_ROOT,$env:RUNNER_TEMP) | Select-Object -Unique
+          foreach ($path in $paths) {
+            "`n===== PATH: $path =====" | Add-Content $diag
+            if (Test-Path -LiteralPath $path) {
+              try { (Get-Acl -LiteralPath $path).Sddl | Add-Content $diag } catch { "Get-Acl error: $_" | Add-Content $diag }
+              try { (& icacls.exe $path 2>&1 | Out-String) | Add-Content $diag } catch { "icacls error: $_" | Add-Content $diag }
+              if ((Get-Item -LiteralPath $path) -is [System.IO.FileInfo]) { try { (Get-FileHash -Algorithm SHA256 -LiteralPath $path | Format-List | Out-String) | Add-Content $diag } catch {} }
+            } else { "MISSING" | Add-Content $diag }
+          }
+          foreach ($logName in @("Microsoft-Windows-AppLocker/EXE and DLL","Microsoft-Windows-CodeIntegrity/Operational")) {
+            "`n===== EVENT LOG: $logName =====" | Add-Content $diag
+            try { Get-WinEvent -FilterHashtable @{LogName=$logName; StartTime=(Get-Date).AddMinutes(-30)} -MaxEvents 50 -ErrorAction Stop | Select-Object TimeCreated,Id,LevelDisplayName,Message | Format-List | Out-String | Add-Content $diag } catch { "Event log unavailable or no matching events: $_" | Add-Content $diag }
+          }
+          $probe = @'
+          import json, os, pathlib, subprocess, traceback
+          target = pathlib.Path(os.environ["INSPECTOR_WORK"]) / ".venv" / "Scripts" / "python.exe"
+          result = {"target": str(target), "exists": target.exists(), "is_file": target.is_file(), "access_execute": os.access(str(target), os.X_OK)}
+          try:
+              child = subprocess.run([str(target), "-c", "import sys; print(sys.executable)"], capture_output=True, text=True, timeout=20, check=False)
+              result.update({"returncode": child.returncode, "stdout": child.stdout, "stderr": child.stderr})
+          except Exception as exc:
+              result.update({"exception_type": type(exc).__name__, "exception": repr(exc), "errno": getattr(exc, "errno", None), "winerror": getattr(exc, "winerror", None), "filename": getattr(exc, "filename", None), "traceback": traceback.format_exc()})
+          print(json.dumps(result, sort_keys=True, indent=2))
+          '@
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $basePython = (Get-Command python).Source
+          & $helper -Python $basePython -WorkingDirectory $env:INSPECTOR_WORK -EvidenceRoot $env:EVIDENCE_ROOT -LogName "restricted-python-launch-probe.log" -TargetCommit $env:GITHUB_SHA -Arguments @("-c",$probe)
+          "Diagnostic probe exit: $LASTEXITCODE" | Add-Content $diag
+          "Probe output is in restricted-python-launch-probe.log and its stderr sidecar." | Add-Content $diag
       - name: Focused F4 tests
         id: focused
         shell: pwsh
