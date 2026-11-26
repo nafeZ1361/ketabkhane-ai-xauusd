@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
+import re
 import struct
 from dataclasses import dataclass
 from typing import Any, BinaryIO
@@ -51,7 +53,7 @@ def _depth(value: Any, level: int = 0) -> None:
     elif value is None or type(value) in (str, bool, int):
         return
     elif type(value) is float:
-        if not __import__("math").isfinite(value):
+        if not math.isfinite(value):
             raise IPCProtocolError("NON_FINITE_JSON_NUMBER")
     else:
         raise IPCProtocolError("UNSUPPORTED_JSON_VALUE")
@@ -150,10 +152,8 @@ class AuthenticatedCodec:
             raise IPCProtocolError("INVALID_SESSION_KEY")
         if type(session_id) is not str or len(session_id) != SESSION_ID_HEX_LENGTH:
             raise IPCProtocolError("INVALID_SESSION_ID")
-        try:
-            bytes.fromhex(session_id)
-        except ValueError as exc:
-            raise IPCProtocolError("INVALID_SESSION_ID") from exc
+        if re.fullmatch(r"[0-9a-f]{64}", session_id) is None:
+            raise IPCProtocolError("INVALID_SESSION_ID")
         if send_direction not in ("parent_to_worker", "worker_to_parent"):
             raise IPCProtocolError("INVALID_DIRECTION")
         if receive_direction not in ("parent_to_worker", "worker_to_parent"):
@@ -185,7 +185,8 @@ class AuthenticatedCodec:
         return digest.hexdigest()
 
     def encode(self, message_type: str, correlation_id: str, payload: dict[str, Any]) -> bytes:
-        if type(message_type) is not str or message_type not in _PARENT_MESSAGES if self._send_direction == "parent_to_worker" else type(message_type) is not str or message_type not in _WORKER_MESSAGES:
+        allowed = _PARENT_MESSAGES if self._send_direction == "parent_to_worker" else _WORKER_MESSAGES
+        if type(message_type) is not str or message_type not in allowed:
             raise IPCProtocolError("MESSAGE_TYPE_NOT_ALLOWED")
         if type(correlation_id) is not str or not correlation_id or len(correlation_id) > 128:
             raise IPCProtocolError("INVALID_CORRELATION_ID")
