@@ -436,6 +436,7 @@ class RestrictedWorker:
             system_root = os.environ.get("SystemRoot", r"C:\Windows")
             temp_path = self._temp.name
             python_dir = str(Path(sys.executable).resolve().parent)
+            python_base = str(Path(sys.base_prefix).resolve())
             safe_environment_names = {
                 "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "APPDATA", "LOCALAPPDATA",
                 "ProgramData", "ProgramFiles", "ProgramFiles(x86)", "CommonProgramFiles",
@@ -453,7 +454,8 @@ class RestrictedWorker:
                 "TMP": temp_path,
                 "PATH": os.pathsep.join((
                     python_dir,
-                    str(Path(python_dir) / "DLLs"),
+                    python_base,
+                    str(Path(python_base) / "DLLs"),
                     str(Path(system_root) / "System32"),
                     system_root,
                 )),
