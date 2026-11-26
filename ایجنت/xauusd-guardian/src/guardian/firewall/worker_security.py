@@ -1,14 +1,13 @@
-"""Windows worker-token security for Phase 5 F4.
+"""Windows restricted-token security for the Phase 5 F4 worker boundary.
 
-The launcher never falls back to an unrestricted worker. On unsupported
-platforms or when the Windows restricted-token APIs fail, launch is denied.
+The launcher fails closed: if Windows cannot create and verify a restricted
+worker token, no worker is started.
 """
 
 from __future__ import annotations
 
 import ctypes
 import os
-import sys
 from ctypes import wintypes
 from dataclasses import dataclass
 
@@ -38,13 +37,13 @@ else:
     TOKEN_DUPLICATE = 0x0002
     TOKEN_ASSIGN_PRIMARY = 0x0001
     TOKEN_ADJUST_DEFAULT = 0x0080
-    TOKEN_ADJUST_SESSIONID = 0x0100
     DISABLE_MAX_PRIVILEGE = 0x1
-    SecurityImpersonation = 2
-    TokenPrimary = 1
     TokenElevationType = 18
-    TokenIntegrityLevel = 25
     TokenHasRestrictions = 21
+    TokenIntegrityLevel = 25
+    STARTF_USESTDHANDLES = 0x00000100
+    WAIT_OBJECT_0 = 0x00000000
+    WAIT_TIMEOUT = 0x00000102
 
     class SID_AND_ATTRIBUTES(ctypes.Structure):
         _fields_ = [("Sid", wintypes.LPVOID), ("Attributes", wintypes.DWORD)]
@@ -52,41 +51,23 @@ else:
     class TOKEN_MANDATORY_LABEL(ctypes.Structure):
         _fields_ = [("Label", SID_AND_ATTRIBUTES)]
 
-    class SECURITY_ATTRIBUTES(ctypes.Structure):
-        _fields_ = [
-            ("nLength", wintypes.DWORD),
-            ("lpSecurityDescriptor", wintypes.LPVOID),
-            ("bInheritHandle", wintypes.BOOL),
-        ]
-
     class STARTUPINFO(ctypes.Structure):
         _fields_ = [
-            ("cb", wintypes.DWORD),
-            ("lpReserved", wintypes.LPWSTR),
-            ("lpDesktop", wintypes.LPWSTR),
-            ("lpTitle", wintypes.LPWSTR),
-            ("dwX", wintypes.DWORD),
-            ("dwY", wintypes.DWORD),
-            ("dwXSize", wintypes.DWORD),
-            ("dwYSize", wintypes.DWORD),
-            ("dwXCountChars", wintypes.DWORD),
-            ("dwYCountChars", wintypes.DWORD),
-            ("dwFillAttribute", wintypes.DWORD),
-            ("dwFlags", wintypes.DWORD),
-            ("wShowWindow", wintypes.WORD),
-            ("cbReserved2", wintypes.WORD),
-            ("lpReserved2", wintypes.LPBYTE),
-            ("hStdInput", wintypes.HANDLE),
-            ("hStdOutput", wintypes.HANDLE),
-            ("hStdError", wintypes.HANDLE),
+            ("cb", wintypes.DWORD), ("lpReserved", wintypes.LPWSTR),
+            ("lpDesktop", wintypes.LPWSTR), ("lpTitle", wintypes.LPWSTR),
+            ("dwX", wintypes.DWORD), ("dwY", wintypes.DWORD),
+            ("dwXSize", wintypes.DWORD), ("dwYSize", wintypes.DWORD),
+            ("dwXCountChars", wintypes.DWORD), ("dwYCountChars", wintypes.DWORD),
+            ("dwFillAttribute", wintypes.DWORD), ("dwFlags", wintypes.DWORD),
+            ("wShowWindow", wintypes.WORD), ("cbReserved2", wintypes.WORD),
+            ("lpReserved2", wintypes.LPBYTE), ("hStdInput", wintypes.HANDLE),
+            ("hStdOutput", wintypes.HANDLE), ("hStdError", wintypes.HANDLE),
         ]
 
     class PROCESS_INFORMATION(ctypes.Structure):
         _fields_ = [
-            ("hProcess", wintypes.HANDLE),
-            ("hThread", wintypes.HANDLE),
-            ("dwProcessId", wintypes.DWORD),
-            ("dwThreadId", wintypes.DWORD),
+            ("hProcess", wintypes.HANDLE), ("hThread", wintypes.HANDLE),
+            ("dwProcessId", wintypes.DWORD), ("dwThreadId", wintypes.DWORD),
         ]
 
     advapi32.OpenProcessToken.argtypes = [
@@ -106,32 +87,41 @@ else:
     advapi32.GetTokenInformation.restype = wintypes.BOOL
     advapi32.CreateProcessAsUserW.argtypes = [
         wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPWSTR,
-        ctypes.POINTER(SECURITY_ATTRIBUTES), ctypes.POINTER(SECURITY_ATTRIBUTES),
-        wintypes.BOOL, wintypes.DWORD, wintypes.LPVOID, wintypes.LPCWSTR,
-        ctypes.POINTER(STARTUPINFO), ctypes.POINTER(PROCESS_INFORMATION)
+        wintypes.LPVOID, wintypes.LPVOID, wintypes.BOOL, wintypes.DWORD,
+        wintypes.LPVOID, wintypes.LPCWSTR, ctypes.POINTER(STARTUPINFO),
+        ctypes.POINTER(PROCESS_INFORMATION)
     ]
     advapi32.CreateProcessAsUserW.restype = wintypes.BOOL
     kernel32.GetCurrentProcess.restype = wintypes.HANDLE
     kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
     kernel32.CloseHandle.restype = wintypes.BOOL
-    kernel32.GetLastError.restype = wintypes.DWORD
+    kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+    kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.TerminateProcess.restype = wintypes.BOOL
 
     def _raise_last_error(prefix: str) -> None:
-        err = ctypes.get_last_error()
-        raise WorkerSecurityError(f"{prefix} (WinError {err})")
+        raise WorkerSecurityError(f"{prefix} (WinError {ctypes.get_last_error()})")
 
     def _open_current_token(access: int) -> wintypes.HANDLE:
         token = wintypes.HANDLE()
-        if not advapi32.OpenProcessToken(kernel32.GetCurrentProcess(), access, ctypes.byref(token)):
+        if not advapi32.OpenProcessToken(
+            kernel32.GetCurrentProcess(), access, ctypes.byref(token)
+        ):
             _raise_last_error("OpenProcessToken failed")
         return token
 
     def _query_dword(token: wintypes.HANDLE, info_class: int) -> int:
         size = wintypes.DWORD()
-        if advapi32.GetTokenInformation(token, info_class, None, 0, ctypes.byref(size)):
-            raise WorkerSecurityError("unexpected token query success")
+        advapi32.GetTokenInformation(token, info_class, None, 0, ctypes.byref(size))
+        if not size.value:
+            _raise_last_error("GetTokenInformation size query failed")
         buf = ctypes.create_string_buffer(size.value)
-        if not advapi32.GetTokenInformation(token, info_class, buf, size, ctypes.byref(size)):
+        if not advapi32.GetTokenInformation(
+            token, info_class, buf, size, ctypes.byref(size)
+        ):
             _raise_last_error("GetTokenInformation failed")
         return ctypes.cast(buf, ctypes.POINTER(wintypes.DWORD)).contents.value
 
@@ -141,18 +131,17 @@ else:
         if not size.value:
             _raise_last_error("TokenIntegrityLevel size query failed")
         buf = ctypes.create_string_buffer(size.value)
-        if not advapi32.GetTokenInformation(token, TokenIntegrityLevel, buf, size, ctypes.byref(size)):
+        if not advapi32.GetTokenInformation(
+            token, TokenIntegrityLevel, buf, size, ctypes.byref(size)
+        ):
             _raise_last_error("TokenIntegrityLevel query failed")
         label = ctypes.cast(buf, ctypes.POINTER(TOKEN_MANDATORY_LABEL)).contents
-        # Integrity SID is S-1-16-RID; sub-authority count is byte 1 and RID is
-        # the final DWORD at the SID's sub-authority array.
         sid = ctypes.cast(label.Label.Sid, ctypes.POINTER(ctypes.c_ubyte))
         count = sid[1]
         if count < 1:
             raise WorkerSecurityError("invalid integrity SID")
-        rid_ptr = ctypes.cast(ctypes.addressof(sid.contents) + 8 + 4 * (count - 1),
-                              ctypes.POINTER(wintypes.DWORD))
-        return rid_ptr.contents.value
+        address = ctypes.addressof(sid.contents) + 8 + 4 * (count - 1)
+        return ctypes.cast(address, ctypes.POINTER(wintypes.DWORD)).contents.value
 
     def verify_current_worker_token() -> WorkerTokenReport:
         token = _open_current_token(TOKEN_QUERY)
@@ -160,21 +149,25 @@ else:
             restricted = bool(_query_dword(token, TokenHasRestrictions))
             elevation = _query_dword(token, TokenElevationType)
             integrity = _integrity_rid(token)
-            # Low integrity is a useful independent boundary check. Restricted
-            # is mandatory; medium/high integrity is rejected.
-            if not restricted or integrity >= 0x3000:
+            # F4 accepts only an actually restricted token. UAC elevation type
+            # is deliberately not used as the security predicate.
+            if not restricted:
                 raise WorkerSecurityError(
-                    f"worker token is not sufficiently restricted: "
-                    f"restricted={restricted}, integrity_rid={integrity}"
+                    f"worker token is unrestricted: integrity_rid={integrity}, "
+                    f"elevation_type={elevation}"
                 )
             return WorkerTokenReport(restricted, integrity, elevation)
         finally:
             kernel32.CloseHandle(token)
 
-    def create_restricted_worker(command_line: str, stdin_handle: int):
+    def create_restricted_worker(
+        *,
+        application_name: str,
+        command_line: str,
+        stdin_handle: int,
+    ) -> PROCESS_INFORMATION:
         token = _open_current_token(
-            TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY
-            | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID
+            TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_ADJUST_DEFAULT
         )
         restricted = wintypes.HANDLE()
         if not advapi32.CreateRestrictedToken(
@@ -186,15 +179,46 @@ else:
         try:
             si = STARTUPINFO()
             si.cb = ctypes.sizeof(STARTUPINFO)
-            si.dwFlags = 0x00000100  # STARTF_USESTDHANDLES
+            si.dwFlags = STARTF_USESTDHANDLES
             si.hStdInput = wintypes.HANDLE(stdin_handle)
             pi = PROCESS_INFORMATION()
             if not advapi32.CreateProcessAsUserW(
-                restricted, None, ctypes.create_unicode_buffer(command_line),
-                None, None, True, 0, None, None, ctypes.byref(si), ctypes.byref(pi)
+                restricted,
+                application_name,
+                ctypes.create_unicode_buffer(command_line),
+                None,
+                None,
+                True,
+                0,
+                None,
+                os.getcwd(),
+                ctypes.byref(si),
+                ctypes.byref(pi),
             ):
                 _raise_last_error("CreateProcessAsUserW failed for restricted worker")
             return pi
         finally:
             kernel32.CloseHandle(restricted)
             kernel32.CloseHandle(token)
+
+    def wait_process(handle: PROCESS_INFORMATION, timeout_ms: int) -> bool:
+        result = kernel32.WaitForSingleObject(handle.hProcess, timeout_ms)
+        if result == WAIT_OBJECT_0:
+            return True
+        if result == WAIT_TIMEOUT:
+            return False
+        _raise_last_error("WaitForSingleObject failed")
+
+    def exit_code(handle: PROCESS_INFORMATION) -> int:
+        code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle.hProcess, ctypes.byref(code)):
+            _raise_last_error("GetExitCodeProcess failed")
+        return int(code.value)
+
+    def terminate_process(handle: PROCESS_INFORMATION) -> None:
+        if not kernel32.TerminateProcess(handle.hProcess, 70):
+            _raise_last_error("TerminateProcess failed")
+
+    def close_process_handles(handle: PROCESS_INFORMATION) -> None:
+        kernel32.CloseHandle(handle.hThread)
+        kernel32.CloseHandle(handle.hProcess)
