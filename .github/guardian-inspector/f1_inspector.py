@@ -299,9 +299,11 @@ def main() -> int:
 
     findings = static_boundary_check(project_root)
     mutation = mutation_control(project_root)
-    frozen_manifest = None
+    frozen_manifest_before = None
+    frozen_manifest_after = None
     if args.frozen_root:
-        frozen_manifest = file_manifest(Path(args.frozen_root).resolve())
+        frozen_root = Path(args.frozen_root).resolve()
+        frozen_manifest_before = file_manifest(frozen_root)
 
     payload = {
         "schema": "guardian-f1-independent-inspector/v1",
@@ -320,6 +322,15 @@ def main() -> int:
         "frozen_manifest": frozen_manifest,
         "status": "PASS" if result.wasSuccessful() and not findings and mutation["status"] == "PASS" else "BLOCK",
     }
+    if args.frozen_root:
+        frozen_manifest_after = file_manifest(Path(args.frozen_root).resolve())
+        payload["frozen_manifest_before"] = frozen_manifest_before
+        payload["frozen_manifest_after"] = frozen_manifest_after
+        payload["frozen_manifest_stable"] = frozen_manifest_before == frozen_manifest_after
+    else:
+        payload["frozen_manifest_stable"] = False
+    if not payload["frozen_manifest_stable"]:
+        payload["status"] = "BLOCK"
     encoded = json.dumps(payload, indent=2, sort_keys=True)
     if args.output:
         Path(args.output).write_text(encoded + "\n", encoding="utf-8")
