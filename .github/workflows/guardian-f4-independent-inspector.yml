@@ -150,9 +150,12 @@ jobs:
           } finally { Pop-Location }
 
       - name: Create ephemeral standard Inspector identity
+        id: identity
         shell: pwsh
         run: |
           $account = "GuardianF4Inspector"
+          New-Item -ItemType Directory -Path $env:RUNNER_TEMP -Force | Out-Null
+          "INSPECTOR_TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
           if (Get-LocalUser -Name $account -ErrorAction SilentlyContinue) { throw "Inspector account already exists" }
           $bytes = New-Object byte[] 32
           [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
@@ -188,6 +191,7 @@ jobs:
           if ($code -ne 0 -or $env:INSPECTOR_SID -eq $env:INSPECTOR_RUNNER_SID) { throw "Inspector identity probe failed" }
 
       - name: Focused F4 tests
+        id: focused
         shell: pwsh
         run: |
           $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
@@ -196,6 +200,7 @@ jobs:
           if (([int](Get-Content (Join-Path $env:EVIDENCE_ROOT "focused-pytest.log.exit-code.txt"))) -ne 0) { throw "Focused F4 tests failed" }
 
       - name: Full regression
+        id: full
         shell: pwsh
         run: |
           $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
@@ -204,6 +209,7 @@ jobs:
           if (([int](Get-Content (Join-Path $env:EVIDENCE_ROOT "full-pytest.log.exit-code.txt"))) -ne 0) { throw "Full regression failed" }
 
       - name: Compile
+        id: compile
         shell: pwsh
         run: |
           $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
@@ -212,6 +218,7 @@ jobs:
           if (([int](Get-Content (Join-Path $env:EVIDENCE_ROOT "compileall.log.exit-code.txt"))) -ne 0) { throw "compileall failed" }
 
       - name: Run independent F4 black-box/static/mutation inspector
+        id: inspector
         shell: pwsh
         run: |
           $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
