@@ -103,7 +103,10 @@ try {
     Set-Content -Path $exitPath -Value ([string]$innerCode) -Encoding ascii
     Write-Output "Inspector account: $account"
     Write-Output "Inspector process exit: $innerCode"
-    if ($innerCode -ne 0) { throw "Inspector child process failed: $innerCode" }
+    if ($innerCode -ne 0) {
+        if (Test-Path $stderrPath) { Write-Output "Inspector stderr:"; Get-Content $stderrPath -Raw | Write-Output }
+        throw "Inspector child process failed: $innerCode"
+    }
 }
 finally {
     foreach ($key in @([Environment]::GetEnvironmentVariables("Process").Keys)) {
