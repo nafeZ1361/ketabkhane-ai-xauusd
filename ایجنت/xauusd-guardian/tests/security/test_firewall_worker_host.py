@@ -10,6 +10,9 @@ from guardian.firewall.worker_host import RestrictedWorker, WorkerHostError
 @pytest.mark.skipif(sys.platform != "win32", reason="F4 worker isolation is Windows-only")
 def test_restricted_worker_starts_and_authenticates_health_check():
     with RestrictedWorker.launch() as worker:
+        assert worker.security_report["is_restricted"] is True
+        assert worker.security_report["integrity_rid"] == 4096
+        assert worker.security_report["privilege_count"] <= 1
         assert worker.request("HEALTH_CHECK", {}) == {"status": "OK"}
 
 
