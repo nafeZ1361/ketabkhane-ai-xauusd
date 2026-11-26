@@ -16,20 +16,43 @@ if (-not (Test-Path $Python) -or -not (Test-Path $WorkingDirectory) -or -not (Te
 $stdoutPath = Join-Path $EvidenceRoot $LogName
 $stderrPath = Join-Path $EvidenceRoot "$LogName.stderr.txt"
 $exitPath = Join-Path $EvidenceRoot "$LogName.exit-code.txt"
-$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-$credential = [System.Management.Automation.PSCredential]::new("$env:COMPUTERNAME\$account", $securePassword)
-function Quote-WindowsArgument([string]$value) {
-    if ($value -notmatch '[\s"]') { return $value }
-    $escaped = $value -replace '(\\*)"', '$1$1\"'
-    $escaped = $escaped -replace '(\\+)$', '$1$1'
-    return '"' + $escaped + '"'
-}
-$argumentLine = (@($Arguments | ForEach-Object { Quote-WindowsArgument ([string]$_) }) -join ' ')
+$launcherPath = Join-Path $tempRoot "guardian-inspector-launch.py"
+$configPath = Join-Path $tempRoot "guardian-inspector-launch.json"
+$innerStdout = Join-Path $tempRoot "$LogName.stdout"
+$innerStderr = Join-Path $tempRoot "$LogName.stderr"
+$innerExit = Join-Path $tempRoot "$LogName.exit"
 $profilePath = Join-Path $env:SystemDrive "Users\$account"
 
-# CreateProcessWithLogonW inherits the caller's process environment. Temporarily
-# replace it with a strict allowlist before spawning the Inspector, then restore
-# the runner environment for the remaining workflow steps.
+$launcher = @'
+import json
+import pathlib
+import subprocess
+import sys
+
+config_path = pathlib.Path(sys.argv[1])
+config = json.loads(config_path.read_text(encoding="utf-8-sig"))
+try:
+    result = subprocess.run(
+        [config["python"], *config["arguments"]],
+        cwd=config["working_directory"],
+        env=config["environment"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    pathlib.Path(config["stdout"]).write_bytes(result.stdout)
+    pathlib.Path(config["stderr"]).write_bytes(result.stderr)
+    pathlib.Path(config["exit"]).write_text(str(result.returncode), encoding="ascii")
+    raise SystemExit(result.returncode)
+except BaseException as exc:
+    pathlib.Path(config["stderr"]).write_text(repr(exc), encoding="utf-8")
+    pathlib.Path(config["exit"]).write_text("125", encoding="ascii")
+    raise
+'@
+$launcher | Set-Content -Path $launcherPath -Encoding utf8
+$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+$credential = [System.Management.Automation.PSCredential]::new("$env:COMPUTERNAME\$account", $securePassword)
+
 $originalEnvironment = [Environment]::GetEnvironmentVariables("Process")
 try {
     foreach ($key in @($originalEnvironment.Keys)) {
@@ -60,10 +83,26 @@ try {
     foreach ($entry in $minimal.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable($entry.Key, [string]$entry.Value, "Process")
     }
-    $process = Start-Process -FilePath $Python -Credential $credential -LoadUserProfile -WorkingDirectory $WorkingDirectory -ArgumentList $argumentLine -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -Wait -PassThru
-    Set-Content -Path $exitPath -Value ([string]$process.ExitCode) -Encoding ascii
+    $config = @{
+        python = $Python
+        arguments = @($Arguments)
+        working_directory = $WorkingDirectory
+        environment = $minimal
+        stdout = $innerStdout
+        stderr = $innerStderr
+        exit = $innerExit
+    }
+    $config | ConvertTo-Json -Depth 8 | Set-Content -Path $configPath -Encoding utf8
+    $quotedConfig = '"' + $configPath.Replace('"', '\"') + '"'
+    $process = Start-Process -FilePath $Python -Credential $credential -LoadUserProfile -WorkingDirectory $WorkingDirectory -ArgumentList @($launcherPath, $configPath) -Wait -PassThru
+    if (-not (Test-Path $innerExit)) { throw "Inspector launcher did not write an exit code; outer exit=$($process.ExitCode)" }
+    $innerCode = [int](Get-Content $innerExit -Raw)
+    if (Test-Path $innerStdout) { Copy-Item $innerStdout $stdoutPath -Force } else { [IO.File]::WriteAllText($stdoutPath, "") }
+    if (Test-Path $innerStderr) { Copy-Item $innerStderr $stderrPath -Force } else { [IO.File]::WriteAllText($stderrPath, "") }
+    Set-Content -Path $exitPath -Value ([string]$innerCode) -Encoding ascii
     Write-Output "Inspector account: $account"
-    Write-Output "Inspector process exit: $($process.ExitCode)"
+    Write-Output "Inspector process exit: $innerCode"
+    if ($innerCode -ne 0) { throw "Inspector child process failed: $innerCode" }
 }
 finally {
     foreach ($key in @([Environment]::GetEnvironmentVariables("Process").Keys)) {
