@@ -449,15 +449,18 @@ class RestrictedWorker:
             worker_script = project_root / "scripts" / "firewall_worker.py"
             if not worker_script.is_file():
                 raise WorkerHostError("FIXED_WORKER_ENTRYPOINT_MISSING")
+            worker_executable = str(Path(getattr(sys, "_base_executable", sys.executable)).resolve())
+            if not Path(worker_executable).is_file():
+                raise WorkerHostError("BASE_PYTHON_EXECUTABLE_MISSING")
             arguments = [
-                sys.executable, "-I", "-S", str(worker_script),
+                worker_executable, "-I", "-S", str(worker_script),
                 "--key-handle", str(int(key_read.value)),
                 "--session-id", session_id,
             ]
             command_line = ctypes.create_unicode_buffer(subprocess.list2cmdline(arguments))
             system_root = os.environ.get("SystemRoot", r"C:\Windows")
             temp_path = self._temp.name
-            python_dir = str(Path(sys.executable).resolve().parent)
+            python_dir = str(Path(worker_executable).resolve().parent)
             python_base = str(Path(sys.base_prefix).resolve())
             safe_environment_names = {
                 "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "APPDATA", "LOCALAPPDATA",
@@ -493,7 +496,7 @@ class RestrictedWorker:
             flags = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW
 
             if not kernel32.CreateProcessW(
-                sys.executable, command_line, None, None, True,
+                worker_executable, command_line, None, None, True,
                 flags, ctypes.cast(environment, wintypes.LPVOID),
                 temp_path, ctypes.byref(startup), ctypes.byref(process_info),
             ):
