@@ -60,3 +60,12 @@ The evidence intake is registered at `evidence/external-inspector/PHASE5-F1-INSP
 GitHub Actions on the claimed exact target were checked: PR workflow runs `45452649612` and `45452649554` both report SUCCESS. These runs corroborate CI status only and do not authenticate the external Inspector report.
 
 **Disposition:** F1 remains **INDEPENDENT ACCEPTANCE PENDING / 0 of 10** until an independent Inspector reviews this registration and determines whether the evidence-integrity limitations satisfy the acceptance policy. F2-F8 remain NOT STARTED; Phase 5 remains 0/100. No acceptance criteria are waived.
+
+
+## Current F1 independence remediation checkpoint (2026-11-26)
+
+The latest owner-supplied local checkpoint reports `INDEPENDENCE_NOT_ESTABLISHED`, F1 0/10, and F2–F8 NOT STARTED. This checkpoint is not an Inspector PASS and its local Windows claims are not verifiable from GitHub alone. The candidate worktree reported for this checkpoint is distinct from PR #8 head; its one-file uncommitted test patch must be identified and hashed separately from the remote commit.
+
+The controlled local reinspection procedure is specified in `PHASE5_F1_INSPECTOR_UNBLOCK_PLAN.md`. Agent roles, snapshot/evidence requirements, and reporting limits are specified in `AI_WORK_PROTOCOL.md`. These documents do not authorize local account changes, ACL changes, DEMO activation, order activity, or PR merge. A genuine separate Inspector logon and effective read-only access to a frozen snapshot remain mandatory.
+
+Do not promote the older owner-supplied report for target `e48729cbd92df86b63d3941d67fdcb8635210bf9` to the current candidate or PR #8 head: its original report bytes/raw evidence were not available for digest recomputation, and its target differs from the current remote head.
