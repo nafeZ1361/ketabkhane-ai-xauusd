@@ -32,8 +32,8 @@ jobs:
       - id: freeze
         shell: pwsh
         run: |
-          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-source.tar"
-          git archive --format=tar --output="$archive" $env:GITHUB_SHA -- "ایجانت/xauusd-guardian"
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-source.zip"
+          git archive --format=zip --output="$archive" $env:GITHUB_SHA -- "ایجانت/xauusd-guardian"
           if ($LASTEXITCODE -ne 0) { throw "git archive failed" }
           $digest = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
           "archive_sha256=$digest" >> $env:GITHUB_OUTPUT
@@ -41,7 +41,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: guardian-f5-frozen-source
-          path: ${{ runner.temp }}/guardian-f5-source.tar
+          path: ${{ runner.temp }}/guardian-f5-source.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -71,20 +71,18 @@ jobs:
       - name: Extract frozen snapshot
         shell: pwsh
         run: |
-          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-artifact\guardian-f5-source.tar"
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-artifact\guardian-f5-source.zip"
           $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
           if ($actual -ne "${{ needs.freeze.outputs.archive_sha256 }}") { throw "archive digest mismatch" }
           $root = Join-Path $env:RUNNER_TEMP "guardian-f5-frozen"
           $evidence = Join-Path $env:RUNNER_TEMP "guardian-f5-evidence"
           $work = Join-Path $env:RUNNER_TEMP "guardian-f5-work"
           New-Item -ItemType Directory -Path $root,$evidence -Force | Out-Null
-          $entries = @(tar -tf $archive | Select-String "kill_switch.py")
-          if ($entries.Count -eq 0) { throw "F5 archive does not contain kill_switch.py" }
-          Write-Host "Archive match: $($entries[0].Line)"
-          tar -xf $archive -C $root --strip-components=2
-          if ($LASTEXITCODE -ne 0) { throw "snapshot extraction failed" }
-          $project = $root
-          if (-not (Test-Path (Join-Path $project "src\guardian\firewall\kill_switch.py"))) { throw "F5 snapshot not found after extraction" }
+          $entries = @(Get-ChildItem (Join-Path $root "ایجانت\xauusd-guardian") -Recurse -File -Filter "kill_switch.py" | Select-Object -First 1)
+          $zipProject = Join-Path $root "ایجانت\xauusd-guardian"
+          Expand-Archive -LiteralPath $archive -DestinationPath $root -Force
+          if (-not (Test-Path (Join-Path $zipProject "src\guardian\firewall\kill_switch.py"))) { throw "F5 snapshot not found after extraction" }
+          $project = $zipProject
           Copy-Item $project $work -Recurse
           "FROZEN_ROOT=$($project.FullName)" >> $env:GITHUB_ENV
           "INSPECTOR_WORK=$work" >> $env:GITHUB_ENV
