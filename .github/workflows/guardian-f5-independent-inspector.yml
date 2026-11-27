@@ -45,7 +45,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: guardian-f5-frozen-source
-          path: ${{ runner.temp }}/guardian-f5-source.zip
+          path: ${{ runner.temp }}/guardian-f5-source.tar
           if-no-files-found: error
           retention-days: 7
 
