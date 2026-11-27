@@ -21,12 +21,12 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 10
     outputs:
-      archive_sha256: ${ steps.freeze.outputs.archive_sha256 }
-      target_commit: ${ steps.freeze.outputs.target_commit }
+      archive_sha256: ${{ steps.freeze.outputs.archive_sha256 }}
+      target_commit: ${{ steps.freeze.outputs.target_commit }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${ github.sha }
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - id: freeze
@@ -41,7 +41,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: guardian-f5-frozen-source
-          path: ${ runner.temp }/guardian-f5-source.tar
+          path: ${{ runner.temp }}/guardian-f5-source.tar
           if-no-files-found: error
           retention-days: 7
 
@@ -53,13 +53,13 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${ github.sha }
+          ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: guardian-f5-frozen-source
-          path: ${ runner.temp }/guardian-f5-artifact
+          path: ${{ runner.temp }}/guardian-f5-artifact
       - name: Checkout pinned independent F5 harness
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -73,7 +73,7 @@ jobs:
         run: |
           $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-artifact\guardian-f5-source.tar"
           $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-          if ($actual -ne "${ needs.freeze.outputs.archive_sha256 }") { throw "archive digest mismatch" }
+          if ($actual -ne "${{ needs.freeze.outputs.archive_sha256 }}") { throw "archive digest mismatch" }
           $root = Join-Path $env:RUNNER_TEMP "guardian-f5-frozen"
           $evidence = Join-Path $env:RUNNER_TEMP "guardian-f5-evidence"
           $work = Join-Path $env:RUNNER_TEMP "guardian-f5-work"
@@ -147,7 +147,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: guardian-f5-inspector-evidence
-          path: ${ runner.temp }/guardian-f5-evidence/
+          path: ${{ runner.temp }}/guardian-f5-evidence/
           if-no-files-found: warn
           retention-days: 30
       - name: Remove Inspector identity
