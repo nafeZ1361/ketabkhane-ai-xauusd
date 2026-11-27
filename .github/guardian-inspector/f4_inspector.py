@@ -24,6 +24,17 @@ def manifest(root: Path) -> dict[str, str]:
 def load_modules(project_root: Path):
     import importlib
     source = str(project_root / "src")
+    # Every black-box run must import from the root it was handed. Without this
+    # purge, mutation_control()'s mutant copy is masked by the pristine modules
+    # imported by the earlier run, so every mutant survives and the inspector
+    # reports FAIL for a control that was never actually exercised.
+    for name in [
+        module for module in sys.modules
+        if module == "guardian" or module.startswith("guardian.")
+    ]:
+        del sys.modules[name]
+    if source in sys.path:
+        sys.path.remove(source)
     sys.path.insert(0, source)
     importlib.invalidate_caches()
     from guardian.firewall.ipc import AuthenticatedSession, IPCError
