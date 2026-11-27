@@ -1,0 +1,174 @@
+name: Guardian F5 Independent Inspector
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/guardian-phase5-f5-kill-switch-20261127
+    paths:
+      - "AGENTS.md"
+      - "ایجانت/xauusd-guardian/**"
+      - ".github/guardian-inspector/**"
+      - ".github/workflows/guardian-f5-independent-inspector.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: guardian-f5-inspector-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  freeze:
+    name: Freeze exact F5 source
+    runs-on: windows-latest
+    timeout-minutes: 10
+    outputs:
+      target_commit: ${{ steps.freeze.outputs.target_commit }}
+      tree_sha: ${{ steps.freeze.outputs.tree_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: freeze
+        shell: pwsh
+        run: |
+          $head = (git rev-parse HEAD).Trim()
+          $tree = (git show -s --format=%T HEAD).Trim()
+          if ($head -ne "$env:GITHUB_SHA") { throw "Freeze HEAD mismatch" }
+          "target_commit=$head" >> $env:GITHUB_OUTPUT
+          "tree_sha=$tree" >> $env:GITHUB_OUTPUT
+          Write-Host "Frozen exact commit: $head"
+          Write-Host "Frozen tree: $tree"
+
+  inspect:
+    name: Independent F5 inspection
+    needs: freeze
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.freeze.outputs.target_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact frozen source
+        shell: pwsh
+        run: |
+          $head = (git rev-parse HEAD).Trim()
+          $tree = (git show -s --format=%T HEAD).Trim()
+          if ($head -ne "${{ needs.freeze.outputs.target_commit }}") { throw "Target commit mismatch" }
+          if ($tree -ne "${{ needs.freeze.outputs.tree_sha }}") { throw "Target tree mismatch" }
+      - name: Checkout pinned independent F5 harness
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: nafeZ1361/ketabkhane-ai-xauusd
+          ref: e5c9f39ddf3fd5b3dc736c997987bbd0c79f3033
+          path: .guardian-inspector
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Re-anchor inspected worktree to exact frozen commit
+        shell: pwsh
+        run: |
+          git sparse-checkout disable
+          if ($LASTEXITCODE -ne 0) { throw "Failed to disable sparse checkout" }
+          git reset --hard "${{ needs.freeze.outputs.target_commit }}"
+          if ($LASTEXITCODE -ne 0) { throw "Target worktree reset failed" }
+          git diff --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Tracked target files changed after exact reset" }
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Staged target files changed after exact reset" }
+      - name: Resolve Guardian project
+        shell: pwsh
+        run: |
+          $lock = Get-ChildItem $env:GITHUB_WORKSPACE -File -Recurse -Filter "requirements-hashed.lock" |
+            Where-Object { $_.FullName -notlike "*\.guardian-inspector\*" } |
+            Select-Object -First 1
+          if (-not $lock) { throw "Target requirements-hashed.lock not found outside pinned harness" }
+          $guardian = $lock.Directory.FullName
+          "GUARDIAN_ROOT=$guardian" >> $env:GITHUB_ENV
+          Write-Host "Resolved target Guardian root: $guardian"
+      - name: Re-materialize exact F5 source files after sparse reset
+        shell: pwsh
+        run: |
+          Push-Location $env:GITHUB_WORKSPACE
+          try {
+            $target = "${{ needs.freeze.outputs.target_commit }}"
+            git show "${target}:ایجانت/xauusd-guardian/tests/unit/test_firewall_kill_switch.py" | Set-Content -Path (Join-Path $env:GUARDIAN_ROOT "tests\unit\test_firewall_kill_switch.py") -Encoding utf8
+            git show "${target}:ایجانت/xauusd-guardian/src/guardian/firewall/kill_switch.py" | Set-Content -Path (Join-Path $env:GUARDIAN_ROOT "src\guardian\firewall\kill_switch.py") -Encoding utf8
+            if ($LASTEXITCODE -ne 0) { throw "Exact F5 source materialization failed" }
+          } finally { Pop-Location }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11.8"
+          architecture: x64
+      - name: Create isolated environment
+        shell: pwsh
+        run: |
+          Push-Location $env:GUARDIAN_ROOT
+          try {
+            python -m venv .venv
+            if ($LASTEXITCODE -ne 0) { throw "venv failed" }
+            & .\.venv\Scripts\python.exe -m pip install --disable-pip-version-check --require-hashes -r requirements-hashed.lock
+            if ($LASTEXITCODE -ne 0) { throw "dependency install failed" }
+            & .\.venv\Scripts\python.exe -m pip check
+            if ($LASTEXITCODE -ne 0) { throw "pip check failed" }
+          } finally { Pop-Location }
+      - name: Create independent Inspector identity
+        shell: pwsh
+        run: |
+          $account = "GuardianF5Inspector"
+          if (Get-LocalUser -Name $account -ErrorAction SilentlyContinue) { throw "Inspector account already exists" }
+          $bytes = New-Object byte[] 32
+          [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+          $password = [Convert]::ToBase64String($bytes) + "aA1!"
+          $secure = ConvertTo-SecureString $password -AsPlainText -Force
+          New-LocalUser -Name $account -Password $secure -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires | Out-Null
+          Add-LocalGroupMember -Group Users -Member $account
+          $sid = (Get-LocalUser -Name $account).SID.Value
+          $runnerSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          if (@(Get-LocalGroupMember -Group Administrators | ForEach-Object { $_.SID.Value }) -contains $sid) { throw "Inspector is admin" }
+          "INSPECTOR_ACCOUNT=$account" >> $env:GITHUB_ENV
+          "INSPECTOR_PASSWORD=$password" >> $env:GITHUB_ENV
+          "INSPECTOR_SID=$sid" >> $env:GITHUB_ENV
+          "INSPECTOR_RUNNER_SID=$runnerSid" >> $env:GITHUB_ENV
+          "INSPECTOR_TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+          Write-Output "::add-mask::$password"
+      - name: Run independent F5 harness
+        id: inspector
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\run_as_inspector.ps1"
+          $python = (Get-Command python).Source
+          $harness = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector\.github\guardian-inspector\f5_inspector.py"
+          $out = Join-Path $env:RUNNER_TEMP "f5-inspector-result.json"
+          & $helper -Python $python -WorkingDirectory $env:GUARDIAN_ROOT -EvidenceRoot $env:RUNNER_TEMP -LogName "f5-inspector.log" -TargetCommit "${{ needs.freeze.outputs.target_commit }}" -Arguments @($harness,"--project-root",$env:GUARDIAN_ROOT,"--output",$out,"--target-commit","${{ needs.freeze.outputs.target_commit }}")
+          if ($LASTEXITCODE -ne 0) { throw "Independent F5 inspection BLOCK" }
+          Copy-Item $out (Join-Path $env:RUNNER_TEMP "f5-inspector-result.json") -Force
+      - name: Verify independence and verdict
+        shell: pwsh
+        run: |
+          if ($env:INSPECTOR_SID -eq $env:INSPECTOR_RUNNER_SID) { throw "Inspector identity is not distinct" }
+          $harnessHead = (git -C (Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector") rev-parse HEAD).Trim()
+          if ($harnessHead -ne "e5c9f39ddf3fd5b3dc736c997987bbd0c79f3033") { throw "Harness pin mismatch" }
+          $summary = Get-Content (Join-Path $env:RUNNER_TEMP "f5-inspector-result.json") -Raw | ConvertFrom-Json
+          if ($summary.verdict -ne "PASS") { throw "F5 Inspector verdict is not PASS" }
+          Write-Host "F5 independent inspection PASS"
+      - name: Upload F5 evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: guardian-f5-inspector-evidence
+          path: ${{ runner.temp }}/f5-inspector*
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Remove Inspector identity
+        if: always()
+        shell: pwsh
+        run: |
+          if (Get-LocalUser -Name "GuardianF5Inspector" -ErrorAction SilentlyContinue) {
+            Remove-LocalUser -Name "GuardianF5Inspector"
+          }
