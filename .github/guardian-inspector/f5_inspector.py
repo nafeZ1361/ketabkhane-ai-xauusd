@@ -76,15 +76,30 @@ def main():
         pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 1
 
-    mutation = tempfile.mkdtemp(prefix="f5-mutant-")
-    mutant = pathlib.Path(mutation) / "kill_switch.py"
-    shutil.copy2(root / "src" / "guardian" / "firewall" / "kill_switch.py", mutant)
-    text = mutant.read_text(encoding="utf-8")
-    text = text.replace("return _invalid()", "return KillSwitchState(_VERSION, _CLEAR, 1, 'MUTANT')")
-    mutant.write_text(text, encoding="utf-8")
-    mutation_detected = "return _invalid()" in source and "MUTANT" in mutant.read_text(encoding="utf-8")
-    result["checks"]["mutation"] = {"mutant_created": True, "control_detected": mutation_detected}
-    shutil.rmtree(mutation, ignore_errors=True)
+    target = root / "src" / "guardian" / "firewall" / "kill_switch.py"
+    original = target.read_text(encoding="utf-8")
+    mutated = original.replace("return _invalid()", "return KillSwitchState(_VERSION, _CLEAR, 1, 'MUTANT')", 1)
+    if mutated == original:
+        result["checks"]["mutation"] = {"mutant_created": False, "control_detected": False}
+        pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return 1
+    target.write_text(mutated, encoding="utf-8")
+    try:
+        code, out, err = run(
+            [str(root / ".venv" / "Scripts" / "python.exe"), "-m", "pytest", "-q",
+             "tests/unit/test_firewall_kill_switch.py"],
+            root,
+        )
+    finally:
+        target.write_text(original, encoding="utf-8")
+    mutation_detected = code != 0
+    result["checks"]["mutation"] = {
+        "mutant_created": True,
+        "mutant_test_exit": code,
+        "control_detected": mutation_detected,
+        "stdout_tail": out[-3000:],
+        "stderr_tail": err[-1500:],
+    }
     if not mutation_detected:
         pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 1
