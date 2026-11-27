@@ -597,3 +597,14 @@ A first security review identified that UAC elevation type alone is not a valid 
 Acceptance is explicitly withheld until an independent Inspector verifies the exact frozen candidate, Windows token boundary, IPC replay/forgery resistance, lifecycle failure paths, mutation controls, full regression suite, compileall, and immutable evidence hashes. No F4 points are awarded yet.
 
 Safety remains unchanged: no A-04 account reads, A-05 DEMO activation, MT5 connectivity, order construction/submission, LIVE path, approval mutation, merge, force-push or destructive operation.
+
+
+## D-041 — Phase 5 F4 independent acceptance (2026-11-27)
+
+**Status:** ACCEPTED — 15/15.
+
+**Evidence:** Exact target `4e43e360351b5886720825234941cb454d6374ff`; independent workflow `46058148029` SUCCESS; `Freeze exact F4 source` job `140705579991`; `Independent F4 inspection` job `140705685452`; pinned harness `ce48e5994970d133f38633b171ce1b2037445a57`; focused 12/0/0, full suite 518/0/0, compileall 0; black-box 6/6, static findings 0, mutation detected; frozen 266-file manifest stable; source archive SHA-256 `a165d43985712b360f9a975434d6c492f65a6814fdcd70511545ec74b2aa180c`; inspector identity `GuardianF4Inspector`, separate from the runner account and removed after the run.
+
+**Decision:** F4 is accepted at 15/15; Phase 5 progress is 49/100. The boundary is a restricted Windows worker with authenticated replay-resistant loopback IPC, an anchored interpreter, one-shot stdin bootstrap and fail-closed lifecycle; it grants no execution authority and contains no order, MT5, account or LIVE path. No merge: PR #10 remains Draft/open/unmerged. PR #8 is unchanged. F5 is not started.
+
+**Limitations:** The worker has no execution capability by design (`F4_WORKER_NO_EXECUTION_CAPABILITY`); transport size bounds remain with the future caller gate. The F4 branch copy of `run_as_inspector.ps1` is unused by CI and still carries the environment-reset defect that was fixed in the pinned harness.
