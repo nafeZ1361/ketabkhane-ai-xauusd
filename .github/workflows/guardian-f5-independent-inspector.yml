@@ -73,6 +73,8 @@ jobs:
       - name: Re-anchor inspected worktree to exact frozen commit
         shell: pwsh
         run: |
+          git sparse-checkout disable
+          if ($LASTEXITCODE -ne 0) { throw "Failed to disable sparse checkout" }
           git reset --hard "${{ needs.freeze.outputs.target_commit }}"
           if ($LASTEXITCODE -ne 0) { throw "Target worktree reset failed" }
           git diff --quiet
