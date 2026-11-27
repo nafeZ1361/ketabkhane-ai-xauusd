@@ -94,6 +94,7 @@ jobs:
         run: |
           Push-Location $env:GUARDIAN_ROOT
           try {
+            git update-index --no-assume-unchanged --no-skip-worktree -- tests/unit/test_firewall_kill_switch.py src/guardian/firewall/kill_switch.py
             git checkout "${{ needs.freeze.outputs.target_commit }}" -- tests/unit/test_firewall_kill_switch.py src/guardian/firewall/kill_switch.py
             if ($LASTEXITCODE -ne 0) { throw "Exact F5 file materialization failed" }
           } finally { Pop-Location }
