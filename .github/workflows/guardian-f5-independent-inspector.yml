@@ -75,8 +75,10 @@ jobs:
         run: |
           git reset --hard "${{ needs.freeze.outputs.target_commit }}"
           if ($LASTEXITCODE -ne 0) { throw "Target worktree reset failed" }
-          $status = git status --porcelain
-          if ($status) { throw "Target worktree is dirty after exact reset" }
+          git diff --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Tracked target files changed after exact reset" }
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Staged target files changed after exact reset" }
       - name: Resolve Guardian project
         shell: pwsh
         run: |
