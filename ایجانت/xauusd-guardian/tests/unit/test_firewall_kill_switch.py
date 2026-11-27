@@ -54,10 +54,12 @@ def test_corrupt_or_ambiguous_state_fails_closed(tmp_path: Path, raw: bytes):
 
 def test_recovery_requires_current_generation(tmp_path: Path):
     store = KillSwitchStore(tmp_path / "kill-switch.json")
+    stale = store.activate()
     active = store.activate()
     with pytest.raises(KillSwitchError, match="stale recovery generation"):
-        store.recover(expected_generation=active.generation + 1)
+        store.recover(expected_generation=stale.generation)
     assert store.is_active() is True
+    assert store.read().generation == active.generation
 
 
 def test_recovery_never_auto_clears(tmp_path: Path):
