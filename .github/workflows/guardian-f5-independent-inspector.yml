@@ -110,6 +110,7 @@ jobs:
           "INSPECTOR_PASSWORD=$password" >> $env:GITHUB_ENV
           "INSPECTOR_SID=$sid" >> $env:GITHUB_ENV
           "INSPECTOR_RUNNER_SID=$runnerSid" >> $env:GITHUB_ENV
+          "INSPECTOR_TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
           Write-Output "::add-mask::$password"
       - name: Run independent F5 harness
         id: inspector
