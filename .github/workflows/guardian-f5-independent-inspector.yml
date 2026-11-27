@@ -97,8 +97,8 @@ jobs:
             $target = "${{ needs.freeze.outputs.target_commit }}"
             git update-index --no-assume-unchanged --no-skip-worktree -- "ایجانت/xauusd-guardian/tests/unit/test_firewall_kill_switch.py" "ایجانت/xauusd-guardian/src/guardian/firewall/kill_switch.py"
             git checkout $target -- "ایجانت/xauusd-guardian/tests/unit/test_firewall_kill_switch.py" "ایجانت/xauusd-guardian/src/guardian/firewall/kill_switch.py"
-            git show "$"+"{target}:ایجانت/xauusd-guardian/tests/unit/test_firewall_kill_switch.py" | Set-Content -Path (Join-Path $env:GUARDIAN_ROOT "tests\unit\test_firewall_kill_switch.py") -Encoding utf8
-            git show "$"+"{target}:ایجانت/xauusd-guardian/src/guardian/firewall/kill_switch.py" | Set-Content -Path (Join-Path $env:GUARDIAN_ROOT "src\guardian\firewall\kill_switch.py") -Encoding utf8
+            git show "${target}:ایجانت/xauusd-guardian/tests/unit/test_firewall_kill_switch.py" | Set-Content -Path (Join-Path $env:GUARDIAN_ROOT "tests\unit\test_firewall_kill_switch.py") -Encoding utf8
+            git show "${target}:ایجانت/xauusd-guardian/src/guardian/firewall/kill_switch.py" | Set-Content -Path (Join-Path $env:GUARDIAN_ROOT "src\guardian\firewall\kill_switch.py") -Encoding utf8
             if ($LASTEXITCODE -ne 0) { throw "Exact F5 file materialization failed" }
           } finally { Pop-Location }
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
