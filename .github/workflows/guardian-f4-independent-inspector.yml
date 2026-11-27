@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: 2650f0369c56aa30887880da37fbefa2f8ba726e
+          ref: 402329d50982ae55cf729b1827b2953fa82e9877
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
