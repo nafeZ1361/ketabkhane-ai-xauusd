@@ -179,7 +179,12 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($pythonRoot) -or -not (Test-Path (Join-Path $pythonRoot "python.exe"))) { throw "Base Python installation root is unavailable" }
           & icacls.exe $pythonRoot /grant ("{0}:(OI)(CI)RX" -f $accountName) /T /C
           if ($LASTEXITCODE -ne 0) { throw "Base Python read/execute ACL failed" }
-          $venvScripts = Join-Path $env:INSPECTOR_WORK ".venv\\Scripts"
+          $venvRoot = Join-Path $env:INSPECTOR_WORK ".venv"
+          $venvConfig = Join-Path $venvRoot "pyvenv.cfg"
+          if (-not (Test-Path -LiteralPath $venvConfig -PathType Leaf)) { throw "Venv pyvenv.cfg is missing" }
+          & icacls.exe $venvConfig /grant ("{0}:(RX)" -f $accountName) /C
+          if ($LASTEXITCODE -ne 0) { throw "Venv pyvenv.cfg ACL failed" }
+          $venvScripts = Join-Path $venvRoot "Scripts"
           $venvExecutables = @(Get-ChildItem -LiteralPath $venvScripts -File -Recurse | Where-Object { $_.Extension -in @(".exe", ".dll", ".pyd") })
           if ($venvExecutables.Count -eq 0) { throw "No venv executable/runtime files found for explicit ACL grant" }
           foreach ($file in $venvExecutables) {
