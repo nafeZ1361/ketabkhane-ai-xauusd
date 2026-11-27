@@ -32,12 +32,13 @@ jobs:
       - id: freeze
         shell: pwsh
         run: |
-          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-source.zip"
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-source.tar"
           $staging = Join-Path $env:RUNNER_TEMP "guardian-f5-staging"
           New-Item -ItemType Directory -Path $staging -Force | Out-Null
           Copy-Item -Path "ایجانت\xauusd-guardian\*" -Destination $staging -Recurse -Force
-          Compress-Archive -Path (Join-Path $staging "*") -DestinationPath $archive -Force
-          if (-not (Test-Path $archive)) { throw "source archive creation failed" }
+          if (-not (Test-Path (Join-Path $staging "src\guardian\firewall\kill_switch.py"))) { throw "F5 staging copy failed" }
+          tar -cf $archive -C $staging .
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $archive)) { throw "source archive creation failed" }
           $digest = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
           "archive_sha256=$digest" >> $env:GITHUB_OUTPUT
           "target_commit=$env:GITHUB_SHA" >> $env:GITHUB_OUTPUT
@@ -74,14 +75,15 @@ jobs:
       - name: Extract frozen snapshot
         shell: pwsh
         run: |
-          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-artifact\guardian-f5-source.zip"
+          $archive = Join-Path $env:RUNNER_TEMP "guardian-f5-artifact\guardian-f5-source.tar"
           $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
           if ($actual -ne "${{ needs.freeze.outputs.archive_sha256 }}") { throw "archive digest mismatch" }
           $root = Join-Path $env:RUNNER_TEMP "guardian-f5-frozen"
           $evidence = Join-Path $env:RUNNER_TEMP "guardian-f5-evidence"
           $work = Join-Path $env:RUNNER_TEMP "guardian-f5-work"
           New-Item -ItemType Directory -Path $root,$evidence -Force | Out-Null
-          Expand-Archive -LiteralPath $archive -DestinationPath $root -Force
+          tar -xf $archive -C $root
+          if ($LASTEXITCODE -ne 0) { throw "snapshot extraction failed" }
           $project = $root
           if (-not (Test-Path (Join-Path $project "src\guardian\firewall\kill_switch.py"))) { throw "F5 snapshot not found after extraction" }
           Copy-Item (Join-Path $project "*") $work -Recurse -Force
