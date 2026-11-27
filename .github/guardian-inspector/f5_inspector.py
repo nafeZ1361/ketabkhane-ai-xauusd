@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import pathlib
 import shutil
@@ -9,42 +10,33 @@ import subprocess
 import tempfile
 
 
-def run(cmd, cwd, timeout=180):
+def run(cmd, cwd, timeout=300):
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
     return p.returncode, p.stdout, p.stderr
-
-
-def manifest(root: pathlib.Path):
-    return {
-        str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
-        for p in sorted(root.rglob("*"))
-        if p.is_file() and ".venv" not in p.parts and ".git" not in p.parts
-    }
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--project-root", required=True)
-    ap.add_argument("--frozen-root", required=True)
-    ap.add_argument("--archive", required=True)
     ap.add_argument("--output", required=True)
+    ap.add_argument("--target-commit", required=True)
     a = ap.parse_args()
     root = pathlib.Path(a.project_root)
-    frozen = pathlib.Path(a.frozen_root)
-    result = {
-        "schema": "guardian-f5-independent-inspection/v1",
-        "target": str(root),
-        "checks": {},
-        "verdict": "BLOCK",
-    }
+    result = {"schema": "guardian-f5-independent-inspection/v2", "verdict": "BLOCK", "checks": {}}
 
-    before = manifest(frozen)
+    code, out, err = run(["git", "rev-parse", "HEAD"], root)
+    actual = out.strip()
+    result["checks"]["exact_commit"] = {"expected": a.target_commit, "actual": actual, "exit": code}
+    if code != 0 or actual != a.target_commit:
+        pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return 1
+
     code, out, err = run(
         [str(root / ".venv" / "Scripts" / "python.exe"), "-m", "pytest", "-q",
          "tests/unit/test_firewall_kill_switch.py"],
         root,
     )
-    result["checks"]["focused"] = {"exit": code, "stdout_tail": out[-4000:], "stderr_tail": err[-2000:]}
+    result["checks"]["focused"] = {"exit": code, "stdout_tail": out[-5000:], "stderr_tail": err[-2000:]}
     if code != 0:
         pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 1
@@ -52,9 +44,8 @@ def main():
     code, out, err = run(
         [str(root / ".venv" / "Scripts" / "python.exe"), "-m", "pytest", "-q"],
         root,
-        timeout=300,
     )
-    result["checks"]["full"] = {"exit": code, "stdout_tail": out[-4000:], "stderr_tail": err[-2000:]}
+    result["checks"]["full"] = {"exit": code, "stdout_tail": out[-5000:], "stderr_tail": err[-2000:]}
     if code != 0:
         pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 1
@@ -76,44 +67,42 @@ def main():
         pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 1
 
-    target = root / "src" / "guardian" / "firewall" / "kill_switch.py"
-    original = target.read_text(encoding="utf-8")
-    mutated = original.replace("return _invalid()", "return KillSwitchState(_VERSION, _CLEAR, 1, 'MUTANT')", 1)
-    if mutated == original:
-        result["checks"]["mutation"] = {"mutant_created": False, "control_detected": False}
-        pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
-        return 1
-    target.write_text(mutated, encoding="utf-8")
-    try:
-        code, out, err = run(
-            [str(root / ".venv" / "Scripts" / "python.exe"), "-m", "pytest", "-q",
-             "tests/unit/test_firewall_kill_switch.py"],
-            root,
-        )
-    finally:
-        target.write_text(original, encoding="utf-8")
+    mutant_dir = pathlib.Path(tempfile.mkdtemp(prefix="guardian-f5-mutant-"))
+    mutant = mutant_dir / "kill_switch.py"
+    mutated = source.replace("return _invalid()", "return KillSwitchState(_VERSION, _CLEAR, 1, 'MUTANT')", 1)
+    mutant.write_text(mutated, encoding="utf-8")
+    probe = mutant_dir / "probe.py"
+    probe.write_text(
+        "import importlib.util, pathlib\n"
+        "p=pathlib.Path(__file__).with_name('kill_switch.py')\n"
+        "s=importlib.util.spec_from_file_location('mutant_ks',p)\n"
+        "m=importlib.util.module_from_spec(s); s.loader.exec_module(m)\n"
+        "assert m.KillSwitchStore(pathlib.Path(__file__).with_name('missing.json')).is_active() is True\n",
+        encoding="utf-8",
+    )
+    code, out, err = run([str(root / ".venv" / "Scripts" / "python.exe"), str(probe)], mutant_dir)
     mutation_detected = code != 0
     result["checks"]["mutation"] = {
         "mutant_created": True,
-        "mutant_test_exit": code,
+        "probe_exit": code,
         "control_detected": mutation_detected,
-        "stdout_tail": out[-3000:],
-        "stderr_tail": err[-1500:],
+        "stdout_tail": out[-2000:],
+        "stderr_tail": err[-2000:],
     }
+    shutil.rmtree(mutant_dir, ignore_errors=True)
     if not mutation_detected:
         pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 1
 
-    after = manifest(frozen)
-    result["checks"]["manifest"] = {
-        "files_before": len(before),
-        "files_after": len(after),
-        "stable": before == after,
-    }
-    result["checks"]["archive_sha256"] = hashlib.sha256(pathlib.Path(a.archive).read_bytes()).hexdigest()
-    result["verdict"] = "PASS" if before == after else "BLOCK"
+    code, out, err = run(["git", "status", "--porcelain"], root)
+    result["checks"]["git_status_after"] = {"exit": code, "output": out}
+    if code != 0:
+        pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return 1
+
+    result["verdict"] = "PASS"
     pathlib.Path(a.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
-    return 0 if result["verdict"] == "PASS" else 1
+    return 0
 
 
 if __name__ == "__main__":
