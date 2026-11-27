@@ -217,7 +217,7 @@ jobs:
           $diag = Join-Path $env:EVIDENCE_ROOT "restricted-python-launch-diagnostics.txt"
           "Target commit: $env:GITHUB_SHA" | Set-Content $diag
           $venv = Join-Path $env:INSPECTOR_WORK ".venv"
-          $paths = @($venv,(Join-Path $venv "Scripts"),(Join-Path $venv "Scripts\python.exe"),(Join-Path $venv "Lib"),(Join-Path $venv "Lib\site-packages"),$env:pythonLocation,(Join-Path $env:pythonLocation "python.exe"),(Join-Path $env:pythonLocation "python311.dll"),$env:INSPECTOR_WORK,$env:EVIDENCE_ROOT,$env:RUNNER_TEMP) | Select-Object -Unique
+          $paths = @($venv,(Join-Path $venv "Scripts"),(Join-Path $venv "Scripts\python.exe"),(Join-Path $venv "Lib"),(Join-Path $venv "Lib\site-packages"),(Join-Path $venv "Lib\site-packages\pytest"),(Join-Path $venv "Lib\site-packages\pytest\__init__.py"),$env:pythonLocation,(Join-Path $env:pythonLocation "python.exe"),(Join-Path $env:pythonLocation "python311.dll"),$env:INSPECTOR_WORK,$env:EVIDENCE_ROOT,$env:RUNNER_TEMP) | Select-Object -Unique
           foreach ($path in $paths) {
             "`n===== PATH: $path =====" | Add-Content $diag
             if (Test-Path -LiteralPath $path) {
@@ -225,6 +225,12 @@ jobs:
               try { (& icacls.exe $path 2>&1 | Out-String) | Add-Content $diag } catch { "icacls error: $_" | Add-Content $diag }
               if ((Get-Item -LiteralPath $path) -is [System.IO.FileInfo]) { try { (Get-FileHash -Algorithm SHA256 -LiteralPath $path | Format-List | Out-String) | Add-Content $diag } catch {} }
             } else { "MISSING" | Add-Content $diag }
+          }
+          $pytestInit = Join-Path $venv "Lib\site-packages\pytest\__init__.py"
+          "`n===== HARDLINK LIST: $pytestInit =====" | Add-Content $diag
+          if (Test-Path -LiteralPath $pytestInit) {
+            try { (& fsutil.exe hardlink list $pytestInit 2>&1 | Out-String) | Add-Content $diag } catch { "fsutil error: $_" | Add-Content $diag }
+            try { "Owner: $((Get-Acl -LiteralPath $pytestInit).Owner)" | Add-Content $diag } catch { "owner error: $_" | Add-Content $diag }
           }
           foreach ($logName in @("Microsoft-Windows-AppLocker/EXE and DLL","Microsoft-Windows-CodeIntegrity/Operational")) {
             "`n===== EVENT LOG: $logName =====" | Add-Content $diag
