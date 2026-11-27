@@ -59,7 +59,7 @@ jobs:
         shell: pwsh
         run: |
           $head = (git rev-parse HEAD).Trim()
-          $tree = (git rev-parse HEAD^{tree}).Trim()
+          $tree = (git show -s --format=%T HEAD).Trim()
           if ($head -ne "${{ needs.freeze.outputs.target_commit }}") { throw "Target commit mismatch" }
           if ($tree -ne "${{ needs.freeze.outputs.tree_sha }}") { throw "Target tree mismatch" }
       - name: Checkout pinned independent F5 harness
