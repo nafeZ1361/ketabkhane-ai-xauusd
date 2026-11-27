@@ -37,7 +37,8 @@ jobs:
           New-Item -ItemType Directory -Path $staging -Force | Out-Null
           $guardian = Get-ChildItem $env:GITHUB_WORKSPACE -Directory -Recurse -Filter "xauusd-guardian" | Select-Object -First 1
           if (-not $guardian) { throw "Guardian project directory not found" }
-          Copy-Item -Path (Join-Path $guardian.FullName "*") -Destination $staging -Recurse -Force
+          robocopy $guardian.FullName $staging /E /R:1 /W:1 /NFL /NDL /NJH /NJS
+          if ($LASTEXITCODE -gt 7) { throw "F5 staging copy failed: robocopy exit $LASTEXITCODE" }
           if (-not (Test-Path (Join-Path $staging "src\guardian\firewall\kill_switch.py"))) { throw "F5 staging copy failed" }
           tar -cf $archive -C $staging .
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path $archive)) { throw "source archive creation failed" }
