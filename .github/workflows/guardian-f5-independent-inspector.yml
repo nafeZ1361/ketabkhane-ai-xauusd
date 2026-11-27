@@ -37,7 +37,7 @@ jobs:
         shell: pwsh
         run: |
           $head = (git rev-parse HEAD).Trim()
-          $tree = (git rev-parse HEAD^{tree}).Trim()
+          $tree = (git rev-parse 'HEAD^{tree}').Trim()
           if ($head -ne "$env:GITHUB_SHA") { throw "Freeze HEAD mismatch" }
           "target_commit=$head" >> $env:GITHUB_OUTPUT
           "tree_sha=$tree" >> $env:GITHUB_OUTPUT
