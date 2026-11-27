@@ -24,6 +24,14 @@ def main():
     root = pathlib.Path(a.project_root)
     result = {"schema": "guardian-f5-independent-inspection/v2", "verdict": "BLOCK", "checks": {}}
 
+    test_path = root / "tests" / "unit" / "test_firewall_kill_switch.py"
+    result["checks"]["source_probe"] = {
+        "cwd": str(root),
+        "test_exists": test_path.exists(),
+        "test_path": str(test_path),
+        "test_sha256": hashlib.sha256(test_path.read_bytes()).hexdigest() if test_path.exists() else None,
+        "test_excerpt": test_path.read_text(encoding="utf-8").splitlines()[48:63] if test_path.exists() else [],
+    }
     code, out, err = run(
         [str(root / ".venv" / "Scripts" / "python.exe"), "-m", "pytest", "-q",
          "tests/unit/test_firewall_kill_switch.py"],
