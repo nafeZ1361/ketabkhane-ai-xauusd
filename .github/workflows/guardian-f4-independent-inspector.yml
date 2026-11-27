@@ -171,10 +171,16 @@ jobs:
           $harness = Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector"
           & icacls.exe $harness /inheritance:r /grant "BUILTIN\Administrators:F" "NT AUTHORITY\SYSTEM:F" ("{0}:(OI)(CI)RX" -f $accountName) /T /C
           if ($LASTEXITCODE -ne 0) { throw "Harness ACL failed" }
+          & icacls.exe $harness /grant ("{0}:(RX)" -f $accountName) /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Harness file ACL failed" }
           & icacls.exe $env:FROZEN_ROOT /inheritance:r /grant "BUILTIN\Administrators:F" "NT AUTHORITY\SYSTEM:F" ("{0}:(OI)(CI)RX" -f $accountName) /T /C
           if ($LASTEXITCODE -ne 0) { throw "Frozen ACL failed" }
+          & icacls.exe $env:FROZEN_ROOT /grant ("{0}:(RX)" -f $accountName) /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Frozen file ACL failed" }
           & icacls.exe $env:INSPECTOR_WORK /inheritance:r /grant "BUILTIN\Administrators:F" "NT AUTHORITY\SYSTEM:F" ("{0}:(OI)(CI)M" -f $accountName) /T /C
           if ($LASTEXITCODE -ne 0) { throw "Work ACL failed" }
+          & icacls.exe $env:INSPECTOR_WORK /grant ("{0}:(M)" -f $accountName) /T /C
+          if ($LASTEXITCODE -ne 0) { throw "Work file ACL failed" }
           $pythonRoot = $env:pythonLocation
           if ([string]::IsNullOrWhiteSpace($pythonRoot) -or -not (Test-Path (Join-Path $pythonRoot "python.exe"))) { throw "Base Python installation root is unavailable" }
           & icacls.exe $pythonRoot /grant ("{0}:(OI)(CI)RX" -f $accountName) /T /C
