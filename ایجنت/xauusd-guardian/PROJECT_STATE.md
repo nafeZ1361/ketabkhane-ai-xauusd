@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-Last updated: 2026-11-27 (F3 independently accepted; Phase 5 progress 34/100)
+Last updated: 2026-11-27 (F4 independently accepted; Phase 5 progress 49/100)
 
 ## Phase status
 
@@ -13,7 +13,7 @@ Last updated: 2026-11-27 (F3 independently accepted; Phase 5 progress 34/100)
 | 3 Analysis/strategy | **ACCEPTED (2026-11-20, D-022)** | S1–S7 PASS. S7 closed by an inspector run executed entirely under the `GuardianInspector` token (standard, non-admin, member of `Users` only; every write-class right explicitly denied on the frozen snapshot — all six access probes DENIED, read/list OK; ACL inheritance check 146 objects / 0 problems): junit **302 / 0 / 0** (46 migration cases, 2 pragma cases), `journal_mode=wal` + `synchronous=2` (FULL, D-020), storage probes all green (`revert_migration` refuses with ledger `[1,2,3]`; W3 `main.`-qualified; TEMP-homonym fail-closed; provenance refusal), snapshot manifest reproduced by the inspector before/after. `INSPECTED_REVISION = 1d489dde + c4bb33565fbec4af549f8d7788c7bdf080f34f1ece5f6c39198075ade823ac83` (120 files). Verdict `PASS` with disclosed residuals (D-022). See `artifacts/phase3-closure-20261120T1255Z.md` and `artifacts/inspector-run-20261120T124202/`. F2/F3 ADVISORY |
 | 4 Risk | **ACCEPTED (2026-11-21, D-024)** | `PHASE4_PLAN.md`; `guardian/domain/risk/sizing.py` + 29 tests. S7 closed by an inspector run under the `GuardianInspector` token (write-denied snapshot; six/six probes DENIED; ACL check 247 objects / 0 problems) on commit `15a210a` (snapshot manifest `e939719f…56ca1`, 124 files; worktree == commit): junit **331 / 0 / 0** (46 migration + 2 pragma + 29 risk cases), `wal`+`synchronous=2`, storage probes green, independent black-box contract probe 31/31 (S1–S5 + cap), syntax gate green. Verdict `PASS` with disclosed residuals (R1/R2 in D-024). See `artifacts/phase4-inspection-20261121T1720Z.md` and `artifacts/inspector-run-20261121T164943/` |
 | 4b Monte Carlo | **ACCEPTED (2026-11-21, D-027; D-026 S11 PASS)** | `MONTE_CARLO.md`; `domain/risk/montecarlo.py` + `scripts/montecarlo.py` + 30 tests; suite **361/0/0**; independent S11 PASS on commit `701a4dd`; snapshot SHA-256 `0eadf45e…`; Inspector evidence SHA-256 `7735b6a5…`; registration: `DECISIONS_LOG.md` D-027. |
-| 5 Firewall | **F1 ACCEPTED — 10/10; F2 ACCEPTED — 12/12; F3 ACCEPTED — 12/12; Phase 5: 34/100** | D-034 / D-035 / D-036 / D-037 / D-039. F3 accepted on exact target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; independent workflow `45898985819` SUCCESS, focused 35 and full 506 passed, black-box 10/10, static findings 0, mutant detected, frozen 259-file manifest stable, 25 evidence hashes independently matched. Details: `PHASE5_F3_RISK_PLAN.md`. F4-F8 NOT STARTED. PR #8 remains Draft/unmerged. No DEMO execution, MT5 order, account financial reads, or LIVE action. |
+| 5 Firewall | **F1 ACCEPTED — 10/10; F2 ACCEPTED — 12/12; F3 ACCEPTED — 12/12; F4 ACCEPTED — 15/15; Phase 5: 49/100** | D-034 / D-035 / D-036 / D-037 / D-039 / D-041. F3 accepted on exact target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; independent workflow `45898985819` SUCCESS, focused 35 and full 506 passed, black-box 10/10, static findings 0, mutant detected, frozen 259-file manifest stable, 25 evidence hashes independently matched. F4 accepted on exact target `4e43e360351b5886720825234941cb454d6374ff`; independent workflow `46058148029` SUCCESS (Freeze job `140705579991`, inspection job `140705685452`), focused 12 and full 518 passed, compileall 0, black-box 6/6 with mutant detected, static findings 0, frozen 266-file manifest stable, source archive SHA-256 `a165d43985712b360f9a975434d6c492f65a6814fdcd70511545ec74b2aa180c`, pinned harness `ce48e5994970d133f38633b171ce1b2037445a57`. Details: `PHASE5_F3_RISK_PLAN.md`, `PHASE5_F4_WORKER_PLAN.md`. F5–F8 NOT STARTED. PR #10 remains Draft/open/unmerged (no merge); PR #8 unchanged. No DEMO execution, MT5 order, account financial reads, or LIVE action. |
 | 6 Backtest | NOT STARTED | |
 | 7 Monitoring | NOT STARTED | |
 | 8 Integration | NOT STARTED | |
@@ -314,3 +314,26 @@ F1 accepted **10/10** on target `1cee6409d6bdf0355e80e7e93ba83e3d49efd1e5`. Work
 - F3 **ACCEPTED 12/12**; Phase 5 total **34/100** (F1 10 + F2 12 + F3 12).
 - Independent workflow `45898985819` inspected exact source target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; focused 35/0/0, full 506/0/0, compileall 0, black-box 10/10, static findings 0, mutation detected, frozen 259-file manifest stable.
 - F4–F8 remain NOT STARTED. PR #8 remains Draft/unmerged. No account reads, MT5, order construction/submission, DEMO activation or LIVE path.
+
+
+## Phase 5 F4 implementation start — 2026-11-27
+
+- F1 **10/10 ACCEPTED**; F2 **12/12 ACCEPTED**; F3 **12/12 ACCEPTED**; Phase 5 total **34/100**.
+- F4 is **IMPLEMENTED / INDEPENDENT INSPECTION PENDING — 0/15** on `work/guardian-phase5-f4-worker-20261127`.
+- F4 base: accepted F3 HEAD `9a4113be8a5b16ebd141c2b429f40f6946c0688f`.
+- Controls implemented: restricted Windows worker token, anchored launcher, authenticated replay-resistant localhost IPC, token verification, handshake and lifecycle fail-closed controls.
+- First F4 review finding was corrected: UAC elevation type is not treated as proof of restriction; `TokenHasRestrictions` is now the restriction predicate.
+- Draft PR #10 is for CI/inspection only and remains unmerged. PR #8 remains Draft/unmerged.
+- No account reads, MT5, orders, DEMO activation or LIVE path.
+
+
+## Phase 5 F4 closure — 2026-11-27 (D-041)
+
+- F4 **ACCEPTED 15/15**; Phase 5 total **49/100** (F1 10 + F2 12 + F3 12 + F4 15).
+- Inspected source: exact commit `4e43e360351b5886720825234941cb454d6374ff` on `work/guardian-phase5-f4-worker-20261127`.
+- Independent workflow `46058148029` **SUCCESS**: `Freeze exact F4 source` job `140705579991`, `Independent F4 inspection` job `140705685452`; inspector identity `GuardianF4Inspector`, separate from the runner account and removed after the run.
+- Harness pinned to `ce48e5994970d133f38633b171ce1b2037445a57` on `work/guardian-f4-inspector-python-acl-20261127`; the Inspector never used the inspected branch as its own harness.
+- Checks: focused F4 **12/0/0**, full suite **518/0/0**, `compileall` 0, black-box **6/6**, mutation **detected**, static findings **0**, frozen **266-file** manifest stable, source archive SHA-256 `a165d43985712b360f9a975434d6c492f65a6814fdcd70511545ec74b2aa180c`.
+- DEMO-only boundary intact: no order construction/submission, no MT5 connection, no account financial reads, no LIVE mode, no credentials.
+- No merge: PR #10 remains Draft/open/unmerged; PR #8 unchanged.
+- F5–F8 remain NOT STARTED.

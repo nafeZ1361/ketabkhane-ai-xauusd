@@ -26,7 +26,21 @@ jobs:
         run: python -m pip install -r requirements.lock
 
       - name: Tests
-        run: python -m pytest -q
+        shell: pwsh
+        run: |
+          $stdout = Join-Path $env:RUNNER_TEMP "pytest.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "pytest.stderr.log"
+          $p = Start-Process -FilePath "python" -ArgumentList "-m","pytest","-q","-x","--durations=20" -WorkingDirectory (Get-Location) -NoNewWindow -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          if (-not $p.WaitForExit(180000)) {
+            Write-Host "pytest exceeded 180s; dumping diagnostics before termination."
+            if (Test-Path $stdout) { Get-Content $stdout }
+            if (Test-Path $stderr) { Get-Content $stderr }
+            Stop-Process -Id $p.Id -Force
+            exit 124
+          }
+          if (Test-Path $stdout) { Get-Content $stdout }
+          if (Test-Path $stderr) { Get-Content $stderr }
+          if ($p.ExitCode -ne 0) { exit $p.ExitCode }
 
       - name: Compile
         run: python -m compileall -q src scripts tests

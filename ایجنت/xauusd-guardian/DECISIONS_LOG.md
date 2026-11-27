@@ -584,3 +584,27 @@ The D-008 engineering package from commit `234e73ea2586e393deb401a289681cbd9bcf6
 **Status:** ACCEPTED — 12/12.
 **Evidence:** Exact target `3f02fc28cc8dfb3685d75e037588493cbbf998c6`; independent workflow `45898985819` SUCCESS; pinned harness `0205030532305303941cdc58b05876182ec63fc0`; focused 35/0/0, full suite 506/0/0, compileall 0; black-box 10/10, static findings 0, mutation detected; frozen 259-file manifest stable; source TAR SHA-256 `a0b2c9b11d3b9bfddbfa198e9a998766cf14dba28a554ba8a62f6aa7ba2927e5`; evidence artifact `15154967843`, ZIP SHA-256 `00183d71ab05132de38cc4e5d93b95b1d0326bcafb59ad19234d41f8583c8f9c`, 25/25 sidecar hashes matched.
 **Decision:** F3 is accepted at 12/12; Phase 5 progress is 34/100. The new module performs only pure arithmetic validation against a separately supplied RiskSpec and explicit inputs; it is not execution authorization and does not authenticate equity/spec provenance. A-04 remains absent; no account reads, MT5, orders, DEMO activation, LIVE path or PR merge. See `PHASE5_F3_RISK_PLAN.md` for complete evidence and limitations.
+
+
+## D-040 — Phase 5 F4 implementation and security hardening — 2026-11-27
+
+**Status:** IMPLEMENTED / INDEPENDENT INSPECTION PENDING — 0/15.
+
+F4 implements the frozen restricted-worker and authenticated replay-resistant IPC boundary on branch `work/guardian-phase5-f4-worker-20261127`, based on accepted F3 HEAD `9a4113be8a5b16ebd141c2b429f40f6946c0688f`. The launcher uses Windows `CreateRestrictedToken` with `DISABLE_MAX_PRIVILEGE`, an anchored Python executable, one-shot stdin bootstrap, loopback-only IPC, per-launch HMAC-SHA256 key/session nonce, monotonic sequence numbers, freshness checks, authenticated handshake, and fail-closed lifecycle cleanup.
+
+A first security review identified that UAC elevation type alone is not a valid restriction predicate. The implementation was hardened to verify `TokenHasRestrictions`; elevation type remains diagnostic only. No unrestricted fallback is permitted.
+
+Acceptance is explicitly withheld until an independent Inspector verifies the exact frozen candidate, Windows token boundary, IPC replay/forgery resistance, lifecycle failure paths, mutation controls, full regression suite, compileall, and immutable evidence hashes. No F4 points are awarded yet.
+
+Safety remains unchanged: no A-04 account reads, A-05 DEMO activation, MT5 connectivity, order construction/submission, LIVE path, approval mutation, merge, force-push or destructive operation.
+
+
+## D-041 — Phase 5 F4 independent acceptance (2026-11-27)
+
+**Status:** ACCEPTED — 15/15.
+
+**Evidence:** Exact target `4e43e360351b5886720825234941cb454d6374ff`; independent workflow `46058148029` SUCCESS; `Freeze exact F4 source` job `140705579991`; `Independent F4 inspection` job `140705685452`; pinned harness `ce48e5994970d133f38633b171ce1b2037445a57`; focused 12/0/0, full suite 518/0/0, compileall 0; black-box 6/6, static findings 0, mutation detected; frozen 266-file manifest stable; source archive SHA-256 `a165d43985712b360f9a975434d6c492f65a6814fdcd70511545ec74b2aa180c`; inspector identity `GuardianF4Inspector`, separate from the runner account and removed after the run.
+
+**Decision:** F4 is accepted at 15/15; Phase 5 progress is 49/100. The boundary is a restricted Windows worker with authenticated replay-resistant loopback IPC, an anchored interpreter, one-shot stdin bootstrap and fail-closed lifecycle; it grants no execution authority and contains no order, MT5, account or LIVE path. No merge: PR #10 remains Draft/open/unmerged. PR #8 is unchanged. F5 is not started.
+
+**Limitations:** The worker has no execution capability by design (`F4_WORKER_NO_EXECUTION_CAPABILITY`); transport size bounds remain with the future caller gate. The F4 branch copy of `run_as_inspector.ps1` is unused by CI and still carries the environment-reset defect that was fixed in the pinned harness.
