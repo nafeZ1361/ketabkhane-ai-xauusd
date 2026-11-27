@@ -66,7 +66,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: bcfe964c5da40efd2360165765c9d147c9ba0476
+          ref: b307971b3b1cb7b51ccaeb56c40ca6f3bfe63c27
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -128,7 +128,7 @@ jobs:
         run: |
           if ($env:INSPECTOR_SID -eq $env:INSPECTOR_RUNNER_SID) { throw "Inspector identity is not distinct" }
           $harnessHead = (git -C (Join-Path $env:GITHUB_WORKSPACE ".guardian-inspector") rev-parse HEAD).Trim()
-          if ($harnessHead -ne "bcfe964c5da40efd2360165765c9d147c9ba0476") { throw "Harness pin mismatch" }
+          if ($harnessHead -ne "b307971b3b1cb7b51ccaeb56c40ca6f3bfe63c27") { throw "Harness pin mismatch" }
           $summary = Get-Content (Join-Path $env:RUNNER_TEMP "f5-inspector-result.json") -Raw | ConvertFrom-Json
           if ($summary.verdict -ne "PASS") { throw "F5 Inspector verdict is not PASS" }
           Write-Host "F5 independent inspection PASS"
