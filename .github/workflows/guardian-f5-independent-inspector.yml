@@ -78,7 +78,6 @@ jobs:
           $evidence = Join-Path $env:RUNNER_TEMP "guardian-f5-evidence"
           $work = Join-Path $env:RUNNER_TEMP "guardian-f5-work"
           New-Item -ItemType Directory -Path $root,$evidence -Force | Out-Null
-          $entries = @(Get-ChildItem (Join-Path $root "ایجانت\xauusd-guardian") -Recurse -File -Filter "kill_switch.py" | Select-Object -First 1)
           $zipProject = Join-Path $root "ایجانت\xauusd-guardian"
           Expand-Archive -LiteralPath $archive -DestinationPath $root -Force
           if (-not (Test-Path (Join-Path $zipProject "src\guardian\firewall\kill_switch.py"))) { throw "F5 snapshot not found after extraction" }
