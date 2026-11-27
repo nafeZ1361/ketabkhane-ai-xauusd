@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: nafeZ1361/ketabkhane-ai-xauusd
-          ref: 402329d50982ae55cf729b1827b2953fa82e9877
+          ref: ce48e5994970d133f38633b171ce1b2037445a57
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
@@ -312,7 +312,7 @@ jobs:
             schema = "guardian-f4-independent-run/v1"
             target_commit = "${{ needs.freeze.outputs.target_commit }}"
             archive_sha256 = $hash
-            inspector_harness_commit = "2650f0369c56aa30887880da37fbefa2f8ba726e"
+            inspector_harness_commit = "ce48e5994970d133f38633b171ce1b2037445a57"
             verdict = $(if ($ok) { "PASS" } else { "BLOCK" })
           } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $env:EVIDENCE_ROOT "run-summary.json")
           if (-not $ok) { throw "Independent F4 inspection verdict: BLOCK" }
