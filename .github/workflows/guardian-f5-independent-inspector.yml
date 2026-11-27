@@ -70,6 +70,13 @@ jobs:
           path: .guardian-inspector
           persist-credentials: false
           fetch-depth: 1
+      - name: Re-anchor inspected worktree to exact frozen commit
+        shell: pwsh
+        run: |
+          git reset --hard "${{ needs.freeze.outputs.target_commit }}"
+          if ($LASTEXITCODE -ne 0) { throw "Target worktree reset failed" }
+          $status = git status --porcelain
+          if ($status) { throw "Target worktree is dirty after exact reset" }
       - name: Resolve Guardian project
         shell: pwsh
         run: |
