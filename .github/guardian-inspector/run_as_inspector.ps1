@@ -55,21 +55,27 @@ $credential = [System.Management.Automation.PSCredential]::new("$env:COMPUTERNAM
 
 $bootstrapPython = (Get-Command python -ErrorAction Stop).Source
 $originalEnvironment = [Environment]::GetEnvironmentVariables("Process")
+# Capture the values the child cannot run without BEFORE the process
+# environment is cleared; reading $env:SystemRoot after the loop yields $null
+# and the child fails Winsock initialisation with WinError 10106.
+$systemRoot = $env:SystemRoot
+$computerName = $env:COMPUTERNAME
+$systemDrive = $env:SystemDrive
 try {
     foreach ($key in @($originalEnvironment.Keys)) {
         [Environment]::SetEnvironmentVariable([string]$key, $null, "Process")
     }
     $minimal = @{
-        SystemRoot = $env:SystemRoot
-        WINDIR = $env:SystemRoot
-        COMSPEC = "$env:SystemRoot\System32\cmd.exe"
+        SystemRoot = $systemRoot
+        WINDIR = $systemRoot
+        COMSPEC = "$systemRoot\System32\cmd.exe"
         PATHEXT = ".COM;.EXE;.BAT;.CMD"
-        PATH = "$(Split-Path -Parent $Python);$env:SystemRoot\System32;$env:SystemRoot"
+        PATH = "$(Split-Path -Parent $Python);$systemRoot\System32;$systemRoot"
         USERNAME = $account
-        USERDOMAIN = $env:COMPUTERNAME
+        USERDOMAIN = $computerName
         USERPROFILE = $profilePath
         HOME = $profilePath
-        HOMEDRIVE = $env:SystemDrive
+        HOMEDRIVE = $systemDrive
         HOMEPATH = "\Users\$account"
         APPDATA = (Join-Path $profilePath "AppData\Roaming")
         LOCALAPPDATA = (Join-Path $profilePath "AppData\Local")
