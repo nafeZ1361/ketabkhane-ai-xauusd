@@ -17,6 +17,7 @@ from guardian.firewall.worker_security import (
     close_process_handles,
     create_restricted_worker,
     exit_code,
+    is_launched_worker,
     terminate_process,
     wait_process,
 )
@@ -39,12 +40,24 @@ class RestrictedWorkerLauncher:
 
     def __init__(self, *, python_executable: str | None = None) -> None:
         self.python_executable = os.path.abspath(python_executable or sys.executable)
+        # Anchor the worker's module search root to this package's own source
+        # directory so `-m guardian.firewall.worker` resolves regardless of the
+        # caller's working directory. Never inherit an arbitrary cwd here.
+        self.worker_module_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
 
     def start(self, *, timeout: float = 5.0) -> WorkerHandle:
         if os.name != "nt":
             raise WorkerLaunchError("F4 requires a Windows restricted worker")
         if not os.path.isfile(self.python_executable):
             raise WorkerLaunchError("anchored Python executable does not exist")
+        if not os.path.isfile(
+            os.path.join(
+                self.worker_module_root, "guardian", "firewall", "worker.py"
+            )
+        ):
+            raise WorkerLaunchError("anchored worker module does not exist")
         if type(timeout) not in (int, float) or timeout <= 0 or timeout > 30:
             raise WorkerLaunchError("invalid startup timeout")
 
@@ -77,11 +90,19 @@ class RestrictedWorkerLauncher:
         try:
             os.set_inheritable(read_fd, True)
             os.set_inheritable(write_fd, False)
+            # CreateProcessAsUserW requires a kernel HANDLE, but os.pipe()
+            # returns CRT descriptors. Passing the descriptor makes the child
+            # start with an unusable stdin, so the bootstrap is never read and
+            # the worker dies before connecting. Convert explicitly.
+            import msvcrt
+
+            stdin_handle = msvcrt.get_osfhandle(read_fd)
             command_line = f'"{self.python_executable}" -m guardian.firewall.worker'
             pi = create_restricted_worker(
                 application_name=self.python_executable,
                 command_line=command_line,
-                stdin_handle=read_fd,
+                stdin_handle=stdin_handle,
+                working_directory=self.worker_module_root,
             )
             os.close(read_fd)
             read_fd = -1
@@ -91,11 +112,13 @@ class RestrictedWorkerLauncher:
             conn, _ = server.accept()
             conn.settimeout(timeout)
             hello = session.decode(recv_frame(conn))
+            worker_pid = hello.get("pid")
             if (
                 hello.get("type") != "worker_hello"
                 or hello.get("restricted") is not True
                 or type(hello.get("integrity_rid")) is not int
-                or hello.get("pid") != int(pi.dwProcessId)
+                or type(worker_pid) is not int
+                or not is_launched_worker(int(pi.dwProcessId), worker_pid)
             ):
                 raise WorkerLaunchError("worker security handshake failed")
             send_frame(conn, session.encode({"type": "ready"}))

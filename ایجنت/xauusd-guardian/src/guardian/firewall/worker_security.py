@@ -29,6 +29,9 @@ if os.name != "nt":
 
     def create_restricted_worker(*args, **kwargs):
         raise WorkerSecurityError("F4 restricted worker requires Windows")
+
+    def is_launched_worker(launched_pid: int, reported_pid: int) -> bool:
+        return launched_pid == reported_pid
 else:
     advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -143,6 +146,63 @@ else:
         address = ctypes.addressof(sid.contents) + 8 + 4 * (count - 1)
         return ctypes.cast(address, ctypes.POINTER(wintypes.DWORD)).contents.value
 
+    TH32CS_SNAPPROCESS = 0x00000002
+    INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+
+    class PROCESSENTRY32W(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.c_size_t),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", wintypes.LONG),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * 260),
+        ]
+
+    kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.Process32FirstW.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)
+    ]
+    kernel32.Process32FirstW.restype = wintypes.BOOL
+    kernel32.Process32NextW.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)
+    ]
+    kernel32.Process32NextW.restype = wintypes.BOOL
+
+    def _parent_pid(pid: int) -> int | None:
+        """Return the OS-recorded parent PID, or None if it cannot be read."""
+        snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if not snapshot or snapshot == INVALID_HANDLE_VALUE:
+            return None
+        try:
+            entry = PROCESSENTRY32W()
+            entry.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+            if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+                return None
+            while True:
+                if int(entry.th32ProcessID) == pid:
+                    return int(entry.th32ParentProcessID)
+                if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                    return None
+        finally:
+            kernel32.CloseHandle(snapshot)
+
+    def is_launched_worker(launched_pid: int, reported_pid: int) -> bool:
+        """True when the reporter is the launched process or its direct child.
+
+        The Windows venv ``python.exe`` is a redirector: CreateProcessAsUserW
+        creates the redirector, and the interpreter that actually runs the
+        worker is its direct child. Only that exact relationship is accepted.
+        """
+        if reported_pid == launched_pid:
+            return True
+        return _parent_pid(reported_pid) == launched_pid
+
     def verify_current_worker_token() -> WorkerTokenReport:
         token = _open_current_token(TOKEN_QUERY)
         try:
@@ -165,6 +225,7 @@ else:
         application_name: str,
         command_line: str,
         stdin_handle: int,
+        working_directory: str,
     ) -> PROCESS_INFORMATION:
         token = _open_current_token(
             TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_ADJUST_DEFAULT
@@ -191,7 +252,7 @@ else:
                 True,
                 0,
                 None,
-                os.getcwd(),
+                working_directory,
                 ctypes.byref(si),
                 ctypes.byref(pi),
             ):

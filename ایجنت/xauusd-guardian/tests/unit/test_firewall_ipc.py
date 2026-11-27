@@ -1,5 +1,6 @@
 import json
 import socket
+import struct
 import time
 
 import pytest
@@ -52,8 +53,15 @@ def test_frame_size_is_bounded():
 def test_socket_frame_helpers():
     left, right = socket.socketpair()
     try:
-        send_frame(left, b"abc")
+        right.settimeout(5.0)
+        frame = struct.pack("!I", 3) + b"abc"
+        send_frame(left, frame)
         assert recv_frame(right) == b"abc"
+
+        sender = AuthenticatedSession(b"k" * 32, b"n" * 16)
+        receiver = AuthenticatedSession(b"k" * 32, b"n" * 16)
+        send_frame(left, sender.encode({"type": "hello"}))
+        assert receiver.decode(recv_frame(right)) == {"type": "hello"}
     finally:
         left.close()
         right.close()
