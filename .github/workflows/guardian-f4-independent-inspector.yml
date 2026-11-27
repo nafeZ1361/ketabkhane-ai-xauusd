@@ -186,7 +186,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Venv pyvenv.cfg ACL failed" }
           $venvLib = Join-Path $venvRoot "Lib"
           if (-not (Test-Path -LiteralPath $venvLib -PathType Container)) { throw "Venv Lib is missing" }
-          & icacls.exe $venvLib /grant ("{0}:(OI)(CI)RX" -f $accountName) /T /C
+          & icacls.exe $venvLib /grant ("{0}:(RX)" -f $accountName) /T /C
           if ($LASTEXITCODE -ne 0) { throw "Venv Lib read/execute ACL failed" }
           $venvScripts = Join-Path $venvRoot "Scripts"
           $venvExecutables = @(Get-ChildItem -LiteralPath $venvScripts -File -Recurse | Where-Object { $_.Extension -in @(".exe", ".dll", ".pyd") })
