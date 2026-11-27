@@ -80,9 +80,9 @@ jobs:
           New-Item -ItemType Directory -Path $root,$evidence -Force | Out-Null
           tar -xf $archive -C $root
           if ($LASTEXITCODE -ne 0) { throw "snapshot extraction failed" }
-          $project = Get-ChildItem $root -Directory -Recurse | Where-Object { Test-Path (Join-Path $_.FullName "src\guardian\firewall\kill_switch.py") } | Select-Object -First 1
-          if (-not $project) { throw "F5 snapshot not found" }
-          Copy-Item $project.FullName $work -Recurse
+          $project = Join-Path $root "ایجانت\xauusd-guardian"
+          if (-not (Test-Path (Join-Path $project "src\guardian\firewall\kill_switch.py"))) { throw "F5 snapshot not found" }
+          Copy-Item $project $work -Recurse
           "FROZEN_ROOT=$($project.FullName)" >> $env:GITHUB_ENV
           "INSPECTOR_WORK=$work" >> $env:GITHUB_ENV
           "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV
