@@ -179,6 +179,13 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($pythonRoot) -or -not (Test-Path (Join-Path $pythonRoot "python.exe"))) { throw "Base Python installation root is unavailable" }
           & icacls.exe $pythonRoot /grant ("{0}:(OI)(CI)RX" -f $accountName) /T /C
           if ($LASTEXITCODE -ne 0) { throw "Base Python read/execute ACL failed" }
+          $venvScripts = Join-Path $env:INSPECTOR_WORK ".venv\\Scripts"
+          $venvExecutables = @(Get-ChildItem -LiteralPath $venvScripts -File -Recurse | Where-Object { $_.Extension -in @(".exe", ".dll", ".pyd") })
+          if ($venvExecutables.Count -eq 0) { throw "No venv executable/runtime files found for explicit ACL grant" }
+          foreach ($file in $venvExecutables) {
+            & icacls.exe $file.FullName /grant ("{0}:(RX)" -f $accountName) /C
+            if ($LASTEXITCODE -ne 0) { throw "Venv executable/runtime ACL failed: $($file.FullName)" }
+          }
           "INSPECTOR_ACCOUNT=$account" >> $env:GITHUB_ENV
           "INSPECTOR_PASSWORD=$password" >> $env:GITHUB_ENV
           "INSPECTOR_SID=$sid" >> $env:GITHUB_ENV
